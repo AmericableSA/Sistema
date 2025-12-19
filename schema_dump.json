@@ -1,0 +1,48 @@
+{
+  "providers": [
+    "id",
+    "name",
+    "contact_name",
+    "phone"
+  ],
+  "clients": [
+    "id",
+    "contract_number",
+    "identity_document",
+    "full_name",
+    "phone_primary",
+    "phone_secondary",
+    "email",
+    "city_id",
+    "neighborhood_id",
+    "address_street",
+    "address_reference",
+    "status",
+    "balance",
+    "last_paid_month",
+    "cutoff_date",
+    "reconnection_date",
+    "installation_date",
+    "preferred_collector_id",
+    "created_at",
+    "updated_at",
+    "last_payment_date",
+    "cutoff_reason",
+    "zone_id",
+    "due_months",
+    "has_mora",
+    "mora_balance",
+    "city",
+    "disconnection_reason"
+  ],
+  "client_statuses": [
+    {
+      "status": "active",
+      "count": 2421
+    },
+    {
+      "status": "suspended",
+      "count": 2321
+    }
+  ]
+}

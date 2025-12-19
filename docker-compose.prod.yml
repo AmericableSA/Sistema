@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # 1. Frontend (React + Nginx)
+  client:
+    build: ./client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: always
+
+  # 2. Backend (Node API)
+  server:
+    build: ./server
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DB_HOST=db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=americable
+    depends_on:
+      - db
+    restart: always
+  # Note: Database in production usually runs on a managed service or separate volume, 
+  # but this setup allows connecting to the host DB or a containerized one.
+
+  # 3. Database (Self-contained for Droplet)
+  db:
+    image: mysql:8.0
+    container_name: americable_db_prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: americable
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - proddb_data:/var/lib/mysql
+      - ./database_schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  proddb_data:
