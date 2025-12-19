@@ -72,8 +72,16 @@ db.getConnection()
     });
 
 // Basic Route
-app.get('/', (req, res) => {
-    res.send('Ameri-Cable Inventory API is Running');
+// app.get('/', (req, res) => {
+//     res.send('Ameri-Cable Inventory API is Running');
+// });
+
+// STATIC FILES (PRODUCTION)
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 
 // Start Server
