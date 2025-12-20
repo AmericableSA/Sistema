@@ -120,6 +120,8 @@ const CashRegister = (props) => {
             setClosingData({ physical: physicalAmount, diff: data.difference, system: data.systemTotal });
             setShowClosePrompt(false);
             setShowJustifyPrompt(true);
+        } else if (res.status === 401 || res.status === 403) {
+            setAlertInfo({ show: true, type: 'error', title: 'Permiso Denegado', message: 'No tienes permisos suficientes para cerrar esta caja. Contacta con un administrador.' });
         } else if (res.ok) {
             setShowClosePrompt(false);
             setShowJustifyPrompt(false);
