@@ -26,7 +26,7 @@ import Login from './pages/Login';
 import './index.css';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, roles }: { children: JSX.Element, roles?: string[] }) => {
+const ProtectedRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="spinner" style={{ marginTop: '20vh' }}></div>;
   if (!user) return <Navigate to="/login" replace />;
