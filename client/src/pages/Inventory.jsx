@@ -10,6 +10,8 @@ import ProviderManagerModal from '../components/ProviderManagerModal';
 import ComboManagerModal from '../components/ComboManagerModal';
 import InventoryHistoryModal from '../components/InventoryHistoryModal';
 
+import { API_URL } from '../service/api';
+
 const Inventory = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ const Inventory = () => {
 
     const fetchProducts = async () => {
         try {
-            const response = await fetch('http://localhost:3001/api/products');
+            const response = await fetch(`${API_URL}/products`);
             const data = await response.json();
             setProducts(data);
             setLoading(false);
@@ -69,7 +71,7 @@ const Inventory = () => {
             action: async () => {
                 setConfirm({ show: false, message: '', action: null });
                 try {
-                    const res = await fetch(`http://localhost:3001/api/products/${product.id}`, { method: 'DELETE' });
+                    const res = await fetch(`${API_URL}/products/${product.id}`, { method: 'DELETE' });
                     if (res.ok) {
                         fetchProducts();
                         setAlert({ show: true, type: 'success', title: 'Eliminado', message: 'Producto eliminado.' });

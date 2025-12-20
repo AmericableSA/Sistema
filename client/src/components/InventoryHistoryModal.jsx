@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../service/api';
 
 const InventoryHistoryModal = ({ onClose }) => {
     const [history, setHistory] = useState([]);
@@ -16,7 +17,7 @@ const InventoryHistoryModal = ({ onClose }) => {
         // Wait, for now let's mock empty or assume route exists. 
         // I'll add the route functionality concurrently.
 
-        fetch('http://localhost:3001/api/products/history/all')
+        fetch(`${API_URL}/products/history/all`)
             .then(r => r.json())
             .then(data => {
                 setHistory(data);

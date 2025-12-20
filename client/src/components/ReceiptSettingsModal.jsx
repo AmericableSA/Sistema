@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../service/api';
 
 import ReactDOM from 'react-dom';
 
@@ -15,7 +16,7 @@ const ReceiptSettingsModal = ({ onClose }) => {
     const [logoPreview, setLogoPreview] = useState('/logo.png');
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/settings')
+        fetch(`${API_URL}/settings`)
             .then(r => r.json())
             .then(data => {
                 setSettings({
@@ -31,7 +32,7 @@ const ReceiptSettingsModal = ({ onClose }) => {
 
     const handleSave = async () => {
         try {
-            await fetch('http://localhost:3001/api/settings', {
+            await fetch(`${API_URL}/settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)

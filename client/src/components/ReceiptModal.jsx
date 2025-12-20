@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { API_URL } from '../service/api';
 
 const ReceiptModal = ({ transaction, onClose, autoPrint }) => {
     const printRef = useRef();
@@ -6,7 +7,7 @@ const ReceiptModal = ({ transaction, onClose, autoPrint }) => {
     const [format, setFormat] = useState('80mm'); // '80mm' or 'a4'
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/settings')
+        fetch(`${API_URL}/settings`)
             .then(r => r.json())
             .then(setSettings)
             .catch(console.error);

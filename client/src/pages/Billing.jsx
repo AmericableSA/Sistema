@@ -7,6 +7,8 @@ import BillingModal from '../components/BillingModal';
 import CustomAlert from '../components/CustomAlert';
 import ReceiptSettingsModal from '../components/ReceiptSettingsModal';
 
+import { API_URL } from '../service/api';
+
 const Billing = () => {
     // Data State
     const [clients, setClients] = useState([]);
@@ -53,7 +55,7 @@ const Billing = () => {
                     status: 'all' // Show all statuses so we can bill anyone
                 });
 
-                const res = await fetch(`http://localhost:3001/api/clients?${params.toString()}`, { cache: 'no-store' });
+                const res = await fetch(`${API_URL}/clients?${params.toString()}`, { cache: 'no-store' });
                 const data = await res.json();
 
                 if (data.clients) {

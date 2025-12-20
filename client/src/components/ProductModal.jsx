@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../service/api';
 
 const ProductModal = ({ product, allProducts, onClose, onSave }) => {
     const [formData, setFormData] = useState({
@@ -26,7 +27,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
 
     useEffect(() => {
         // Fetch Providers
-        fetch('http://localhost:3001/api/providers')
+        fetch(`${API_URL}/providers`)
             .then(r => r.json())
             .then(data => setProviders(data))
             .catch(e => console.error(e));
@@ -34,7 +35,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         if (isEditing) {
             setFormData(product);
             if (product.type === 'bundle') {
-                fetch(`http://localhost:3001/api/products/${product.id}/bundle`)
+                fetch(`${API_URL}/products/${product.id}/bundle`)
                     .then(r => r.json())
                     .then(items => setBundleItems(items))
                     .catch(e => console.error(e));
@@ -61,7 +62,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
     const handleCreateProvider = async () => {
         if (!newProviderName.trim()) return;
         try {
-            const res = await fetch('http://localhost:3001/api/providers', {
+            const res = await fetch(`${API_URL}/providers`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: newProviderName })
@@ -115,8 +116,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         try {
             const method = isEditing ? 'PUT' : 'POST';
             const url = isEditing
-                ? `http://localhost:3001/api/products/${product.id}`
-                : 'http://localhost:3001/api/products';
+                ? `${API_URL}/products/${product.id}`
+                : `${API_URL}/products`;
 
             const payload = { ...formData, bundle_items: bundleItems };
 

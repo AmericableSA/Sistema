@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../service/api';
 
 const HistoryModal = ({ client, onClose, global = false }) => {
     const [logs, setLogs] = useState([]);
@@ -6,8 +7,8 @@ const HistoryModal = ({ client, onClose, global = false }) => {
 
     useEffect(() => {
         const url = global
-            ? 'http://localhost:3001/api/clients/history/global'
-            : `http://localhost:3001/api/clients/${client?.id}/history`;
+            ? `${API_URL}/clients/history/global`
+            : `${API_URL}/clients/${client?.id}/history`;
 
         if (global || client) {
             fetch(url)

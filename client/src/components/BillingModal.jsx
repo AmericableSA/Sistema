@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../service/api';
 import CustomAlert from './CustomAlert';
 import ReceiptModal from './ReceiptModal';
 
@@ -48,10 +49,10 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
     // 1. Initial Load (Products, Plans, Client Details)
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:3001/api/billing/products').then(r => r.json()),
-            fetch('http://localhost:3001/api/billing/plans').then(r => r.json()),
-            fetch(`http://localhost:3001/api/billing/details/${client.id}`).then(r => r.json()),
-            fetch('http://localhost:3001/api/users').then(r => r.json())
+            fetch(`${API_URL}/billing/products`).then(r => r.json()),
+            fetch(`${API_URL}/billing/plans`).then(r => r.json()),
+            fetch(`${API_URL}/billing/details/${client.id}`).then(r => r.json()),
+            fetch(`${API_URL}/users`).then(r => r.json())
         ]).then(([dProds, dPlans, dClient, dUsers]) => {
             setProducts(dProds);
             setPlans(dPlans);
@@ -221,7 +222,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
         };
 
         try {
-            const res = await fetch('http://localhost:3001/api/billing/pay', {
+            const res = await fetch(`${API_URL}/billing/pay`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
             const data = await res.json();

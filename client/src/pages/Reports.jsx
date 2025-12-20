@@ -61,6 +61,8 @@ const CashClosingTable = styled.table`
     tr:last-child td { border-bottom: none; }
 `;
 
+import { API_URL } from '../service/api';
+
 const Reports = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -74,7 +76,7 @@ const Reports = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api') + '/reports';
+        const apiBaseUrl = `${API_URL}/reports`;
         const headers = { 'Authorization': `Bearer ${token}` };
 
         // Dates for Month Range

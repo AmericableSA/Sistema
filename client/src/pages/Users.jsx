@@ -4,6 +4,8 @@ import UserModal from '../components/UserModal'; // @ts-ignore
 import CustomAlert from '../components/CustomAlert'; // @ts-ignore
 import ConfirmModal from '../components/ConfirmModal';
 
+import { API_URL } from '../service/api';
+
 const Users = () => {
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
@@ -17,8 +19,7 @@ const Users = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-            const res = await fetch(`${apiUrl}/users`, {
+            const res = await fetch(`${API_URL}/users`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Unauth or Error');
@@ -66,8 +67,7 @@ const Users = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-            await fetch(`${apiUrl}/users/${id}`, {
+            await fetch(`${API_URL}/users/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../service/api';
 import CustomAlert from './CustomAlert';
 
 const UserModal = ({ user, onClose, onSave }) => {
@@ -46,8 +47,8 @@ const UserModal = ({ user, onClose, onSave }) => {
         try {
             const method = user ? 'PUT' : 'POST';
             const url = user
-                ? `http://localhost:3001/api/users/${user.id}`
-                : 'http://localhost:3001/api/users';
+                ? `${API_URL}/users/${user.id}`
+                : `${API_URL}/users`;
 
             const response = await fetch(url, {
                 method,

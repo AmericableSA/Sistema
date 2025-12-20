@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_URL } from '../service/api';
 
 const StockAdjustmentModal = ({ product, onClose, onSave }) => {
     const [type, setType] = useState('IN'); // IN or OUT
@@ -22,7 +23,7 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
         };
 
         try {
-            const res = await fetch('http://localhost:3001/api/transactions', {
+            const res = await fetch(`${API_URL}/transactions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
