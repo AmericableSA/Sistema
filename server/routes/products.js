@@ -10,6 +10,10 @@ router.get('/history/all', productController.getAllInventoryHistory); // Global 
 // @desc    Get all products
 router.get('/', productController.getAllProducts);
 
+// @route   POST /api/products
+// @desc    Create a new product
+router.post('/', productController.createProduct);
+
 // @route   GET /api/products/:id/bundle
 // @desc    Get bundle details for a product
 router.get('/:id/bundle', productController.getBundleDetails);
