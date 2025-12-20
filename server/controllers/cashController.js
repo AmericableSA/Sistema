@@ -140,11 +140,8 @@ exports.closeSession = async (req, res) => {
         const [users] = await db.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
         const userRole = users.length ? users[0].role : 'cashier';
 
-        // SECURITY CHECK: Owner or Elevated Role (admin/oficina) can close
-        const isElevated = ['admin', 'oficina'].includes(userRole);
-        if (sessionOwner !== reqUserId && !isElevated) {
-            return res.status(403).json({ msg: 'No tienes permiso para cerrar esta caja. Solo el Cajero responsable, Oficina o Admin pueden hacerlo.' });
-        }
+        // SECURITY CHECK REMOVED per user request
+        // Any authenticated user can close the session
 
         const [income] = await db.query(
             'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND type != "void"',
