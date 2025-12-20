@@ -22,6 +22,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
     const [newProviderName, setNewProviderName] = useState('');
     const [showProviderInput, setShowProviderInput] = useState(false);
 
+    const isEditing = product && product.id;
+
     useEffect(() => {
         // Fetch Providers
         fetch('http://localhost:3001/api/providers')
@@ -29,7 +31,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
             .then(data => setProviders(data))
             .catch(e => console.error(e));
 
-        if (product) {
+        if (isEditing) {
             setFormData(product);
             if (product.type === 'bundle') {
                 fetch(`http://localhost:3001/api/products/${product.id}/bundle`)
@@ -40,11 +42,16 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                 setBundleItems([]);
             }
         } else {
-            // Reset for new
+            // Reset for new (Create Mode)
             setFormData({
-                sku: '', name: '', description: '',
-                current_stock: 0, min_stock_alert: 5,
-                selling_price: 0, unit_cost: 0, type: 'product',
+                sku: '',
+                name: '',
+                description: '',
+                current_stock: 0,
+                min_stock_alert: 5,
+                selling_price: 0,
+                unit_cost: 0,
+                type: product?.type || 'product', // Use passed type if available
                 provider_id: ''
             });
             setBundleItems([]);
@@ -95,7 +102,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         e.preventDefault();
 
         // VALIDATION: Validate Reason if Stock Changed (Only for edits)
-        if (product && formData.type === 'product') {
+        if (isEditing && formData.type === 'product') {
             const oldStock = Number(product.current_stock);
             const newStock = Number(formData.current_stock);
 
@@ -106,8 +113,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         }
 
         try {
-            const method = product ? 'PUT' : 'POST';
-            const url = product
+            const method = isEditing ? 'PUT' : 'POST';
+            const url = isEditing
                 ? `http://localhost:3001/api/products/${product.id}`
                 : 'http://localhost:3001/api/products';
 
@@ -142,7 +149,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         }}>
             <div className="glass-card" style={{ width: '700px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto', background: '#0f172a', border: '1px solid #1e293b' }}>
                 <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid #334155', paddingBottom: '1rem', color: 'white' }}>
-                    {product ? `Editar ${product.name || 'Item'}` : 'Crear Nuevo Producto'}
+                    {isEditing ? `Editar ${product.name || 'Item'}` : 'Crear Nuevo Producto'}
                 </h3>
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
@@ -305,7 +312,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <button type="button" onClick={onClose} className="btn-secondary" style={{ flex: 1, padding: '0.8rem', background: 'transparent', border: '1px solid #475569', color: '#cbd5e1' }}>Cancelar</button>
                         <button type="submit" className="btn-primary-glow" style={{ flex: 1, padding: '0.8rem' }}>
-                            {product ? 'Actualizar' : 'Guardar Producto'}
+                            {isEditing ? 'Actualizar' : 'Guardar Producto'}
                         </button>
                     </div>
                 </form>
