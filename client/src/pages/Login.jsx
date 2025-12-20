@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+import logo from '../assets/logo.png';
+
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -46,14 +48,14 @@ const Login = () => {
             }}>
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <div style={{
-                        width: '80px', height: '80px',
-                        background: 'linear-gradient(135deg, #3b82f6, #ec4899)',
+                        width: '120px', height: '120px',
+                        background: 'transparent',
                         borderRadius: '20px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '2.5rem', margin: '0 auto 1rem',
-                        boxShadow: '0 10px 25px rgba(59, 130, 246, 0.4)'
+                        margin: '0 auto 1rem',
+                        // boxShadow: '0 10px 25px rgba(59, 130, 246, 0.4)'
                     }}>
-                        📡
+                        <img src={logo} alt="Americable Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </div>
                     <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Ameri-Cable</h1>
                     <p style={{ color: '#94a3b8' }}>Sistema de Gestión Inteligente</p>

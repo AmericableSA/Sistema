@@ -288,7 +288,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                     )}
 
                     {/* Reason Field for Edits */}
-                    {product && formData.type === 'product' && (
+                    {isEditing && formData.type === 'product' && (
                         <div style={{ marginBottom: '1rem', marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
                             <label className="label-dark" style={{ color: Number(product.current_stock) !== Number(formData.current_stock) ? '#ef4444' : '#fbbf24', fontWeight: 'bold' }}>
                                 {Number(product.current_stock) !== Number(formData.current_stock) ? '📝 Razón del Cambio (REQUERIDO)' : '📝 Razón del Cambio (Opcional)'}
