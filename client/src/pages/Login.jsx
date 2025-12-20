@@ -99,7 +99,7 @@ const Login = () => {
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
-                    v1.5.0 - Enterprise Edition
+                    v1.5.0 - Americable Enterprise Edition
                 </p>
             </div>
         </div>
