@@ -8,10 +8,13 @@ const servicePlan = require('../controllers/servicePlanController');
 
 // Cash
 // Route Config
+const { checkRole } = require('../middleware/authMiddleware');
+
+// Route Config
 router.get('/status', cash.getStatus);
 router.get('/stats', cash.getSessionStats); // NEW
 router.post('/open', cash.openSession);
-router.post('/close', cash.closeSession);
+router.post('/close', checkRole(['admin', 'oficina']), cash.closeSession);
 router.post('/movement', cash.addMovement); // New
 
 // Billing

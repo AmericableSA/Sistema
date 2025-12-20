@@ -219,3 +219,22 @@ exports.getDailyClosing = async (req, res) => {
 exports.getDashboardStats = async (req, res) => {
     res.json({}); // Placeholder if rarely used
 };
+
+// 6. Cash History
+exports.getCashHistory = async (req, res) => {
+    try {
+        const pool = await db.getConnection();
+        const [rows] = await pool.query(`
+            SELECT cr.*, u.username 
+            FROM cash_reports cr 
+            LEFT JOIN users u ON cr.user_id = u.id 
+            ORDER BY cr.closing_date DESC 
+            LIMIT 30
+        `);
+        pool.release();
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'DB Error' });
+    }
+};

@@ -16,5 +16,6 @@ router.get('/dashboard', reportController.getDashboardStats);
 // Cable TV Specific Reports
 router.get('/cable-stats', reportController.getCableStats);
 router.get('/daily-closing', reportController.getDailyClosing);
+router.get('/cash-history', reportController.getCashHistory); // NEW
 
 module.exports = router;
