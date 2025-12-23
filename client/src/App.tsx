@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+// @ts-ignore
 import { useAuth } from './context/AuthContext';
 // @ts-ignore
 import Sidebar from './components/Sidebar';
