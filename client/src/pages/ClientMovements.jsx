@@ -170,18 +170,114 @@ const ClientMovements = () => {
         }
     };
 
+    // List View State
+    const [viewMode, setViewMode] = useState('SEARCH'); // 'SEARCH' | 'LIST'
+    const [dailyOrders, setDailyOrders] = useState([]);
+    const [loadingDaily, setLoadingDaily] = useState(false);
+
+    // Fetch Daily Orders
+    const fetchDailyOrders = async () => {
+        setLoadingDaily(true);
+        try {
+            // Fetching all orders using the reports endpoint for versatility
+            // You might want to filter by date=today in backend or here
+            const res = await fetch('/api/reports/orders');
+            const data = await res.json();
+            // Filter locally for "Today" or just show latest 50
+            // Assuming data is array of orders
+            if (Array.isArray(data)) {
+                // Sort by ID desc (newest first)
+                setDailyOrders(data.sort((a, b) => b.id - a.id).slice(0, 100));
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoadingDaily(false);
+        }
+    };
+
+    useEffect(() => {
+        if (viewMode === 'LIST') fetchDailyOrders();
+    }, [viewMode]);
+
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
 
-            <div className="animate-entry" style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', background: 'linear-gradient(to right, #60a5fa, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Gestión de Trámites
-                </h1>
-                <p style={{ color: '#94a3b8', margin: 0 }}>Registro de cambios, traslados y desconexiones.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div>
+                    <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: 'white' }}>
+                        Gestión de Trámites
+                    </h1>
+                    <p style={{ color: '#94a3b8', margin: 0 }}>Registro de cambios, traslados y órdenes de servicio.</p>
+                </div>
+
+                {/* TABS */}
+                <div style={{ background: '#1e293b', padding: '0.5rem', borderRadius: '12px', display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        onClick={() => setViewMode('SEARCH')}
+                        style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: viewMode === 'SEARCH' ? '#3b82f6' : 'transparent', color: viewMode === 'SEARCH' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                        🔍 Nuevo Trámite
+                    </button>
+                    <button
+                        onClick={() => setViewMode('LIST')}
+                        style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: viewMode === 'LIST' ? '#3b82f6' : 'transparent', color: viewMode === 'LIST' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                        📋 Trámites del Día
+                    </button>
+                </div>
             </div>
 
-            {/* STEP 1: CLIENT SELECTION (Billing Style) */}
-            {!selectedClient && (
+            {/* VIEW: DAILY LIST */}
+            {viewMode === 'LIST' && (
+                <div className="animate-fade-in">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <h3 style={{ color: 'white', margin: 0 }}>Órdenes y Trámites Recientes</h3>
+                        <button onClick={fetchDailyOrders} className="btn-secondary" style={{ fontSize: '0.8rem' }}>🔄 Actualizar</button>
+                    </div>
+
+                    <div className="glass-card" style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #334155', textAlign: 'left', color: '#94a3b8' }}>
+                                    <th style={{ padding: '1rem' }}>#</th>
+                                    <th style={{ padding: '1rem' }}>Fecha</th>
+                                    <th style={{ padding: '1rem' }}>Tipo</th>
+                                    <th style={{ padding: '1rem' }}>Cliente</th>
+                                    <th style={{ padding: '1rem' }}>Estado</th>
+                                    <th style={{ padding: '1rem' }}>Detalle</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loadingDaily && <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</td></tr>}
+                                {!loadingDaily && dailyOrders.length === 0 && <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center' }}>No hay registros.</td></tr>}
+
+                                {!loadingDaily && dailyOrders.map(order => (
+                                    <tr key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '1rem' }}>{order.id}</td>
+                                        <td style={{ padding: '1rem' }}>{new Date(order.created_at).toLocaleDateString()}</td>
+                                        <td style={{ padding: '1rem', fontWeight: 'bold' }}>{order.type || order.action}</td>
+                                        <td style={{ padding: '1rem' }}>{order.client_name || 'N/A'}</td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <span style={{
+                                                padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold',
+                                                background: order.status === 'COMPLETED' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                                color: order.status === 'COMPLETED' ? '#34d399' : '#fbbf24'
+                                            }}>
+                                                {order.status || 'REGISTRADO'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>{order.description || order.details || '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* VIEW: SEARCH CLIENT (Original) */}
+            {viewMode === 'SEARCH' && !selectedClient && (
                 <div className="animate-entry">
                     <h3 style={{ color: 'white', marginBottom: '1rem' }}>👤 Seleccionar Cliente para Trámite</h3>
 
@@ -233,8 +329,8 @@ const ClientMovements = () => {
                 </div>
             )}
 
-            {/* STEP 2: MOVEMENT FORM */}
-            {selectedClient && (
+            {/* STEP 2: MOVEMENT FORM (Kept when Client Selected) */}
+            {selectedClient && viewMode === 'SEARCH' && (
                 <div className="animate-entry">
                     <button onClick={() => setSelectedClient(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         ⬅ Volver a Búsqueda

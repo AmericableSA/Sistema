@@ -79,21 +79,27 @@ const Billing = () => {
         fetchClients();
     }, [debouncedSearch, letterFilter, isSessionOpen, viewMode, refreshTrigger]);
 
-    const handleRequestVisit = async (client) => {
-        // Simple manual prompt for now, can be upgraded to modal
-        // eslint-disable-next-line no-restricted-globals
-        const reason = prompt(`Ingrese el motivo de la visita para ${client.full_name}:`);
-        if (!reason) return;
+    // State for Visit Modal
+    const [visitModal, setVisitModal] = useState({ show: false, client: null, reason: '' });
+
+    const openVisitModal = (client) => {
+        setVisitModal({ show: true, client, reason: '' });
+    };
+
+    const confirmVisit = async () => {
+        if (!visitModal.reason) return;
+        const client = visitModal.client;
 
         try {
             const res = await fetch(`/api/clients/${client.id}/manual-order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: 'REPAIR', description: reason })
+                body: JSON.stringify({ type: 'REPAIR', description: visitModal.reason })
             });
             const data = await res.json();
             if (res.ok) {
                 setAlert({ show: true, type: 'success', title: 'Visita Solicitada', message: 'Orden de servicio creada exitosamente.' });
+                setVisitModal({ show: false, client: null, reason: '' });
             } else {
                 setAlert({ show: true, type: 'error', title: 'Error', message: data.msg || 'Error al crear orden.' });
             }
@@ -106,24 +112,22 @@ const Billing = () => {
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
 
-            <div className="animate-entry" style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', background: 'linear-gradient(to right, #34d399, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Facturación y Caja
-                </h1>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ color: '#94a3b8', margin: 0 }}>Control de Turnos y Cobros</p>
-                    <button
-                        onClick={() => setShowTicketConfig(true)}
-                        className="btn-dark-glow"
-                        style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
-                    >
-                        ⚙️ Configurar Ticket
-                    </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
+                <div>
+                    <h1 style={{ fontSize: '2rem', color: 'white', margin: 0, fontWeight: 'bold' }}>Facturación y Caja</h1>
+                    <p style={{ color: '#94a3b8', margin: '0.5rem 0 0 0' }}>Control de Turnos y Cobros</p>
                 </div>
+                <button
+                    onClick={() => setShowTicketConfig(true)}
+                    className="btn-secondary"
+                    style={{ fontSize: '0.9rem' }}
+                >
+                    ⚙️ Ticket
+                </button>
             </div>
 
-            {/* 1. THE CASH REGISTER DASHBOARD (Controls visibility via viewMode) */}
-            <div className="animate-entry" style={{ marginBottom: '3rem' }}>
+            {/* 1. THE CASH REGISTER DASHBOARD */}
+            <div style={{ marginBottom: '2rem' }}>
                 <CashRegister
                     onSessionChange={(isOpen) => setIsSessionOpen(isOpen)}
                     viewMode={viewMode}
@@ -131,138 +135,137 @@ const Billing = () => {
                 />
             </div>
 
-            {/* 2. SEARCH CLIENT TO BILL (HIDDEN IF SESSION CLOSED OR IN OTHER MODES) */}
+            {/* 2. SEARCH CLIENT TO BILL */}
             {isSessionOpen && viewMode === 'SEARCH' && (
-                <>
-                    <div className="animate-entry">
-                        <h3 style={{ color: 'white', marginBottom: '1rem' }}>🔎 Buscar Cliente para Cobrar</h3>
-
-                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                <div className="animate-fade-in">
+                    <div style={{ background: '#1e293b', padding: '1.5rem', borderRadius: '12px', border: '1px solid #334155', marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                             <input
                                 type="text"
-                                placeholder="Escriba nombre, cédula o contrato..."
+                                placeholder="🔍 Buscar por Nombre, Cédula o Contrato..."
                                 className="input-dark"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                style={{ flex: 1, minWidth: '300px', fontSize: '1.2rem', padding: '1rem' }}
+                                style={{ flex: 1, minWidth: '300px', fontSize: '1.1rem' }}
                             />
                         </div>
 
-                        {/* Alphabet Filter Strip */}
-                        <div className="animate-entry" style={{
-                            display: 'flex', gap: '0.25rem', overflowX: 'auto', paddingBottom: '1rem', marginBottom: '1rem',
-                            borderBottom: '1px solid rgba(255,255,255,0.05)',
-                            scrollbarWidth: 'thin'
-                        }}>
-                            <button
-                                onClick={() => setLetterFilter('')}
-                                className={`btn-letter ${letterFilter === '' ? 'active' : ''}`}
-                                style={{
-                                    padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold',
-                                    background: letterFilter === '' ? '#34d399' : 'rgba(255,255,255,0.05)',
-                                    color: letterFilter === '' ? 'white' : '#94a3b8',
-                                    border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', whiteSpace: 'nowrap',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                TODOS
-                            </button>
+                        {/* Alphabet Filter */}
+                        <div style={{ display: 'flex', gap: '0.25rem', overflowX: 'auto', marginTop: '1rem', paddingBottom: '0.5rem' }} className="scrollbar-hide">
+                            <button onClick={() => setLetterFilter('')} className={`btn-letter ${letterFilter === '' ? 'active' : ''}`}>TODOS</button>
                             {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(char => (
-                                <button
-                                    key={char}
-                                    onClick={() => setLetterFilter(char)}
-                                    className={`btn-letter ${letterFilter === char ? 'active' : ''}`}
-                                    style={{
-                                        minWidth: '36px',
-                                        padding: '0.5rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold',
-                                        background: letterFilter === char ? '#34d399' : 'rgba(255,255,255,0.05)',
-                                        color: letterFilter === char ? 'white' : '#94a3b8',
-                                        border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {char}
-                                </button>
+                                <button key={char} onClick={() => setLetterFilter(char)} className={`btn-letter ${letterFilter === char ? 'active' : ''}`}>{char}</button>
                             ))}
                         </div>
                     </div>
 
-                    {/* 3. RESULTS GRID (Optimized for Billing) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
-                        {loading && <div style={{ color: 'white', gridColumn: '1/-1', textAlign: 'center' }}>Buscando...</div>}
+                    {/* RESULTS GRID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                        {loading && <div style={{ color: 'white', gridColumn: '1/-1', textAlign: 'center', padding: '2rem' }}>Cargando clientes...</div>}
 
                         {!loading && clients.length === 0 && (
-                            <div style={{ color: '#64748b', gridColumn: '1/-1', textAlign: 'center', padding: '2rem' }}>
-                                No se encontraron clientes. Busque por nombre o use el filtro de letras.
+                            <div style={{ color: '#64748b', gridColumn: '1/-1', textAlign: 'center', padding: '3rem', border: '2px dashed #334155', borderRadius: '12px' }}>
+                                No se encontraron clientes con estos criterios.
                             </div>
                         )}
 
-                        {!loading && clients.map((c, i) => (
-                            <div key={c.id} className="glass-card animate-entry" style={{ animationDelay: `${i * 0.05}s`, borderLeft: c.status === 'active' ? '4px solid #10b981' : '4px solid #ef4444' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <h4 style={{ margin: 0, color: 'white' }}>{c.full_name}</h4>
-                                    <span style={{ color: c.status === 'active' ? '#34d399' : '#f87171', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        {!loading && clients.map((c) => (
+                            <div key={c.id} style={{
+                                background: '#0f172a',
+                                border: '1px solid #334155',
+                                borderRadius: '12px',
+                                padding: '1.5rem',
+                                borderLeft: c.status === 'active' ? '4px solid #10b981' : '4px solid #ef4444',
+                                transition: 'transform 0.2s',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                                    <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem', fontWeight: '600' }}>{c.full_name}</h3>
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        padding: '0.25rem 0.5rem',
+                                        borderRadius: '4px',
+                                        background: c.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                        color: c.status === 'active' ? '#34d399' : '#f87171'
+                                    }}>
                                         {c.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
                                     </span>
                                 </div>
-                                <div style={{ fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '1rem' }}>
-                                    <div>Zona: {c.zone_name || 'N/A'}</div>
-                                    <div>Contrato: {c.contract_number}</div>
+
+                                <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '1.5rem', display: 'grid', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Zona:</span> <span style={{ color: '#cbd5e1' }}>{c.zone_name || 'N/A'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Contrato:</span> <span style={{ color: '#cbd5e1' }}>{c.contract_number}</span>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => { setSelectedClient(c); setShowBilling(true); }}
-                                    className="btn-dark-glow"
-                                    style={{ width: '100%', background: '#059669', borderColor: '#34d399', color: 'white', justifyContent: 'center' }}
-                                >
-                                    💲 REALIZAR COBRO
-                                </button>
-                                <button
-                                    onClick={() => handleRequestVisit(c)}
-                                    className="btn-secondary-glow"
-                                    style={{ width: '100%', marginTop: '0.5rem', color: '#60a5fa', borderColor: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', justifyContent: 'center' }}
-                                >
-                                    🛠️ SOLICITAR VISITA
-                                </button>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <button
+                                        onClick={() => { setSelectedClient(c); setShowBilling(true); }}
+                                        className="btn-primary-glow"
+                                        style={{ justifyContent: 'center', padding: '0.75rem', fontSize: '0.9rem' }}
+                                    >
+                                        💲 Cobrar
+                                    </button>
+                                    <button
+                                        onClick={() => openVisitModal(c)}
+                                        className="btn-secondary"
+                                        style={{ justifyContent: 'center', padding: '0.75rem', fontSize: '0.9rem', border: '1px solid #3b82f6', color: '#60a5fa' }}
+                                    >
+                                        🛠️ Visita
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* PAGINATION CONTROLS */}
+                    {/* PAGINATION */}
                     {!loading && totalPages > 1 && (
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem', paddingBottom: '2rem' }}>
-                            <button
-                                onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                                disabled={page === 1}
-                                className="btn-secondary"
-                            >
-                                ⬅ Anterior
-                            </button>
-                            <span style={{ display: 'flex', alignItems: 'center', color: '#94a3b8' }}>
-                                Página <strong style={{ color: 'white', margin: '0 0.5rem' }}>{page}</strong> de {totalPages}
-                            </span>
-                            <button
-                                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={page === totalPages}
-                                className="btn-secondary"
-                            >
-                                Siguiente ➡
-                            </button>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '3rem' }}>
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary">⬅ Anterior</button>
+                            <span style={{ color: '#94a3b8', alignSelf: 'center' }}>Página <strong style={{ color: 'white' }}>{page}</strong> de {totalPages}</span>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn-secondary">Siguiente ➡</button>
                         </div>
                     )}
-                </>
+                </div>
             )}
 
-            {/* BILLING MODAL */}
+            {/* MODALS */}
             {showBilling && (
                 <BillingModal
                     client={selectedClient}
                     onClose={() => setShowBilling(false)}
                     onPaymentSuccess={() => {
                         setShowBilling(false);
-                        setRefreshTrigger(prev => prev + 1); // Trigger re-fetch
-                        setAlert({ show: true, type: 'success', title: 'Pago Exitoso', message: 'Cobro registrado y caja actualizada.' });
+                        setRefreshTrigger(p => p + 1);
+                        setAlert({ show: true, type: 'success', title: 'Pago Exitoso', message: 'Cobro registrado.' });
                     }}
                 />
+            )}
+
+            {/* Custom Visit Modal */}
+            {visitModal.show && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="glass-card" style={{ width: '400px', padding: '2rem', background: '#1e293b' }}>
+                        <h3 style={{ color: 'white', marginTop: 0 }}>Solicitar Visita Técnica</h3>
+                        <p style={{ color: '#94a3b8' }}>Cliente: {visitModal.client?.full_name}</p>
+                        <textarea
+                            className="input-dark"
+                            rows="4"
+                            placeholder="Describa el motivo (Ej: Sin señal, Cable dañado...)"
+                            value={visitModal.reason}
+                            onChange={e => setVisitModal(prev => ({ ...prev, reason: e.target.value }))}
+                            autoFocus
+                        />
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setVisitModal({ show: false, client: null, reason: '' })} className="btn-secondary">Cancelar</button>
+                            <button onClick={confirmVisit} className="btn-primary-glow">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <CustomAlert
@@ -273,10 +276,7 @@ const Billing = () => {
                 onClose={() => setAlert({ ...alert, show: false })}
             />
 
-            {/* TICKET CONFIG MODAL */}
-            {showTicketConfig && (
-                <ReceiptSettingsModal onClose={() => setShowTicketConfig(false)} />
-            )}
+            {showTicketConfig && <ReceiptSettingsModal onClose={() => setShowTicketConfig(false)} />}
         </div>
     );
 };
