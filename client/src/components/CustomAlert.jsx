@@ -133,3 +133,4 @@ const CustomAlert = ({ isOpen, title, message, type = 'info', onClose, onConfirm
 };
 
 export default CustomAlert;
+

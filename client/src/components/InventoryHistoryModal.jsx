@@ -17,7 +17,7 @@ const InventoryHistoryModal = ({ onClose }) => {
         // Wait, for now let's mock empty or assume route exists. 
         // I'll add the route functionality concurrently.
 
-        fetch('http://localhost:3001/api/products/history/all')
+        fetch('/api/products/history/all')
             .then(r => r.json())
             .then(data => {
                 setHistory(data);
@@ -101,3 +101,4 @@ const InventoryHistoryModal = ({ onClose }) => {
 };
 
 export default InventoryHistoryModal;
+

@@ -46,14 +46,15 @@ const Login = () => {
             }}>
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <div style={{
-                        width: '80px', height: '80px',
-                        background: 'linear-gradient(135deg, #3b82f6, #ec4899)',
+                        width: '120px', height: '120px',
+                        background: 'rgba(255,255,255,0.05)',
                         borderRadius: '20px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '2.5rem', margin: '0 auto 1rem',
-                        boxShadow: '0 10px 25px rgba(59, 130, 246, 0.4)'
+                        margin: '0 auto 1rem',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                        padding: '10px'
                     }}>
-                        📡
+                        <img src="/logo.png" alt="Americable" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </div>
                     <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Ameri-Cable</h1>
                     <p style={{ color: '#94a3b8' }}>Sistema de Gestión Inteligente</p>
@@ -97,7 +98,7 @@ const Login = () => {
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
-                    v1.5.0 - Enterprise Edition
+                    Americable © Copyright 2025
                 </p>
             </div>
         </div>
@@ -105,3 +106,4 @@ const Login = () => {
 };
 
 export default Login;
+

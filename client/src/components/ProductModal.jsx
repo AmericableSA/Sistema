@@ -24,7 +24,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         if (product) {
             setFormData(product);
             if (product.type === 'bundle') {
-                fetch(`http://localhost:3001/api/products/${product.id}/bundle`)
+                fetch(`/api/products/${product.id}/bundle`)
                     .then(r => r.json())
                     .then(items => setBundleItems(items))
                     .catch(e => console.error(e));
@@ -97,8 +97,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         try {
             const method = product ? 'PUT' : 'POST';
             const url = product
-                ? `http://localhost:3001/api/products/${product.id}`
-                : 'http://localhost:3001/api/products';
+                ? `/api/products/${product.id}`
+                : '/api/products';
 
             const response = await fetch(url, {
                 method,
@@ -269,3 +269,4 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
 };
 
 export default ProductModal;
+

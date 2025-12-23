@@ -7,7 +7,7 @@ const ZoneModal = ({ onClose }) => {
 
     // Fetch zones
     const fetchZones = async () => {
-        const res = await fetch('http://localhost:3001/api/zones');
+        const res = await fetch('/api/zones');
         const data = await res.json();
         setZones(data);
     };
@@ -18,8 +18,8 @@ const ZoneModal = ({ onClose }) => {
         e.preventDefault();
         setLoading(true);
         const url = form.id
-            ? `http://localhost:3001/api/zones/${form.id}`
-            : 'http://localhost:3001/api/zones';
+            ? `/api/zones/${form.id}`
+            : '/api/zones';
         const method = form.id ? 'PUT' : 'POST';
 
         await fetch(url, {
@@ -44,7 +44,7 @@ const ZoneModal = ({ onClose }) => {
     const handleDelete = async (e, id) => {
         e.stopPropagation(); // Prevent edit trigger
         if (window.confirm('¿Eliminar esta zona?')) {
-            await fetch(`http://localhost:3001/api/zones/${id}`, { method: 'DELETE' });
+            await fetch(`/api/zones/${id}`, { method: 'DELETE' });
             fetchZones();
             if (form.id === id) handleReset();
         }
@@ -125,3 +125,4 @@ const ZoneModal = ({ onClose }) => {
 };
 
 export default ZoneModal;
+

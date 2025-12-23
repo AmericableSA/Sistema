@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use environment variable or fallback to localhost
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const fetchProviderInvoices = async (token) => {
     const res = await axios.get(`${API_URL}/invoices`, {
@@ -61,3 +61,4 @@ export const createProvider = async (data, token) => {
         headers: { Authorization: `Bearer ${token}` }
     });
 };
+

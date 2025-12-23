@@ -54,7 +54,7 @@ const ClientMovements = () => {
                     status: 'all'
                 });
 
-                const res = await fetch(`http://localhost:3001/api/clients?${params.toString()}`, { cache: 'no-store' });
+                const res = await fetch(`/api/clients?${params.toString()}`, { cache: 'no-store' });
                 const data = await res.json();
 
                 if (data.clients) {
@@ -86,7 +86,7 @@ const ClientMovements = () => {
     const fetchOrders = async (clientId) => {
         setLoadingOrders(true);
         try {
-            const res = await fetch(`http://localhost:3001/api/clients/${clientId}/orders`);
+            const res = await fetch(`/api/clients/${clientId}/orders`);
             const data = await res.json();
             setOrders(Array.isArray(data) ? data : []);
         } catch (e) {
@@ -97,7 +97,7 @@ const ClientMovements = () => {
     const fetchTechs = async () => {
         if (techs.length > 0) return;
         try {
-            const res = await fetch(`http://localhost:3001/api/clients/technicians/list`);
+            const res = await fetch(`/api/clients/technicians/list`);
             const data = await res.json();
             setTechs(data);
         } catch (e) { console.error(e); }
@@ -113,7 +113,7 @@ const ClientMovements = () => {
             const order = orders.find(o => o.id === orderId);
             const payload = { ...order, [field]: value };
 
-            await fetch(`http://localhost:3001/api/clients/orders/${orderId}`, {
+            await fetch(`/api/clients/orders/${orderId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -144,7 +144,7 @@ const ClientMovements = () => {
                 user_id: 1 // TODO: Auth User ID
             };
 
-            const res = await fetch('http://localhost:3001/api/clients/movements', {
+            const res = await fetch('/api/clients/movements', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -392,3 +392,4 @@ const ClientMovements = () => {
 };
 
 export default ClientMovements;
+

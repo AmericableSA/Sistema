@@ -59,7 +59,7 @@ const Billing = () => {
                     status: 'all'
                 });
 
-                const res = await fetch(`http://localhost:3001/api/clients?${params.toString()}`, { cache: 'no-store' });
+                const res = await fetch(`/api/clients?${params.toString()}`, { cache: 'no-store' });
                 const data = await res.json();
 
                 if (data.clients) {
@@ -86,7 +86,7 @@ const Billing = () => {
         if (!reason) return;
 
         try {
-            const res = await fetch(`http://localhost:3001/api/clients/${client.id}/manual-order`, {
+            const res = await fetch(`/api/clients/${client.id}/manual-order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'REPAIR', description: reason })
@@ -282,3 +282,4 @@ const Billing = () => {
 };
 
 export default Billing;
+

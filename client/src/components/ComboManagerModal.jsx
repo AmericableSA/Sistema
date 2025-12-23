@@ -64,3 +64,4 @@ const ComboManagerModal = ({ products, onEdit, onDelete, onClose, onCreateNew })
 };
 
 export default ComboManagerModal;
+

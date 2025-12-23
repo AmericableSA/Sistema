@@ -15,7 +15,7 @@ const ReceiptSettingsModal = ({ onClose }) => {
     const [logoPreview, setLogoPreview] = useState('/logo.png');
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/settings')
+        fetch('/api/settings')
             .then(r => r.json())
             .then(data => {
                 setSettings({
@@ -31,7 +31,7 @@ const ReceiptSettingsModal = ({ onClose }) => {
 
     const handleSave = async () => {
         try {
-            await fetch('http://localhost:3001/api/settings', {
+            await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)
@@ -85,3 +85,4 @@ const ReceiptSettingsModal = ({ onClose }) => {
 };
 
 export default ReceiptSettingsModal;
+

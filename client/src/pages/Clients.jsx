@@ -64,7 +64,7 @@ const Clients = () => {
             });
 
             // Added cache: 'no-store' to prevent browser caching issues
-            const res = await fetch(`http://localhost:3001/api/clients?${params.toString()}`, { cache: 'no-store' });
+            const res = await fetch(`/api/clients?${params.toString()}`, { cache: 'no-store' });
 
             if (!res.ok) throw new Error('Error en el servidor');
 
@@ -100,7 +100,7 @@ const Clients = () => {
     const confirmDeleteAction = async () => {
         if (!confirmDelete.id) return;
         try {
-            await fetch(`http://localhost:3001/api/clients/${confirmDelete.id}`, { method: 'DELETE' });
+            await fetch(`/api/clients/${confirmDelete.id}`, { method: 'DELETE' });
             fetchClients(currentPage);
             setAlert({ show: true, type: 'success', title: 'Eliminado', message: 'Cliente eliminado correctamente.' });
         } catch (err) {
@@ -348,3 +348,4 @@ const Clients = () => {
 };
 
 export default Clients;
+

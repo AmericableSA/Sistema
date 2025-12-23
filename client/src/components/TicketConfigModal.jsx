@@ -99,3 +99,4 @@ const TicketConfigModal = ({ onClose }) => {
 };
 
 export default TicketConfigModal;
+

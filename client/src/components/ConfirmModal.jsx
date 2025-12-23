@@ -59,3 +59,4 @@ const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onC
 };
 
 export default ConfirmModal;
+

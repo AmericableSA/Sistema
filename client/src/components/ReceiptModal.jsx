@@ -6,7 +6,7 @@ const ReceiptModal = ({ transaction, onClose, autoPrint }) => {
     const [format, setFormat] = useState('80mm'); // '80mm' or 'a4'
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/settings')
+        fetch('/api/settings')
             .then(r => r.json())
             .then(setSettings)
             .catch(console.error);
@@ -309,3 +309,4 @@ const ReceiptModal = ({ transaction, onClose, autoPrint }) => {
 };
 
 export default ReceiptModal;
+

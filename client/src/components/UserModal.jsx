@@ -46,8 +46,8 @@ const UserModal = ({ user, onClose, onSave }) => {
         try {
             const method = user ? 'PUT' : 'POST';
             const url = user
-                ? `http://localhost:3001/api/users/${user.id}`
-                : 'http://localhost:3001/api/users';
+                ? `/api/users/${user.id}`
+                : '/api/users';
 
             const response = await fetch(url, {
                 method,
@@ -174,3 +174,4 @@ const UserModal = ({ user, onClose, onSave }) => {
 };
 
 export default UserModal;
+

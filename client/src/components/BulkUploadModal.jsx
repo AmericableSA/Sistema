@@ -22,7 +22,7 @@ const BulkUploadModal = ({ onClose, onUpload }) => {
             const text = event.target.result;
             try {
                 setStatus('Procesando datos en el servidor...');
-                const res = await fetch('http://localhost:3001/api/upload/clients', {
+                const res = await fetch('/api/upload/clients', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ csvData: text, clearDb })
@@ -106,3 +106,4 @@ const BulkUploadModal = ({ onClose, onUpload }) => {
 };
 
 export default BulkUploadModal;
+

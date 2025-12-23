@@ -6,8 +6,8 @@ const HistoryModal = ({ client, onClose, global = false }) => {
 
     useEffect(() => {
         const url = global
-            ? 'http://localhost:3001/api/clients/history/global'
-            : `http://localhost:3001/api/clients/${client?.id}/history`;
+            ? '/api/clients/history/global'
+            : `/api/clients/${client?.id}/history`;
 
         if (global || client) {
             fetch(url)
@@ -86,3 +86,4 @@ const LogContent = ({ content }) => {
 };
 
 export default HistoryModal;
+

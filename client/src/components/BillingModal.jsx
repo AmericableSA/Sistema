@@ -48,10 +48,10 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
     // 1. Initial Load (Products, Plans, Client Details)
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:3001/api/billing/products').then(r => r.json()),
-            fetch('http://localhost:3001/api/billing/plans').then(r => r.json()),
-            fetch(`http://localhost:3001/api/billing/details/${client.id}`).then(r => r.json()),
-            fetch('http://localhost:3001/api/users').then(r => r.json())
+            fetch('/api/billing/products').then(r => r.json()),
+            fetch('/api/billing/plans').then(r => r.json()),
+            fetch(`/api/billing/details/${client.id}`).then(r => r.json()),
+            fetch('/api/users').then(r => r.json())
         ]).then(([dProds, dPlans, dClient, dUsers]) => {
             setProducts(dProds);
             setPlans(dPlans);
@@ -221,7 +221,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
         };
 
         try {
-            const res = await fetch('http://localhost:3001/api/billing/pay', {
+            const res = await fetch('/api/billing/pay', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
             const data = await res.json();
@@ -456,3 +456,4 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
 };
 
 export default BillingModal;
+

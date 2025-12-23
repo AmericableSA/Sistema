@@ -12,7 +12,7 @@ const ProviderManagerModal = ({ onClose }) => {
     const fetchProviders = async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:3001/api/providers');
+            const res = await fetch('/api/providers');
             const data = await res.json();
             setProviders(data);
         } catch (err) { console.error(err); }
@@ -23,7 +23,7 @@ const ProviderManagerModal = ({ onClose }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const url = editId ? `http://localhost:3001/api/providers/${editId}` : 'http://localhost:3001/api/providers';
+        const url = editId ? `/api/providers/${editId}` : '/api/providers';
         const method = editId ? 'PUT' : 'POST';
 
         try {
@@ -55,7 +55,7 @@ const ProviderManagerModal = ({ onClose }) => {
 
     const confirmDelete = async (id) => {
         try {
-            await fetch(`http://localhost:3001/api/providers/${id}`, { method: 'DELETE' });
+            await fetch(`/api/providers/${id}`, { method: 'DELETE' });
             fetchProviders();
             setAlertConfig(null);
         } catch (err) { console.error(err); }
@@ -179,3 +179,4 @@ const ProviderManagerModal = ({ onClose }) => {
 };
 
 export default ProviderManagerModal;
+

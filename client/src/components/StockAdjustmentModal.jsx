@@ -22,7 +22,7 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
         };
 
         try {
-            const res = await fetch('http://localhost:3001/api/transactions', {
+            const res = await fetch('/api/transactions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -152,3 +152,4 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
 };
 
 export default StockAdjustmentModal;
+

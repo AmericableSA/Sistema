@@ -77,7 +77,7 @@ const Reports = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api') + '/reports';
+        const apiBaseUrl = (import.meta.env.VITE_API_URL || '/api') + '/reports';
         const headers = { 'Authorization': `Bearer ${token}` };
 
         // Dates for Month Range
@@ -273,3 +273,4 @@ const Reports = () => {
 };
 
 export default Reports;
+

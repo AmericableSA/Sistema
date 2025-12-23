@@ -17,7 +17,7 @@ const Users = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+            const apiUrl = import.meta.env.VITE_API_URL || '/api';
             const res = await fetch(`${apiUrl}/users`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -66,7 +66,7 @@ const Users = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+            const apiUrl = import.meta.env.VITE_API_URL || '/api';
             await fetch(`${apiUrl}/users/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -241,3 +241,4 @@ const Users = () => {
 };
 
 export default Users;
+

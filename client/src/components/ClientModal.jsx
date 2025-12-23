@@ -33,9 +33,9 @@ const ClientModal = ({ client, onClose, onSave }) => {
     const fetchCatalogs = async () => {
         try {
             const [resZones, resCities, resUsers] = await Promise.all([
-                fetch('http://localhost:3001/api/zones'),
-                fetch('http://localhost:3001/api/cities'),
-                fetch('http://localhost:3001/api/users')
+                fetch('/api/zones'),
+                fetch('/api/cities'),
+                fetch('/api/users')
             ]);
 
             const dZones = await resZones.json();
@@ -88,8 +88,8 @@ const ClientModal = ({ client, onClose, onSave }) => {
 
             const method = client ? 'PUT' : 'POST';
             const url = client
-                ? `http://localhost:3001/api/clients/${client.id}`
-                : 'http://localhost:3001/api/clients';
+                ? `/api/clients/${client.id}`
+                : '/api/clients';
 
             const response = await fetch(url, {
                 method,
@@ -273,3 +273,4 @@ const ClientModal = ({ client, onClose, onSave }) => {
 };
 
 export default ClientModal;
+

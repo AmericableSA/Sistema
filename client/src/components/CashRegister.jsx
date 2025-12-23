@@ -49,7 +49,7 @@ const CashRegister = (props) => {
     const fetchHistory = async (useFilters = false) => {
         try {
             setLoading(true);
-            let url = `http://localhost:3001/api/history?limit=7&page=${page}`; // Reduced limit for better card fit
+            let url = `/api/history?limit=7&page=${page}`; // Reduced limit for better card fit
             if (useFilters || filterStart || filterEnd || searchTerm) {
                 if (filterStart) url += `&startDate=${filterStart}`;
                 if (filterEnd) url += `&endDate=${filterEnd}`;
@@ -85,7 +85,7 @@ const CashRegister = (props) => {
 
     const fetchStatus = async () => {
         try {
-            const res = await fetch('http://localhost:3001/api/billing/status');
+            const res = await fetch('/api/billing/status');
             const data = await res.json();
             setSession(data || null);
             setLoading(false);
@@ -95,7 +95,7 @@ const CashRegister = (props) => {
 
     const handleOpen = async () => {
         if (!amount) return setAlertInfo({ show: true, type: 'error', title: 'Error', message: 'Ingrese monto inicial' });
-        await fetch('http://localhost:3001/api/billing/open', {
+        await fetch('/api/billing/open', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ start_amount: amount, exchange_rate: rate, current_user_id: user?.id })
         });
@@ -104,7 +104,7 @@ const CashRegister = (props) => {
     };
 
     const attemptClose = async (physicalAmount, note = null) => {
-        const res = await fetch('http://localhost:3001/api/billing/close', {
+        const res = await fetch('/api/billing/close', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 session_id: session.id,
@@ -131,7 +131,7 @@ const CashRegister = (props) => {
 
     const handleMovement = async () => {
         if (!moveAmount || !moveDesc) return alert('Datos incompletos');
-        await fetch('http://localhost:3001/api/billing/movement', {
+        await fetch('/api/billing/movement', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 type: movementType,
@@ -148,7 +148,7 @@ const CashRegister = (props) => {
 
     const handleReprint = async (txId) => {
         try {
-            const res = await fetch(`http://localhost:3001/api/billing/transaction/${txId}`);
+            const res = await fetch(`/api/billing/transaction/${txId}`);
             if (!res.ok) throw new Error('Error recuperando transacción');
             const data = await res.json();
             setReceiptTransaction({ ...data, transactionId: data.id });
@@ -421,3 +421,4 @@ const CashRegister = (props) => {
 };
 
 export default CashRegister;
+

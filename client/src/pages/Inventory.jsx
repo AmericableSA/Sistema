@@ -28,7 +28,7 @@ const Inventory = () => {
 
     const fetchProducts = async () => {
         try {
-            const response = await fetch('http://localhost:3001/api/products');
+            const response = await fetch('/api/products');
             const data = await response.json();
             setProducts(data);
             setLoading(false);
@@ -68,7 +68,7 @@ const Inventory = () => {
             action: async () => {
                 setConfirm({ show: false, message: '', action: null });
                 try {
-                    const res = await fetch(`http://localhost:3001/api/products/${product.id}`, { method: 'DELETE' });
+                    const res = await fetch(`/api/products/${product.id}`, { method: 'DELETE' });
                     if (res.ok) {
                         fetchProducts();
                         setAlert({ show: true, type: 'success', title: 'Eliminado', message: 'Producto eliminado.' });
@@ -289,3 +289,4 @@ const Inventory = () => {
 };
 
 export default Inventory;
+
