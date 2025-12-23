@@ -239,10 +239,45 @@ exports.getMovementsReport = async (req, res) => {
 // 7. Service Orders Report
 exports.getServiceOrdersReport = async (req, res) => {
     try {
-        const { date, mode } = req.query;
+        const { date, mode, list, status } = req.query;
         const targetDate = date || new Date().toISOString().split('T')[0];
         const pool = await db.getConnection();
 
+        // IF LIST IS REQUESTED (For ClientMovements View)
+        if (list) {
+            let query = `
+                SELECT so.id, so.created_at, so.type, so.status, so.technician_notes as description,
+                       c.full_name as client_name, c.id as client_id
+                FROM service_orders so
+                LEFT JOIN clients c ON so.client_id = c.id
+            `;
+
+            let params = [];
+
+            if (status === 'PENDING') {
+                // Show ALL pending, ignoring date
+                query += ` WHERE so.status = 'PENDING'`;
+            } else {
+                // Show Daily List (Filter by Date)
+                let dateFilter;
+                if (mode === 'monthly') {
+                    dateFilter = `MONTH(so.created_at) = MONTH(?) AND YEAR(so.created_at) = YEAR(?)`;
+                    params.push(targetDate, targetDate);
+                } else {
+                    dateFilter = `DATE(so.created_at) = ?`;
+                    params.push(targetDate);
+                }
+                query += ` WHERE ${dateFilter}`;
+            }
+
+            query += ` ORDER BY so.created_at DESC LIMIT 100`;
+
+            const [rows] = await pool.query(query, params);
+            pool.release();
+            return res.json(rows);
+        }
+
+        // ORIGINAL STATS LOGIC (For Reports Dashboard)
         let dateFilter;
         if (mode === 'monthly') {
             dateFilter = `MONTH(created_at) = MONTH('${targetDate}') AND YEAR(created_at) = YEAR('${targetDate}')`;

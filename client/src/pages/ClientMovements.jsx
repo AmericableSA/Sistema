@@ -179,15 +179,18 @@ const ClientMovements = () => {
     const fetchDailyOrders = async () => {
         setLoadingDaily(true);
         try {
-            // Fetching all orders using the reports endpoint for versatility
-            // You might want to filter by date=today in backend or here
-            const res = await fetch('/api/reports/orders');
+            let url = '/api/reports/orders?list=true';
+            if (viewMode === 'PENDING') {
+                url += '&status=PENDING';
+            }
+
+            const res = await fetch(url);
             const data = await res.json();
-            // Filter locally for "Today" or just show latest 50
-            // Assuming data is array of orders
+
             if (Array.isArray(data)) {
-                // Sort by ID desc (newest first)
-                setDailyOrders(data.sort((a, b) => b.id - a.id).slice(0, 100));
+                setDailyOrders(data);
+            } else {
+                setDailyOrders([]);
             }
         } catch (e) {
             console.error(e);
