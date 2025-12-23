@@ -1,0 +1,10 @@
+# Credentials
+.env
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/

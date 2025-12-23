@@ -8,7 +8,12 @@ router.get('/history/all', productController.getAllInventoryHistory); // Global 
 
 // @route   GET /api/products
 // @desc    Get all products
+// @desc    Get all products
 router.get('/', productController.getAllProducts);
+
+// @route   POST /api/products
+// @desc    Create a new product
+router.post('/', productController.createProduct);
 
 // @route   GET /api/products/:id/bundle
 // @desc    Get bundle details for a product
