@@ -3,12 +3,11 @@ const bcrypt = require('bcryptjs');
 
 exports.login = async (req, res) => {
     const { username, password } = req.body;
-
+    let pool;
     try {
-        const pool = await db.getConnection();
+        pool = await db.getConnection();
         // Check if user exists
         const [users] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-        pool.release();
 
         if (users.length === 0) {
             return res.status(404).json({ msg: 'Usuario no encontrado' });
@@ -34,5 +33,7 @@ exports.login = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ msg: 'Error en el servidor' });
+    } finally {
+        if (pool) pool.release();
     }
 };

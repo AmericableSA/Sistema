@@ -429,3 +429,19 @@ exports.getTechnicians = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+exports.registerMovement = async (req, res) => {
+    const { client_id, type, details } = req.body;
+    const userId = 1; // Default Admin
+
+    try {
+        await db.query(
+            'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
+            [client_id, userId, type, details || '']
+        );
+        res.json({ msg: 'Movimiento registrado' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
