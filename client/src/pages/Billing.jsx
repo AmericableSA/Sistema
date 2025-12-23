@@ -29,7 +29,7 @@ const Billing = () => {
     // Pagination
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const limit = 30; // User requested 30
+    const limit = 12; // User requested 12
 
     const [isSessionOpen, setIsSessionOpen] = useState(false);
     // View Mode: 'SEARCH' | 'HISTORY' | 'MOVEMENT_IN' | 'MOVEMENT_OUT'
@@ -151,10 +151,41 @@ const Billing = () => {
                         </div>
 
                         {/* Alphabet Filter */}
-                        <div style={{ display: 'flex', gap: '0.25rem', overflowX: 'auto', marginTop: '1rem', paddingBottom: '0.5rem' }} className="scrollbar-hide">
-                            <button onClick={() => setLetterFilter('')} className={`btn-letter ${letterFilter === '' ? 'active' : ''}`}>TODOS</button>
+                        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', marginTop: '1.5rem', paddingBottom: '0.5rem' }} className="scrollbar-hide">
+                            <button
+                                onClick={() => setLetterFilter('')}
+                                className={`btn-letter ${letterFilter === '' ? 'active' : ''}`}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '8px',
+                                    background: letterFilter === '' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                                    color: letterFilter === '' ? 'white' : '#94a3b8',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                TODOS
+                            </button>
                             {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(char => (
-                                <button key={char} onClick={() => setLetterFilter(char)} className={`btn-letter ${letterFilter === char ? 'active' : ''}`}>{char}</button>
+                                <button
+                                    key={char}
+                                    onClick={() => setLetterFilter(char)}
+                                    className={`btn-letter ${letterFilter === char ? 'active' : ''}`}
+                                    style={{
+                                        minWidth: '40px',
+                                        padding: '0.5rem',
+                                        borderRadius: '8px',
+                                        background: letterFilter === char ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                                        color: letterFilter === char ? 'white' : '#94a3b8',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    {char}
+                                </button>
                             ))}
                         </div>
                     </div>
