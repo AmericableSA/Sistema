@@ -187,6 +187,16 @@ exports.createTransaction = async (req, res) => {
                         [dItem.product_id, transactionId, -dItem.quantity]
                     );
                 }
+
+                // CHECK FOR INSTALLATION (To create Service Order)
+                // Case-insensitive check for "instalaci" or type 'service'
+                if (product.name.toLowerCase().includes('instalaci')) {
+                    await conn.query(
+                        `INSERT INTO service_orders (client_id, type, status, created_by_user_id, created_at) 
+                         VALUES (?, 'INSTALLATION', 'PENDING', ?, NOW())`,
+                        [client_id || null, reqUserId]
+                    );
+                }
             }
         }
 

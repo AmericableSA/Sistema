@@ -44,7 +44,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
             <nav style={{ flex: 1, overflowY: 'auto' }} className="scrollbar-hide">
                 <Link to="/" style={getStyle('/')} onClick={onClose}>
-                    Dashboard
+                    Menú
                 </Link>
 
                 {hasRole(['admin', 'office', 'collector']) && (
@@ -56,6 +56,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                 {hasRole(['admin', 'office', 'technician']) && (
                     <Link to="/clients" style={getStyle('/clients')} onClick={onClose}>
                         Clientes
+                    </Link>
+                )}
+
+                {hasRole(['admin', 'office', 'collector']) && (
+                    <Link to="/movements" style={getStyle('/movements')} onClick={onClose}>
+                        Trámites / Movimientos
                     </Link>
                 )}
 

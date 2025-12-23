@@ -3,10 +3,12 @@ const db = require('../config/db');
 // --- NEW ENDPOINTS FOR FINANCIAL DASHBOARD ---
 
 // 1. Sales Summary (Ventas Brutas & Ganancia)
+// 1. Sales Summary
 exports.getSalesSummary = async (req, res) => {
+    let pool;
     try {
         const { startDate, endDate } = req.query;
-        const pool = await db.getConnection();
+        pool = await db.getConnection();
         const [rows] = await pool.query(`
             SELECT 
                 COALESCE(SUM(amount), 0) as ventas_brutas
@@ -14,38 +16,41 @@ exports.getSalesSummary = async (req, res) => {
             WHERE type != 'void' 
             AND DATE(created_at) BETWEEN ? AND ?
         `, [startDate, endDate]);
-        pool.release();
 
         const ventas = parseFloat(rows[0].ventas_brutas);
-        res.json({ ventas_brutas: ventas, ganancia_total: ventas * 0.3 }); // Approx 30% margin
+        res.json({ ventas_brutas: ventas, ganancia_total: ventas * 0.3 });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'DB Error' });
+    } finally {
+        if (pool) pool.release();
     }
 };
 
 // 2. Inventory Value
+// 2. Inventory Value
 exports.getInventoryValue = async (req, res) => {
+    let pool;
     try {
-        const pool = await db.getConnection();
+        pool = await db.getConnection();
         let val = 0;
-        try {
-            const [rows] = await pool.query("SELECT SUM(price * stock) as total FROM products");
-            val = rows[0].total || 0;
-        } catch (e) { }
-
-        pool.release();
+        const [rows] = await pool.query("SELECT SUM(price * stock) as total FROM products");
+        val = rows[0].total || 0;
         res.json({ valor_total_inventario: val });
     } catch (err) {
         res.status(500).json({ error: 'DB Error' });
+    } finally {
+        if (pool) pool.release();
     }
 };
 
 // 3. Sales By User
+// 3. Sales By User
 exports.getSalesByUser = async (req, res) => {
+    let pool;
     try {
         const { startDate, endDate } = req.query;
-        const pool = await db.getConnection();
+        pool = await db.getConnection();
         const [rows] = await pool.query(`
             SELECT 
                 COALESCE(u.username, 'Sin Asignar') as nombre_usuario, 
@@ -58,11 +63,12 @@ exports.getSalesByUser = async (req, res) => {
             ORDER BY total_vendido DESC
             LIMIT 5
         `, [startDate, endDate]);
-        pool.release();
         res.json(rows);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'DB Error' });
+    } finally {
+        if (pool) pool.release();
     }
 };
 
@@ -95,81 +101,57 @@ exports.getSalesChart = async (req, res) => {
 // --- CABLE TV SPECIFIC REPORTING ---
 
 exports.getCableStats = async (req, res) => {
+    let pool;
     try {
-        const pool = await db.getConnection();
+        pool = await db.getConnection();
 
         // 1. Morosos 
-        // Logic: Active clients whose "Vencimiento" (last_paid_month) is in the past.
         let morososCount = 0;
         let morososDebt = 0;
-        try {
-            const [mRows] = await pool.query(`
-                SELECT 
-                    COUNT(*) as c, 
-                    SUM(
-                        TIMESTAMPDIFF(MONTH, last_paid_month, CURDATE()) * z.tariff * 1.05
-                    ) as d 
-                FROM clients c
-                LEFT JOIN zones z ON c.zone_id = z.id
-                WHERE c.status = 'active' 
-                AND c.last_paid_month < CURDATE()
-            `);
-            morososCount = mRows[0].c;
-            morososDebt = mRows[0].d;
-        } catch (e) { console.log("Error fetching morosos:", e.message); }
+        const [mRows] = await pool.query(`
+            SELECT COUNT(*) as c, SUM(TIMESTAMPDIFF(MONTH, last_paid_month, CURDATE()) * z.tariff * 1.05) as d 
+            FROM clients c LEFT JOIN zones z ON c.zone_id = z.id
+            WHERE c.status = 'active' AND c.last_paid_month < CURDATE()
+        `);
+        morososCount = mRows[0]?.c || 0;
+        morososDebt = mRows[0]?.d || 0;
 
-        // 2. Cortes (Suspendidos) vs Retirados
-        // UI shows "Cortados", "Retirados".
-        // Cortados = status 'suspended'
-        let suspendidosCount = 0;
-        let retiradosCount = 0;
-        try {
-            const [sRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'suspended'");
-            suspendidosCount = sRows[0].c;
+        // 2. Cortes vs Retirados
+        const [sRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'suspended'");
+        const [rRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status IN ('retired', 'inactive', 'disconnected')");
 
-            const [rRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status IN ('retired', 'inactive', 'disconnected')");
-            retiradosCount = rRows[0].c;
-        } catch (e) { }
+        // 3. New Installations
+        const [nRows] = await pool.query(`
+            SELECT COUNT(*) as c FROM clients 
+            WHERE MONTH(installation_date) = MONTH(CURRENT_DATE()) AND YEAR(installation_date) = YEAR(CURRENT_DATE())
+        `);
 
-        // 3. New Installations (This Month)
-        // Correct Logic: Use 'installation_date' 
-        let newCount = 0;
-        try {
-            const [nRows] = await pool.query(`
-                SELECT COUNT(*) as c 
-                FROM clients 
-                WHERE MONTH(installation_date) = MONTH(CURRENT_DATE()) 
-                AND YEAR(installation_date) = YEAR(CURRENT_DATE())
-            `);
-            newCount = nRows[0].c;
-        } catch (e) { }
-
-        // 4. Total Clients (Base Total)
-        let totalCount = 0;
+        // 4. Total
         const [tRows] = await pool.query("SELECT COUNT(*) as c FROM clients");
-        totalCount = tRows[0].c;
 
-        pool.release();
         res.json({
             morosos: { count: morososCount, deuda: morososDebt || 0 },
-            suspendidos: suspendidosCount, // "Cortados"
-            retirados: retiradosCount,
-            instalaciones_mes: newCount,
-            total_clientes: totalCount
+            suspendidos: sRows[0]?.c || 0,
+            retirados: rRows[0]?.c || 0,
+            instalaciones_mes: nRows[0]?.c || 0,
+            total_clientes: tRows[0]?.c || 0
         });
 
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Stats Error' });
+    } finally {
+        if (pool) pool.release();
     }
 };
 
 exports.getDailyClosing = async (req, res) => {
+    let pool;
     try {
         const date = req.query.date || new Date().toISOString().split('T')[0];
-        const pool = await db.getConnection();
+        pool = await db.getConnection();
 
-        // 1. Sales Income (Transactions)
+        // 1. Sales Income
         const [salesRows] = await pool.query(
             "SELECT SUM(amount) as total FROM transactions WHERE type != 'void' AND DATE(created_at) = ?",
             [date]
@@ -189,7 +171,7 @@ exports.getDailyClosing = async (req, res) => {
             else if (r.type === 'OUT') manualOut += parseFloat(r.total);
         });
 
-        // 3. Breakdown by User (Sales Only)
+        // 3. Breakdown by User
         const [userRows] = await pool.query(`
             SELECT COALESCE(u.username, 'Sistema') as username, SUM(t.amount) as total
             FROM transactions t
@@ -198,21 +180,18 @@ exports.getDailyClosing = async (req, res) => {
             GROUP BY t.collector_id, u.username
         `, [date]);
 
-        pool.release();
-
-        const totalIngresos = salesTotal + manualIn;
-        const totalEgresos = manualOut;
-
         res.json({
-            ingresos: totalIngresos,
-            egresos: totalEgresos,
-            balance_dia: totalIngresos - totalEgresos,
+            ingresos: salesTotal + manualIn,
+            egresos: manualOut,
+            balance_dia: (salesTotal + manualIn) - manualOut,
             por_usuario: userRows
         });
 
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Closing Error' });
+    } finally {
+        if (pool) pool.release();
     }
 };
 
@@ -220,21 +199,82 @@ exports.getDashboardStats = async (req, res) => {
     res.json({}); // Placeholder if rarely used
 };
 
-// 6. Cash History
-exports.getCashHistory = async (req, res) => {
+// --- NEW BLOCKS FOR MOVEMENTS & SERVICE ORDERS ---
+
+// 6. Movements (Trámites) Report
+exports.getMovementsReport = async (req, res) => {
+    let pool;
     try {
-        const pool = await db.getConnection();
+        const { date, mode } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        pool = await db.getConnection();
+
+        let dateFilter;
+        if (mode === 'monthly') {
+            dateFilter = `MONTH(timestamp) = MONTH('${targetDate}') AND YEAR(timestamp) = YEAR('${targetDate}')`;
+        } else {
+            dateFilter = `DATE(timestamp) = '${targetDate}'`;
+        }
+
         const [rows] = await pool.query(`
-            SELECT cr.*, u.username 
-            FROM cash_reports cr 
-            LEFT JOIN users u ON cr.user_id = u.id 
-            ORDER BY cr.closing_date DESC 
-            LIMIT 30
+            SELECT action, COUNT(*) as total FROM client_logs WHERE ${dateFilter} GROUP BY action
         `);
-        pool.release();
-        res.json(rows);
+
+        // Stats Map
+        const stats = { CHANGE_NAME: 0, CHANGE_ADDRESS: 0, DISCONNECT_REQ: 0, DISCONNECT_MORA: 0, SERVICE_COMPLETED: 0 };
+        rows.forEach(r => {
+            if (stats[r.action] !== undefined) stats[r.action] = r.total;
+            else if (r.action === 'SERVICE_COMPLETED') stats['SERVICE_COMPLETED'] = r.total;
+        });
+
+        res.json(stats);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'DB Error' });
+        res.status(500).json({ error: 'Movements Error' });
+    } finally {
+        if (pool) pool.release();
+    }
+};
+
+// 7. Service Orders Report
+exports.getServiceOrdersReport = async (req, res) => {
+    try {
+        const { date, mode } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        const pool = await db.getConnection();
+
+        let dateFilter;
+        if (mode === 'monthly') {
+            dateFilter = `MONTH(created_at) = MONTH('${targetDate}') AND YEAR(created_at) = YEAR('${targetDate}')`;
+        } else {
+            dateFilter = `DATE(created_at) = '${targetDate}'`;
+        }
+
+        // Count by Type
+        const [typeRows] = await pool.query(`
+            SELECT type, COUNT(*) as total 
+            FROM service_orders 
+            WHERE ${dateFilter}
+            GROUP BY type
+        `);
+
+        // Count by Status
+        const [statusRows] = await pool.query(`
+            SELECT status, COUNT(*) as total 
+            FROM service_orders 
+            WHERE ${dateFilter}
+            GROUP BY status
+        `);
+
+        pool.release();
+
+        res.json({
+            byType: typeRows,
+            byStatus: statusRows
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Orders Error' });
     }
 };

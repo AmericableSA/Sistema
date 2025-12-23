@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../service/api';
 
 const ProductModal = ({ product, allProducts, onClose, onSave }) => {
     const [formData, setFormData] = useState({
@@ -18,24 +17,14 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
     const [selectedIngredientId, setSelectedIngredientId] = useState('');
     const [ingredientQty, setIngredientQty] = useState(1);
 
-    // Providers Logic
-    const [providers, setProviders] = useState([]);
-    const [newProviderName, setNewProviderName] = useState('');
-    const [showProviderInput, setShowProviderInput] = useState(false);
 
-    const isEditing = product && product.id;
 
     useEffect(() => {
-        // Fetch Providers
-        fetch(`${API_URL}/providers`)
-            .then(r => r.json())
-            .then(data => setProviders(data))
-            .catch(e => console.error(e));
 
-        if (isEditing) {
+        if (product) {
             setFormData(product);
             if (product.type === 'bundle') {
-                fetch(`${API_URL}/products/${product.id}/bundle`)
+                fetch(`http://localhost:3001/api/products/${product.id}/bundle`)
                     .then(r => r.json())
                     .then(items => setBundleItems(items))
                     .catch(e => console.error(e));
@@ -43,37 +32,17 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                 setBundleItems([]);
             }
         } else {
-            // Reset for new (Create Mode)
+            // Reset for new
             setFormData({
-                sku: '',
-                name: '',
-                description: '',
-                current_stock: 0,
-                min_stock_alert: 5,
-                selling_price: 0,
-                unit_cost: 0,
-                type: product?.type || 'product', // Use passed type if available
-                provider_id: ''
+                sku: '', name: '', description: '',
+                current_stock: 0, min_stock_alert: 5,
+                selling_price: 0, unit_cost: 0, type: 'product'
             });
             setBundleItems([]);
         }
     }, [product]);
 
-    const handleCreateProvider = async () => {
-        if (!newProviderName.trim()) return;
-        try {
-            const res = await fetch(`${API_URL}/providers`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newProviderName })
-            });
-            const data = await res.json();
-            setProviders([...providers, data]); // Add to list
-            setFormData({ ...formData, provider_id: data.id }); // Auto-select
-            setShowProviderInput(false);
-            setNewProviderName('');
-        } catch (e) { console.error(e); }
-    };
+
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -102,8 +71,20 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // AUTO-SKU Generation
+        let finalSku = formData.sku;
+        if (!finalSku || !finalSku.trim()) {
+            // Generate simple unique SKU: PROD-TIMESTAMP-RANDOM
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.floor(Math.random() * 1000);
+            finalSku = `PROD-${timestamp}-${random}`;
+        }
+
+        // Prepare payload with potentially new SKU
+        const payload = { ...formData, sku: finalSku, bundle_items: bundleItems };
+
         // VALIDATION: Validate Reason if Stock Changed (Only for edits)
-        if (isEditing && formData.type === 'product') {
+        if (product && formData.type === 'product') {
             const oldStock = Number(product.current_stock);
             const newStock = Number(formData.current_stock);
 
@@ -114,12 +95,10 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         }
 
         try {
-            const method = isEditing ? 'PUT' : 'POST';
-            const url = isEditing
-                ? `${API_URL}/products/${product.id}`
-                : `${API_URL}/products`;
-
-            const payload = { ...formData, bundle_items: bundleItems };
+            const method = product ? 'PUT' : 'POST';
+            const url = product
+                ? `http://localhost:3001/api/products/${product.id}`
+                : 'http://localhost:3001/api/products';
 
             const response = await fetch(url, {
                 method,
@@ -150,7 +129,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         }}>
             <div className="glass-card" style={{ width: '700px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto', background: '#0f172a', border: '1px solid #1e293b' }}>
                 <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid #334155', paddingBottom: '1rem', color: 'white' }}>
-                    {isEditing ? `Editar ${product.name || 'Item'}` : 'Crear Nuevo Producto'}
+                    {product ? `Editar ${product.name || 'Item'}` : 'Crear Nuevo Producto'}
                 </h3>
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
@@ -173,8 +152,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div>
-                            <label className="label-dark">SKU / Código</label>
-                            <input className="input-dark" name="sku" value={formData.sku} onChange={handleChange} required placeholder="Ej: COMBO-01" />
+                            <label className="label-dark">SKU / Código (Auto si vacío)</label>
+                            <input className="input-dark" name="sku" value={formData.sku} onChange={handleChange} placeholder="(Autogenerado)" />
                         </div>
                         <div>
                             <label className="label-dark">Nombre</label>
@@ -187,40 +166,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                         <textarea className="input-dark" name="description" value={formData.description} onChange={handleChange} rows="2" />
                     </div>
 
-                    {/* PROVIDER SELECTOR */}
-                    {formData.type === 'product' && (
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label className="label-dark">Proveedor (Opcional)</label>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <select
-                                    name="provider_id"
-                                    value={formData.provider_id || ''}
-                                    onChange={handleChange}
-                                    className="input-dark"
-                                    style={{ flex: 1, padding: '0.5rem' }}
-                                >
-                                    <option value="">-- Sin Proveedor --</option>
-                                    {providers.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
-                                <button type="button" onClick={() => setShowProviderInput(!showProviderInput)} className="btn-secondary" style={{ padding: '0 1rem', fontSize: '1.2rem' }} title="Crear Proveedor">+</button>
-                            </div>
-                            {/* Quick Create Provider Input */}
-                            {showProviderInput && (
-                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px' }}>
-                                    <input
-                                        className="input-dark"
-                                        placeholder="Nombre Nuevo Proveedor"
-                                        value={newProviderName}
-                                        onChange={e => setNewProviderName(e.target.value)}
-                                        style={{ flex: 1 }}
-                                    />
-                                    <button type="button" onClick={handleCreateProvider} className="btn-primary-glow" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>Guardar</button>
-                                </div>
-                            )}
-                        </div>
-                    )}
+
 
                     {/* DYNAMIC FIELDS BASED ON TYPE */}
                     {formData.type === 'product' && (
@@ -289,7 +235,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                     )}
 
                     {/* Reason Field for Edits */}
-                    {isEditing && formData.type === 'product' && (
+                    {product && formData.type === 'product' && (
                         <div style={{ marginBottom: '1rem', marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
                             <label className="label-dark" style={{ color: Number(product.current_stock) !== Number(formData.current_stock) ? '#ef4444' : '#fbbf24', fontWeight: 'bold' }}>
                                 {Number(product.current_stock) !== Number(formData.current_stock) ? '📝 Razón del Cambio (REQUERIDO)' : '📝 Razón del Cambio (Opcional)'}
@@ -313,7 +259,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <button type="button" onClick={onClose} className="btn-secondary" style={{ flex: 1, padding: '0.8rem', background: 'transparent', border: '1px solid #475569', color: '#cbd5e1' }}>Cancelar</button>
                         <button type="submit" className="btn-primary-glow" style={{ flex: 1, padding: '0.8rem' }}>
-                            {isEditing ? 'Actualizar' : 'Guardar Producto'}
+                            {product ? 'Actualizar' : 'Guardar Producto'}
                         </button>
                     </div>
                 </form>

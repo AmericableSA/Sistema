@@ -1,0 +1,67 @@
+DOCUMENTACIÓN DEL SISTEMA DE GESTIÓN AMERICABLE
+
+1. VISIÓN GENERAL
+Este sistema es una plataforma web integral diseñada para la gestión administrativa, financiera y operativa de Americable. Permite el control de clientes, cobros de mensualidades, gestión de inventario, control de caja y emisión de reportes financieros.
+
+El sistema está alojado en un servidor en la nube (DigitalOcean) y es accesible a través de navegadores web, permitiendo el acceso remoto seguro para administradores y cajeros.
+
+2. MÓDULOS PRINCIPALES Y FUNCIONALIDADES
+
+A. MÓDULO DE CLIENTES
+- Propósito: Base de datos centralizada de todos los suscriptores.
+- Funcionalidades:
+  * Registro de nuevos clientes con datos personales, dirección, zona y plan contratado.
+  * Estado del Cliente: Control automático de estados (Activo, Suspendido, Cortado).
+  * Historial: Visualización de pagos anteriores y cambios en el servicio.
+  * Geolocalización: Registro de coordenadas y ubicación física (Barrio, No. Casa).
+  * Gestión de Deudas: Cálculo automático de meses pendientes.
+
+B. MÓDULO DE FACTURACIÓN Y COBROS (CAJA)
+- Propósito: Procesar los pagos de mensualidades, reconexiones y venta de equipos.
+- Funcionalidades:
+  * Cobro Rápido: Interfaz ágil para cobrar mensualidades. Acepta pagos en efectivo, tarjeta, transferencia o dólares.
+  * Cálculo de Mora: El sistema detecta automáticamente si un cliente se ha pasado de su fecha de corte y aplica el cargo por mora (configurable, actualmente 50 C$).
+  * Impresión de Recibos: Generación de comprobantes de pago (tickets térmicos) con detalle de lo pagado.
+  * Reconexión Automática: Si un cliente suspendido paga su deuda, el sistema lo reactiva automáticamente.
+
+C. MÓDULO DE CAJA Y TURNOS (SEGURIDAD DE EFECTIVO)
+- Propósito: Control estricto del dinero que entra y sale de la empresa.
+- Funcionalidades:
+  * Apertura de Caja: Al iniciar turno, el cajero indica con cuánto dinero inicia.
+  * Registro de Movimientos: Posibilidad de registrar "Ingresos" o "Egresos" manuales (ej. pago de servicios básicos, compra de materiales) que afectan el arqueo final.
+  * Cierre de Caja (Arqueo): Al finalizar, el sistema compara lo que "debería haber" (según cobros registrados) vs. lo que "el cajero cuenta físicamente".
+  * Alerta de Diferencias: Si hay una diferencia (faltante o sobrante), el sistema obliga a ingresar una justificación antes de permitir el cierre.
+  * Seguridad: Solo el cajero dueño de la sesión o un Administrador pueden cerrar la caja.
+
+D. MÓDULO DE INVENTARIO
+- Propósito: Control de equipos (routers, cables) y servicios.
+- Funcionalidades:
+  * Productos y Servicios: Catálogo de ítems vendibles.
+  * Combos (Bundles): Capacidad de crear "Kits" (ej. "Kit Instalación") que al venderse descuentan automáticamente del inventario los materiales individuales (cable, conectores, etc.).
+  * Control de Stock: Alerta o restricción cuando no hay existencias suficientes.
+
+E. MÓDULO DE REPORTES
+- Propósito: Visión financiera del negocio.
+- Funcionalidades:
+  * Reporte Diario: Resumen de cuánto se cobró hoy, desglosado por método de pago (Efectivo, Tarjeta, etc.).
+  * Historial de Transacciones: Buscador avanzado de todos los cobros realizados por fecha, cliente o cajero.
+
+F. MÓDULO DE USUARIOS Y SEGURIDAD
+- Propósito: Control de acceso al sistema.
+- Roles:
+  * Administrador: Acceso total a configuración, reportes sensibles y anulación de procesos.
+  * Cajero/Oficina: Acceso limitado a cobros y atención al cliente, sin permisos para borrar datos críticos.
+
+3. FLUJO DE TRABAJO TÍPICO
+1. El cajero inicia sesión y realiza la "Apertura de Caja" indicando el dinero inicial.
+2. Llegan clientes a pagar. El cajero busca al cliente por nombre o cédula.
+3. El sistema muestra la deuda (meses + mora si aplica).
+4. El cajero selecciona qué meses se pagarán y procesa el cobro. Se imprime el recibo.
+5. Si entra dinero extra o se gasta dinero de la caja, se registra un "Movimiento".
+6. Al final del turno, se realiza el "Cierre de Caja". Se cuenta el dinero físico y se ingresa al sistema. El sistema valida y cierra el turno.
+
+4. INFORMACIÓN TÉCNICA (PARA PROPIETARIOS)
+- Servidor: DigitalOcean Droplet (Ubuntu Linux).
+- Base de Datos: MySQL (Almacenamiento seguro, respaldado diariamente).
+- Tecnología Web: React (Frontend moderno y rápido) + Node.js (Backend robusto).
+- Seguridad: El sistema registra QUÉ usuario hizo CADA movimiento, garantizando trazabilidad total de cualquier error o fraude.

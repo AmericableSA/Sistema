@@ -8,9 +8,6 @@ const servicePlan = require('../controllers/servicePlanController');
 
 // Cash
 // Route Config
-const { checkRole } = require('../middleware/authMiddleware');
-
-// Route Config
 router.get('/status', cash.getStatus);
 router.get('/stats', cash.getSessionStats); // NEW
 router.post('/open', cash.openSession);

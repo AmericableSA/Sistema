@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../service/api';
 import { useAuth } from '../context/AuthContext';
 import CustomAlert from './CustomAlert';
 import ConfirmModal from './ConfirmModal';
@@ -50,7 +49,7 @@ const CashRegister = (props) => {
     const fetchHistory = async (useFilters = false) => {
         try {
             setLoading(true);
-            let url = `${API_URL}/history?limit=7&page=${page}`; // Reduced limit for better card fit
+            let url = `http://localhost:3001/api/history?limit=7&page=${page}`; // Reduced limit for better card fit
             if (useFilters || filterStart || filterEnd || searchTerm) {
                 if (filterStart) url += `&startDate=${filterStart}`;
                 if (filterEnd) url += `&endDate=${filterEnd}`;
@@ -86,7 +85,7 @@ const CashRegister = (props) => {
 
     const fetchStatus = async () => {
         try {
-            const res = await fetch(`${API_URL}/billing/status`);
+            const res = await fetch('http://localhost:3001/api/billing/status');
             const data = await res.json();
             setSession(data || null);
             setLoading(false);
@@ -96,7 +95,7 @@ const CashRegister = (props) => {
 
     const handleOpen = async () => {
         if (!amount) return setAlertInfo({ show: true, type: 'error', title: 'Error', message: 'Ingrese monto inicial' });
-        await fetch(`${API_URL}/billing/open`, {
+        await fetch('http://localhost:3001/api/billing/open', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ start_amount: amount, exchange_rate: rate, current_user_id: user?.id })
         });
@@ -105,7 +104,7 @@ const CashRegister = (props) => {
     };
 
     const attemptClose = async (physicalAmount, note = null) => {
-        const res = await fetch(`${API_URL}/billing/close`, {
+        const res = await fetch('http://localhost:3001/api/billing/close', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 session_id: session.id,
@@ -120,8 +119,6 @@ const CashRegister = (props) => {
             setClosingData({ physical: physicalAmount, diff: data.difference, system: data.systemTotal });
             setShowClosePrompt(false);
             setShowJustifyPrompt(true);
-        } else if (res.status === 401 || res.status === 403) {
-            setAlertInfo({ show: true, type: 'error', title: 'Permiso Denegado', message: 'No tienes permisos suficientes para cerrar esta caja. Contacta con un administrador.' });
         } else if (res.ok) {
             setShowClosePrompt(false);
             setShowJustifyPrompt(false);
@@ -134,7 +131,7 @@ const CashRegister = (props) => {
 
     const handleMovement = async () => {
         if (!moveAmount || !moveDesc) return alert('Datos incompletos');
-        await fetch(`${API_URL}/billing/movement`, {
+        await fetch('http://localhost:3001/api/billing/movement', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 type: movementType,
@@ -151,7 +148,7 @@ const CashRegister = (props) => {
 
     const handleReprint = async (txId) => {
         try {
-            const res = await fetch(`${API_URL}/billing/transaction/${txId}`);
+            const res = await fetch(`http://localhost:3001/api/billing/transaction/${txId}`);
             if (!res.ok) throw new Error('Error recuperando transacción');
             const data = await res.json();
             setReceiptTransaction({ ...data, transactionId: data.id });

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../service/api';
 // @ts-ignore
 import ZoneModal from './ZoneModal';
 
@@ -34,9 +33,9 @@ const ClientModal = ({ client, onClose, onSave }) => {
     const fetchCatalogs = async () => {
         try {
             const [resZones, resCities, resUsers] = await Promise.all([
-                fetch(`${API_URL}/zones`),
-                fetch(`${API_URL}/cities`),
-                fetch(`${API_URL}/users`)
+                fetch('http://localhost:3001/api/zones'),
+                fetch('http://localhost:3001/api/cities'),
+                fetch('http://localhost:3001/api/users')
             ]);
 
             const dZones = await resZones.json();
@@ -89,8 +88,8 @@ const ClientModal = ({ client, onClose, onSave }) => {
 
             const method = client ? 'PUT' : 'POST';
             const url = client
-                ? `${API_URL}/clients/${client.id}`
-                : `${API_URL}/clients`;
+                ? `http://localhost:3001/api/clients/${client.id}`
+                : 'http://localhost:3001/api/clients';
 
             const response = await fetch(url, {
                 method,

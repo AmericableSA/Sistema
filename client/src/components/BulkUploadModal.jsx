@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { API_URL } from '../service/api';
 
 const BulkUploadModal = ({ onClose, onUpload }) => {
     const [file, setFile] = useState(null);
@@ -23,7 +22,7 @@ const BulkUploadModal = ({ onClose, onUpload }) => {
             const text = event.target.result;
             try {
                 setStatus('Procesando datos en el servidor...');
-                const res = await fetch(`${API_URL}/upload/clients`, {
+                const res = await fetch('http://localhost:3001/api/upload/clients', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ csvData: text, clearDb })

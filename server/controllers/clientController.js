@@ -343,3 +343,89 @@ exports.deleteClient = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// --- SERVICE ORDERS ---
+
+exports.getServiceOrders = async (req, res) => {
+    const { id } = req.params; // client id
+    try {
+        const [orders] = await db.query(`
+            SELECT so.*, u.full_name as tech_name 
+            FROM service_orders so
+            LEFT JOIN users u ON so.assigned_tech_id = u.id
+            WHERE so.client_id = ?
+            ORDER BY so.created_at DESC
+        `, [id]);
+        res.json(orders);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.updateServiceOrder = async (req, res) => {
+    const { orderId } = req.params;
+    const { assigned_tech_id, status, notes } = req.body;
+
+    try {
+        await db.query(`
+            UPDATE service_orders 
+            SET assigned_tech_id = ?, status = ?, technician_notes = ?
+            WHERE id = ?
+        `, [assigned_tech_id || null, status, notes || null, orderId]);
+
+        // LOGGING ON COMPLETION
+        if (status === 'COMPLETED') {
+            // Fetch Order Details for Log
+            const [oRows] = await db.query(`
+                SELECT so.client_id, u.full_name as tech_name 
+                FROM service_orders so
+                LEFT JOIN users u ON so.assigned_tech_id = u.id
+                WHERE so.id = ?
+            `, [orderId]);
+
+            if (oRows.length > 0) {
+                const order = oRows[0];
+                const techName = order.tech_name || 'Sin Asignar';
+                // Log to history
+                await db.query(
+                    'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
+                    [order.client_id, 1, 'SERVICE_COMPLETED', `Visita/Instalación Finalizada. Técnico: ${techName}. Notas: ${notes || 'Ninguna'}`]
+                );
+            }
+        }
+
+        res.json({ msg: 'Orden actualizada' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.createManualServiceOrder = async (req, res) => {
+    const { id } = req.params; // Client ID
+    const { type, description } = req.body;
+    const userId = 1; // Default Admin
+
+    try {
+        await db.query(`
+            INSERT INTO service_orders (client_id, type, status, created_by_user_id, technician_notes)
+            VALUES (?, ?, 'PENDING', ?, ?)
+        `, [id, type || 'REPAIR', userId, description || 'Solicitud Manual desde Caja']);
+
+        res.json({ msg: 'Orden creada exitosamente' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.getTechnicians = async (req, res) => {
+    try {
+        const [techs] = await db.query("SELECT id, full_name, username FROM users WHERE role IN ('technician', 'admin')");
+        res.json(techs);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};

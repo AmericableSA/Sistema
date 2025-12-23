@@ -23,10 +23,12 @@ import Reports from './pages/Reports';
 import Invoices from './pages/Invoices'; // NEW
 // @ts-ignore
 import Login from './pages/Login';
+// @ts-ignore
+import ClientMovements from './pages/ClientMovements'; // NEW
 import './index.css';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
+const ProtectedRoute = ({ children, roles }: { children: JSX.Element, roles?: string[] }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="spinner" style={{ marginTop: '20vh' }}></div>;
   if (!user) return <Navigate to="/login" replace />;
@@ -76,6 +78,7 @@ function App() {
             <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
 
             <Route path="/invoices" element={<ProtectedRoute roles={['admin', 'cajero']}><Invoices /></ProtectedRoute>} />
+            <Route path="/movements" element={<ProtectedRoute><ClientMovements /></ProtectedRoute>} />
           </Routes>
         </main>
       </div>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { API_URL } from '../service/api';
 
 const StockAdjustmentModal = ({ product, onClose, onSave }) => {
     const [type, setType] = useState('IN'); // IN or OUT
@@ -23,7 +22,7 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
         };
 
         try {
-            const res = await fetch(`${API_URL}/transactions`, {
+            const res = await fetch('http://localhost:3001/api/transactions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -54,9 +53,6 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
                 <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px' }}>
                     <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Producto</p>
                     <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-secondary-dark)' }}>{product.name}</p>
-                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                        Stock Actual: <strong>{product.current_stock}</strong>
-                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
@@ -86,13 +82,35 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
                         </div>
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Cantidad</label>
-                        <input
-                            type="number" min="1" className="input-field"
-                            value={quantity} onChange={(e) => setQuantity(e.target.value)}
-                            required
-                        />
+                    {/* Quantity & Calculation Area */}
+                    <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1rem', alignItems: 'center', textAlign: 'center' }}>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>Actual</label>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#334155' }}>{product.current_stock}</div>
+                            </div>
+                            <div style={{ fontSize: '1.2rem', color: type === 'IN' ? '#166534' : '#991B1B', fontWeight: 'bold' }}>
+                                {type === 'IN' ? '+' : '-'}
+                            </div>
+                            <div>
+                                <input
+                                    type="number" min="1" className="input-field"
+                                    value={quantity} onChange={(e) => setQuantity(e.target.value)}
+                                    required
+                                    style={{ textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold', width: '100%' }}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '1rem', borderTop: '1px dashed #CBD5E1', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 600, color: '#64748B' }}>Cantidad Final:</span>
+                            <span style={{
+                                fontSize: '1.3rem', fontWeight: 800,
+                                color: (parseInt(product.current_stock) + (type === 'IN' ? parseInt(quantity || 0) : -parseInt(quantity || 0))) < 0 ? '#ef4444' : '#0f172a'
+                            }}>
+                                {parseInt(product.current_stock) + (type === 'IN' ? parseInt(quantity || 0) : -parseInt(quantity || 0))}
+                            </span>
+                        </div>
                     </div>
 
                     <div>

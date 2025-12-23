@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../service/api';
 
 const InventoryHistoryModal = ({ onClose }) => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         // Fetch inventory moves from existing moves endpoint or create if needed
@@ -17,7 +17,7 @@ const InventoryHistoryModal = ({ onClose }) => {
         // Wait, for now let's mock empty or assume route exists. 
         // I'll add the route functionality concurrently.
 
-        fetch(`${API_URL}/products/history/all`)
+        fetch('http://localhost:3001/api/products/history/all')
             .then(r => r.json())
             .then(data => {
                 setHistory(data);
@@ -40,7 +40,17 @@ const InventoryHistoryModal = ({ onClose }) => {
                         <h3 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🕒 Historial de Movimientos</h3>
                         <p style={{ margin: '0.2rem 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>Registro completo de entradas, salidas y ajustes.</p>
                     </div>
-                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <input
+                            type="text"
+                            placeholder="Buscar producto..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="input-dark"
+                            style={{ padding: '0.5rem 1rem', width: '250px' }}
+                        />
+                        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+                    </div>
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
@@ -57,9 +67,9 @@ const InventoryHistoryModal = ({ onClose }) => {
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Cargando historial...</td></tr>
-                            ) : history.length === 0 ? (
-                                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Sin movimientos registrados.</td></tr>
-                            ) : history.map((item, i) => (
+                            ) : history.filter(h => h.product_name?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>{searchTerm ? 'No se encontraron resultados.' : 'Sin movimientos registrados.'}</td></tr>
+                            ) : history.filter(h => h.product_name?.toLowerCase().includes(searchTerm.toLowerCase())).map((item, i) => (
                                 <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                     <td style={{ padding: '1rem', color: '#cbd5e1' }}>{new Date(item.created_at).toLocaleString()}</td>
                                     <td style={{ padding: '1rem', color: 'white', fontWeight: 500 }}>{item.product_name}</td>

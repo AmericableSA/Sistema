@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../service/api';
 
 const ZoneModal = ({ onClose }) => {
     const [zones, setZones] = useState([]);
@@ -8,7 +7,7 @@ const ZoneModal = ({ onClose }) => {
 
     // Fetch zones
     const fetchZones = async () => {
-        const res = await fetch(`${API_URL}/zones`);
+        const res = await fetch('http://localhost:3001/api/zones');
         const data = await res.json();
         setZones(data);
     };
@@ -19,8 +18,8 @@ const ZoneModal = ({ onClose }) => {
         e.preventDefault();
         setLoading(true);
         const url = form.id
-            ? `${API_URL}/zones/${form.id}`
-            : `${API_URL}/zones`;
+            ? `http://localhost:3001/api/zones/${form.id}`
+            : 'http://localhost:3001/api/zones';
         const method = form.id ? 'PUT' : 'POST';
 
         await fetch(url, {
@@ -45,7 +44,7 @@ const ZoneModal = ({ onClose }) => {
     const handleDelete = async (e, id) => {
         e.stopPropagation(); // Prevent edit trigger
         if (window.confirm('¿Eliminar esta zona?')) {
-            await fetch(`${API_URL}/zones/${id}`, { method: 'DELETE' });
+            await fetch(`http://localhost:3001/api/zones/${id}`, { method: 'DELETE' });
             fetchZones();
             if (form.id === id) handleReset();
         }

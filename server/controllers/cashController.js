@@ -140,8 +140,10 @@ exports.closeSession = async (req, res) => {
         const [users] = await db.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
         const userRole = users.length ? users[0].role : 'cashier';
 
-        // SECURITY CHECK REMOVED per user request
-        // Any authenticated user can close the session
+        // SECURITY CHECK: Only Owner or Admin can close
+        if (sessionOwner !== reqUserId && userRole !== 'admin') {
+            return res.status(403).json({ msg: 'No tienes permiso para cerrar esta caja. Solo el Cajero responsable o un Administrador pueden hacerlo.' });
+        }
 
         const [income] = await db.query(
             'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND type != "void"',
@@ -187,19 +189,6 @@ exports.closeSession = async (req, res) => {
             });
         }
 
-        // 3. NEW: Save to Historical Report (cash_reports)
-        // Get Client Count
-        const [clients] = await db.query('SELECT COUNT(DISTINCT client_id) as count FROM transactions WHERE session_id = ? AND type != "void"', [session_id]);
-        const clientCount = clients[0].count || 0;
-
-        // Get Breakdown (JSON)
-        const [methodStats] = await db.query('SELECT payment_method, SUM(amount) as total FROM transactions WHERE session_id = ? AND type != "void" GROUP BY payment_method', [session_id]);
-
-        await db.query(
-            'INSERT INTO cash_reports (user_id, total_cash, client_count, breakdown_json) VALUES (?, ?, ?, ?)',
-            [reqUserId, systemTotal, clientCount, JSON.stringify(methodStats)]
-        );
-
         await db.query(
             `UPDATE cash_sessions SET 
              end_time = NOW(), 
@@ -209,7 +198,7 @@ exports.closeSession = async (req, res) => {
              difference = ?,
              closing_note = ?
              WHERE id = ?`,
-            [systemTotal, end_amount_physical, difference || 0, closing_note || null, session_id]
+            [systemTotal, end_amount_physical, difference, closing_note || null, session_id]
         );
 
         res.json({ msg: 'Caja Cerrada Correctamente' });
