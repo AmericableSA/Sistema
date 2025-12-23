@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-import { API_URL } from '../service/api';
-
 const InventoryHistory = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,7 +11,7 @@ const InventoryHistory = () => {
 
     const fetchTransactions = async () => {
         try {
-            const response = await fetch(`${API_URL}/transactions`);
+            const response = await fetch('http://localhost:3001/api/transactions');
             const data = await response.json();
             setTransactions(data);
             setLoading(false);

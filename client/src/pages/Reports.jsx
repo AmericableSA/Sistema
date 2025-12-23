@@ -61,24 +61,23 @@ const CashClosingTable = styled.table`
     tr:last-child td { border-bottom: none; }
 `;
 
-import { API_URL } from '../service/api';
-
 const Reports = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [cableStats, setCableStats] = useState({ morosos: { count: 0, deuda: 0 }, retirados: 0, instalaciones_mes: 0 });
     const [dailyClosing, setDailyClosing] = useState({ ingresos: 0, egresos: 0, balance_dia: 0, por_usuario: [] });
     const [topCollectors, setTopCollectors] = useState([]);
-    const [cashHistory, setCashHistory] = useState([]);
-    const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'history'
+    const [movements, setMovements] = useState({});
+    const [orders, setOrders] = useState({ byType: [], byStatus: [] });
     const [refresh, setRefresh] = useState(0);
 
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const formatCurrency = (val) => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO' }).format(val || 0);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const apiBaseUrl = `${API_URL}/reports`;
+        const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api') + '/reports';
         const headers = { 'Authorization': `Bearer ${token}` };
 
         // Dates for Month Range
@@ -87,22 +86,22 @@ const Reports = () => {
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
         try {
-            if (activeTab === 'summary') {
-                const [statsRes, closingRes, topRes] = await Promise.all([
-                    fetch(`${apiBaseUrl}/cable-stats`, { headers }),
-                    fetch(`${apiBaseUrl}/daily-closing`, { headers }),
-                    fetch(`${apiBaseUrl}/sales-by-user?startDate=${startOfMonth}&endDate=${endOfMonth}`, { headers })
-                ]);
-                setCableStats(await statsRes.json());
-                setDailyClosing(await closingRes.json());
-                setTopCollectors(await topRes.json());
-            } else if (activeTab === 'history') {
-                const histRes = await fetch(`${apiBaseUrl}/cash-history`, { headers });
-                setCashHistory(await histRes.json());
-            }
+            const [statsRes, closingRes, topRes, moveRes, ordersRes] = await Promise.all([
+                fetch(`${apiBaseUrl}/cable-stats`, { headers }),
+                fetch(`${apiBaseUrl}/daily-closing?date=${selectedDate}`, { headers }),
+                fetch(`${apiBaseUrl}/sales-by-user?startDate=${startOfMonth}&endDate=${endOfMonth}`, { headers }),
+                fetch(`${apiBaseUrl}/movements?mode=daily&date=${selectedDate}`, { headers }),
+                fetch(`${apiBaseUrl}/orders?mode=daily&date=${selectedDate}`, { headers })
+            ]);
+
+            setCableStats(await statsRes.json());
+            setDailyClosing(await closingRes.json());
+            setTopCollectors(await topRes.json());
+            setMovements(await moveRes.json());
+            setOrders(await ordersRes.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, [refresh, activeTab]);
+    }, [refresh, selectedDate]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -116,154 +115,158 @@ const Reports = () => {
                     <TitleHeader>Reportes Operativos</TitleHeader>
                     <p style={{ margin: 0, color: '#64748b' }}>Resumen de Caja, Morosidad y Estado de Red</p>
                 </div>
-                <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FaSync /> Actualizar Datos
-                </button>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid #475569', padding: '0.5rem', borderRadius: '8px' }}
+                    />
+                    <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <FaSync /> Actualizar
+                    </button>
+                </div>
             </Header>
 
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-                <button
-                    onClick={() => setActiveTab('summary')}
-                    style={{
-                        padding: '1rem 2rem', background: activeTab === 'summary' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
-                        border: 'none', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer'
-                    }}
-                >
-                    Resumen Operativo
-                </button>
-                <button
-                    onClick={() => setActiveTab('history')}
-                    style={{
-                        padding: '1rem 2rem', background: activeTab === 'history' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
-                        border: 'none', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer'
-                    }}
-                >
-                    📜 Historial de Cajas
-                </button>
-            </div>
+            <SectionTitle>Actividad Operativa ({selectedDate})</SectionTitle>
+            <Grid>
+                <Card>
+                    <Label style={{ color: '#db2777' }}>📝 Cambios Nombre</Label>
+                    <Value style={{ color: 'white' }}>{movements.CHANGE_NAME || 0}</Value>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#9333ea' }}>📍 Traslados</Label>
+                    <Value style={{ color: 'white' }}>{movements.CHANGE_ADDRESS || 0}</Value>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#ef4444' }}>✂️ Solicitudes Baja</Label>
+                    <Value style={{ color: 'white' }}>{movements.DISCONNECT_REQ || 0}</Value>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#f59e0b' }}>⚖️ Cortes Mora</Label>
+                    <Value style={{ color: 'white' }}>{movements.DISCONNECT_MORA || 0}</Value>
+                </Card>
+            </Grid>
 
-            {activeTab === 'history' && (
-                <div className="animate-slide-up">
-                    <Card style={{ overflowX: 'auto' }}>
-                        <CashClosingTable>
-                            <thead>
-                                <tr>
-                                    <th>Fecha Cierre</th>
-                                    <th>Responsable</th>
-                                    <th>Total Sistema</th>
-                                    <th>Clientes</th>
-                                    <th className="text-right">Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading && <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>Cargando...</td></tr>}
-                                {!loading && cashHistory.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No hay cierres registrados aún.</td></tr>}
-                                {cashHistory.map((row) => (
-                                    <tr key={row.id}>
-                                        <td>{new Date(row.closing_date).toLocaleString()}</td>
-                                        <td>{row.username || 'Sistema'}</td>
-                                        <td style={{ color: '#4ade80', fontWeight: 'bold' }}>{formatCurrency(row.total_cash)}</td>
-                                        <td>{row.client_count}</td>
-                                        <td className="text-right">
-                                            <span style={{ padding: '0.3rem 0.8rem', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', fontSize: '0.85rem' }}>
-                                                CERRADO
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </CashClosingTable>
+            <SectionTitle>Órdenes de Servicio ({selectedDate})</SectionTitle>
+            <Grid>
+                <Card>
+                    <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>
+                    <Value>{orders.byStatus.reduce((acc, curr) => acc + curr.total, 0)}</Value>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Generadas en fecha</div>
+                </Card>
+                {orders.byType.map((t, i) => (
+                    <Card key={i}>
+                        <Label>{t.type}</Label>
+                        <Value style={{ fontSize: '1.5rem' }}>{t.total}</Value>
                     </Card>
-                </div>
+                ))}
+            </Grid>
+
+            {/* Existing Sections Below */}
+            <SectionTitle>Cierre de Caja ({selectedDate})</SectionTitle>
+            <Grid>
+                <Card $highlight="linear-gradient(135deg, #059669 0%, #10b981 100%)">
+                    <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos Hoy</Label>
+                    <Value>{formatCurrency(dailyClosing.ingresos)}</Value>
+                    <div style={{ color: '#d1fae5', fontSize: '0.9rem' }}>Cobrado en transacciones</div>
+                </Card>
+                <Card $highlight="linear-gradient(135deg, #dc2626 0%, #ef4444 100%)">
+                    <Label style={{ color: 'white' }}><FaExchangeAlt /> Gastos Hoy</Label>
+                    <Value>{formatCurrency(dailyClosing.egresos)}</Value>
+                    <div style={{ color: '#fecaca' }}>Pagos y Salidas</div>
+                </Card>
+                <Card>
+                    <Label><FaMoneyBillWave /> Balance Neto</Label>
+                    <Value style={{ color: dailyClosing.balance_dia >= 0 ? '#4ade80' : '#ef4444' }}>
+                        {formatCurrency(dailyClosing.balance_dia)}
+                    </Value>
+                    <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Diferencia (Caja Real)</div>
+                </Card>
+            </Grid>
+
+            {dailyClosing.por_usuario && dailyClosing.por_usuario.length > 0 && (
+                <Card style={{ marginBottom: '2rem' }}>
+                    <Label>Desglose por Cajero (Solo Hoy)</Label>
+                    <CashClosingTable>
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Total Cobrado</th>
+                                <th>% del Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {dailyClosing.por_usuario.map((u, i) => (
+                                <tr key={i}>
+                                    <td style={{ fontWeight: 'bold', color: 'white' }}>{u.username}</td>
+                                    <td style={{ color: '#4ade80', fontWeight: 'bold' }}>{formatCurrency(u.total)}</td>
+                                    <td>{((u.total / dailyClosing.ingresos) * 100).toFixed(1)}%</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </CashClosingTable>
+                </Card>
             )}
 
-            {activeTab === 'summary' && (
-                <>
+            <SectionTitle>Actividad Operativa (Hoy)</SectionTitle>
+            <Grid>
+                <Card>
+                    <Label style={{ color: '#db2777' }}>📝 Cambios Nombre</Label>
+                    <Value style={{ color: 'white' }}>{movements.CHANGE_NAME || 0}</Value>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#9333ea' }}>📍 Traslados</Label>
+                    <Value style={{ color: 'white' }}>{movements.CHANGE_ADDRESS || 0}</Value>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#ef4444' }}>✂️ Solicitudes Baja</Label>
+                    <Value style={{ color: 'white' }}>{movements.DISCONNECT_REQ || 0}</Value>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#f59e0b' }}>⚖️ Cortes Mora</Label>
+                    <Value style={{ color: 'white' }}>{movements.DISCONNECT_MORA || 0}</Value>
+                </Card>
+            </Grid>
 
-                    <SectionTitle>Mejores Colectores (Mes Actual)</SectionTitle>
-                    <Grid>
-                        {topCollectors.length > 0 ? topCollectors.map((c, i) => (
-                            <Card key={i} $highlight={i === 0 ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" : undefined}>
-                                <Label style={i === 0 ? { color: 'white' } : {}}><FaUserCheck /> {i + 1}º Lugar</Label>
-                                <Value style={i === 0 ? { color: 'white' } : { color: '#f8fafc' }}>{c.nombre_usuario || 'Desconocido'}</Value>
-                                <div style={i === 0 ? { color: '#bfdbfe' } : { color: '#94a3b8' }}>
-                                    Recaudado: <span style={{ fontWeight: 'bold' }}>{formatCurrency(c.total_vendido)}</span>
-                                </div>
-                            </Card>
-                        )) : <p style={{ color: '#94a3b8', paddingLeft: '1rem' }}>No hay datos de recaudación este mes.</p>}
-                    </Grid>
+            <SectionTitle>Órdenes de Servicio (Mes Actual)</SectionTitle>
+            <Grid>
+                <Card>
+                    <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>
+                    <Value>{orders.byStatus.reduce((acc, curr) => acc + curr.total, 0)}</Value>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Generadas este mes</div>
+                </Card>
+                {orders.byType.map((t, i) => (
+                    <Card key={i}>
+                        <Label>{t.type}</Label>
+                        <Value style={{ fontSize: '1.5rem' }}>{t.total}</Value>
+                    </Card>
+                ))}
+            </Grid>
 
-                    <SectionTitle>Cierre de Caja (Hoy)</SectionTitle>
-                    <Grid>
-                        <Card $highlight="linear-gradient(135deg, #059669 0%, #10b981 100%)">
-                            <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos Hoy</Label>
-                            <Value>{formatCurrency(dailyClosing.ingresos)}</Value>
-                            <div style={{ color: '#d1fae5', fontSize: '0.9rem' }}>Cobrado en transacciones</div>
-                        </Card>
-                        <Card $highlight="linear-gradient(135deg, #dc2626 0%, #ef4444 100%)">
-                            <Label style={{ color: 'white' }}><FaExchangeAlt /> Gastos Hoy</Label>
-                            <Value>{formatCurrency(dailyClosing.egresos)}</Value>
-                            <div style={{ color: '#fecaca' }}>Pagos y Salidas</div>
-                        </Card>
-                        <Card>
-                            <Label><FaMoneyBillWave /> Balance Neto</Label>
-                            <Value style={{ color: dailyClosing.balance_dia >= 0 ? '#4ade80' : '#ef4444' }}>
-                                {formatCurrency(dailyClosing.balance_dia)}
-                            </Value>
-                            <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Diferencia (Caja Real)</div>
-                        </Card>
-                    </Grid>
-
-                    {dailyClosing.por_usuario && dailyClosing.por_usuario.length > 0 && (
-                        <Card style={{ marginBottom: '2rem' }}>
-                            <Label>Desglose por Cajero (Solo Hoy)</Label>
-                            <CashClosingTable>
-                                <thead>
-                                    <tr>
-                                        <th>Usuario</th>
-                                        <th>Total Cobrado</th>
-                                        <th>% del Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {dailyClosing.por_usuario.map((u, i) => (
-                                        <tr key={i}>
-                                            <td style={{ fontWeight: 'bold', color: 'white' }}>{u.username}</td>
-                                            <td style={{ color: '#4ade80', fontWeight: 'bold' }}>{formatCurrency(u.total)}</td>
-                                            <td>{((u.total / dailyClosing.ingresos) * 100).toFixed(1)}%</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </CashClosingTable>
-                        </Card>
-                    )}
-
-                    <SectionTitle>Estado de Cartera de Clientes</SectionTitle>
-                    <Grid>
-                        <Card>
-                            <Label style={{ color: '#ef4444' }}><FaUserTimes /> Morosos (Vencidos)</Label>
-                            <Value style={{ color: '#ef4444' }}>{cableStats.morosos.count}</Value>
-                            <div style={{ color: '#94a3b8' }}>Deuda: <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(cableStats.morosos.deuda)}</span></div>
-                        </Card>
-                        <Card>
-                            <Label style={{ color: '#f59e0b' }}><FaUserTimes /> Cortados</Label>
-                            <Value style={{ color: '#f59e0b' }}>{cableStats.suspendidos}</Value>
-                            <div style={{ color: '#94a3b8' }}>Servicio suspendido</div>
-                        </Card>
-                        <Card>
-                            <Label style={{ color: '#64748b' }}><FaUserCheck /> Total Clientes</Label>
-                            <Value style={{ color: 'white' }}>{cableStats.total_clientes}</Value>
-                            <div style={{ color: '#94a3b8' }}>Base instalada total</div>
-                        </Card>
-                        <Card>
-                            <Label style={{ color: '#3b82f6' }}><FaUserCheck /> Nuevas (Mes)</Label>
-                            <Value style={{ color: '#3b82f6' }}>{cableStats.instalaciones_mes}</Value>
-                            <div style={{ color: '#94a3b8' }}>Instalaciones del mes</div>
-                        </Card>
-                    </Grid>
-
-                </>
-            )}
+            <SectionTitle>Estado de Cartera de Clientes</SectionTitle>
+            <Grid>
+                <Card>
+                    <Label style={{ color: '#ef4444' }}><FaUserTimes /> Cortados por Mora</Label>
+                    <Value style={{ color: '#ef4444' }}>{cableStats.morosos.count}</Value>
+                    <div style={{ color: '#94a3b8' }}>Deuda: <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(cableStats.morosos.deuda)}</span></div>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#f59e0b' }}><FaUserTimes /> Cortado a solicitud del cliente</Label>
+                    <Value style={{ color: '#f59e0b' }}>{cableStats.suspendidos}</Value>
+                    <div style={{ color: '#94a3b8' }}>Servicio suspendido</div>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#64748b' }}><FaUserCheck /> Total Clientes</Label>
+                    <Value style={{ color: 'white' }}>{cableStats.total_clientes}</Value>
+                    <div style={{ color: '#94a3b8' }}>Base instalada total</div>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#3b82f6' }}><FaUserCheck /> Nuevas (Mes)</Label>
+                    <Value style={{ color: '#3b82f6' }}>{cableStats.instalaciones_mes}</Value>
+                    <div style={{ color: '#94a3b8' }}>Instalaciones del mes</div>
+                </Card>
+            </Grid>
 
         </PageWrapper>
     );

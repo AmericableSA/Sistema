@@ -10,8 +10,6 @@ import ZoneModal from '../components/ZoneModal'; // @ts-ignore
 import BulkUploadModal from '../components/BulkUploadModal';
 import { useAuth } from '../context/AuthContext';
 
-import { API_URL } from '../service/api';
-
 const Clients = () => {
     // Data State
     const [clients, setClients] = useState([]);
@@ -66,7 +64,7 @@ const Clients = () => {
             });
 
             // Added cache: 'no-store' to prevent browser caching issues
-            const res = await fetch(`${API_URL}/clients?${params.toString()}`, { cache: 'no-store' });
+            const res = await fetch(`http://localhost:3001/api/clients?${params.toString()}`, { cache: 'no-store' });
 
             if (!res.ok) throw new Error('Error en el servidor');
 
@@ -102,7 +100,7 @@ const Clients = () => {
     const confirmDeleteAction = async () => {
         if (!confirmDelete.id) return;
         try {
-            await fetch(`${API_URL}/clients/${confirmDelete.id}`, { method: 'DELETE' });
+            await fetch(`http://localhost:3001/api/clients/${confirmDelete.id}`, { method: 'DELETE' });
             fetchClients(currentPage);
             setAlert({ show: true, type: 'success', title: 'Eliminado', message: 'Cliente eliminado correctamente.' });
         } catch (err) {
@@ -298,8 +296,8 @@ const Clients = () => {
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                                            <button onClick={() => { setSelectedClient(c); setShowHistory(true); }} className="btn-icon" style={{ flex: '0 0 auto', width: '40px', background: 'rgba(255,255,255,0.05)' }} title="Historial">
-                                                🕒
+                                            <button onClick={() => { setSelectedClient(c); setShowHistory(true); }} className="btn-secondary" style={{ flex: '0 0 auto', padding: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)' }} title="Ver Historial Completo">
+                                                🕒 Historial
                                             </button>
                                             <button onClick={() => { setSelectedClient(c); setShowModal(true); }} className="btn-dark-glow" style={{ flex: 1, padding: '0.5rem' }}>
                                                 Editar

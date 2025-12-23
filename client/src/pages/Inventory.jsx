@@ -3,14 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ProductModal from '../components/ProductModal';
 // @ts-ignore
+// @ts-ignore
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 // @ts-ignore
 import CustomAlert from '../components/CustomAlert';
-import ProviderManagerModal from '../components/ProviderManagerModal';
 import ComboManagerModal from '../components/ComboManagerModal';
 import InventoryHistoryModal from '../components/InventoryHistoryModal';
-
-import { API_URL } from '../service/api';
 
 const Inventory = () => {
     const [products, setProducts] = useState([]);
@@ -25,13 +23,12 @@ const Inventory = () => {
     const [stockProduct, setStockProduct] = useState(null);
 
     // New Managers State
-    const [showProviderManager, setShowProviderManager] = useState(false);
     const [showComboManager, setShowComboManager] = useState(false);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
 
     const fetchProducts = async () => {
         try {
-            const response = await fetch(`${API_URL}/products`);
+            const response = await fetch('http://localhost:3001/api/products');
             const data = await response.json();
             setProducts(data);
             setLoading(false);
@@ -71,7 +68,7 @@ const Inventory = () => {
             action: async () => {
                 setConfirm({ show: false, message: '', action: null });
                 try {
-                    const res = await fetch(`${API_URL}/products/${product.id}`, { method: 'DELETE' });
+                    const res = await fetch(`http://localhost:3001/api/products/${product.id}`, { method: 'DELETE' });
                     if (res.ok) {
                         fetchProducts();
                         setAlert({ show: true, type: 'success', title: 'Eliminado', message: 'Producto eliminado.' });
@@ -107,9 +104,6 @@ const Inventory = () => {
                     <button className="btn-dark-glow" onClick={() => setShowComboManager(true)} style={{ background: 'rgba(124, 58, 237, 0.1)', border: '1px solid rgba(124, 58, 237, 0.3)', color: '#a78bfa' }}>
                         Administrar Combos
                     </button>
-                    <button className="btn-dark-glow" onClick={() => setShowProviderManager(true)} style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                        Proveedores
-                    </button>
                     <button className="btn-dark-glow" onClick={() => setShowHistoryModal(true)} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
                         Historial
                     </button>
@@ -142,7 +136,7 @@ const Inventory = () => {
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>SKU</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>Producto</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>Tipo</th>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Stock</th>
+                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Cantidad</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Precio</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'center' }}>Acciones</th>
                             </tr>
@@ -253,10 +247,7 @@ const Inventory = () => {
                 )
             }
 
-            {/* PROVIDER MANAGER MODAL */}
-            {showProviderManager && (
-                <ProviderManagerModal onClose={() => setShowProviderManager(false)} />
-            )}
+            {/* PROVIDER MANAGER MODAL REMOVED */}
 
             {/* COMBO MANAGER MODAL */}
             {showComboManager && (

@@ -7,8 +7,6 @@ import BillingModal from '../components/BillingModal';
 import CustomAlert from '../components/CustomAlert';
 import ReceiptSettingsModal from '../components/ReceiptSettingsModal';
 
-import { API_URL } from '../service/api';
-
 const Billing = () => {
     // Data State
     const [clients, setClients] = useState([]);
@@ -28,6 +26,11 @@ const Billing = () => {
     // Refresh Logic
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const limit = 30; // User requested 30
+
     const [isSessionOpen, setIsSessionOpen] = useState(false);
     // View Mode: 'SEARCH' | 'HISTORY' | 'MOVEMENT_IN' | 'MOVEMENT_OUT'
     const [viewMode, setViewMode] = useState('SEARCH');
@@ -36,6 +39,7 @@ const Billing = () => {
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search);
+            setPage(1); // Reset to page 1 on search
         }, 500);
         return () => clearTimeout(timer);
     }, [search]);
@@ -48,18 +52,19 @@ const Billing = () => {
             setLoading(true);
             try {
                 const params = new URLSearchParams({
-                    page: 1,
-                    limit: 50, // Limit results for billing search
+                    page: page,
+                    limit: limit,
                     search: debouncedSearch,
                     start_letter: letterFilter,
-                    status: 'all' // Show all statuses so we can bill anyone
+                    status: 'all'
                 });
 
-                const res = await fetch(`${API_URL}/clients?${params.toString()}`, { cache: 'no-store' });
+                const res = await fetch(`http://localhost:3001/api/clients?${params.toString()}`, { cache: 'no-store' });
                 const data = await res.json();
 
                 if (data.clients) {
                     setClients(data.clients);
+                    setTotalPages(data.totalPages || 1);
                 } else {
                     setClients([]);
                 }
@@ -73,6 +78,30 @@ const Billing = () => {
 
         fetchClients();
     }, [debouncedSearch, letterFilter, isSessionOpen, viewMode, refreshTrigger]);
+
+    const handleRequestVisit = async (client) => {
+        // Simple manual prompt for now, can be upgraded to modal
+        // eslint-disable-next-line no-restricted-globals
+        const reason = prompt(`Ingrese el motivo de la visita para ${client.full_name}:`);
+        if (!reason) return;
+
+        try {
+            const res = await fetch(`http://localhost:3001/api/clients/${client.id}/manual-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'REPAIR', description: reason })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setAlert({ show: true, type: 'success', title: 'Visita Solicitada', message: 'Orden de servicio creada exitosamente.' });
+            } else {
+                setAlert({ show: true, type: 'error', title: 'Error', message: data.msg || 'Error al crear orden.' });
+            }
+        } catch (err) {
+            console.error(err);
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'Fallo de conexión.' });
+        }
+    };
 
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
@@ -159,7 +188,7 @@ const Billing = () => {
                     </div>
 
                     {/* 3. RESULTS GRID (Optimized for Billing) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
                         {loading && <div style={{ color: 'white', gridColumn: '1/-1', textAlign: 'center' }}>Buscando...</div>}
 
                         {!loading && clients.length === 0 && (
@@ -187,9 +216,39 @@ const Billing = () => {
                                 >
                                     💲 REALIZAR COBRO
                                 </button>
+                                <button
+                                    onClick={() => handleRequestVisit(c)}
+                                    className="btn-secondary-glow"
+                                    style={{ width: '100%', marginTop: '0.5rem', color: '#60a5fa', borderColor: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', justifyContent: 'center' }}
+                                >
+                                    🛠️ SOLICITAR VISITA
+                                </button>
                             </div>
                         ))}
                     </div>
+
+                    {/* PAGINATION CONTROLS */}
+                    {!loading && totalPages > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem', paddingBottom: '2rem' }}>
+                            <button
+                                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                                disabled={page === 1}
+                                className="btn-secondary"
+                            >
+                                ⬅ Anterior
+                            </button>
+                            <span style={{ display: 'flex', alignItems: 'center', color: '#94a3b8' }}>
+                                Página <strong style={{ color: 'white', margin: '0 0.5rem' }}>{page}</strong> de {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={page === totalPages}
+                                className="btn-secondary"
+                            >
+                                Siguiente ➡
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
 
