@@ -247,7 +247,8 @@ exports.getServiceOrdersReport = async (req, res) => {
         if (list) {
             let query = `
                 SELECT so.id, so.created_at, so.type, so.status, so.technician_notes as description,
-                       c.full_name as client_name, c.id as client_id
+                       c.full_name as client_name, c.id as client_id,
+                       c.address_street, c.contract_number, c.status as client_status
                 FROM service_orders so
                 LEFT JOIN clients c ON so.client_id = c.id
             `;

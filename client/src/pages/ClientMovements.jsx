@@ -330,14 +330,18 @@ const ClientMovements = () => {
                                         <td style={{ padding: '1rem' }}>
                                             <button
                                                 onClick={() => {
-                                                    // Quick navigation to manage client
-                                                    const client = { id: order.client_id, full_name: order.client_name, status: 'active', address_street: '...' }; // Partial data
-                                                    // Since we need full client data, we might need to fetch it or just go to search.
-                                                    // For now, let's keep it simple: Just view.
-                                                    // Or better: Allow changing status right here if we had the function exposed.
+                                                    const clientToManage = {
+                                                        id: order.client_id,
+                                                        full_name: order.client_name,
+                                                        status: order.client_status || 'active', // Fallback
+                                                        address_street: order.address_street || '',
+                                                        contract_number: order.contract_number || ''
+                                                    };
+                                                    handleSelectClient(clientToManage);
+                                                    setViewMode('SEARCH'); // Switch to Management View
                                                 }}
-                                                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#60a5fa' }}
-                                                title="Gestionar"
+                                                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#60a5fa', fontSize: '1.2rem' }}
+                                                title="Gestionar Cliente"
                                             >
                                                 ➡️
                                             </button>
