@@ -220,6 +220,12 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
         const amt = parseFloat(enteredAmount || 0);
         if (amt <= 0) return setAlert({ show: true, type: 'error', title: 'Monto Inválido', message: 'El monto debe ser > 0.' });
 
+        // Validate Payment
+        const received = parseFloat(receivedAmount || 0);
+        if (received < calculatedTotal) {
+            return setAlert({ show: true, type: 'warning', title: 'Monto Insuficiente', message: `El cliente debe pagar al menos C$ ${calculatedTotal.toFixed(2)}` });
+        }
+
         if (needsJustification && !justification.trim()) {
             return setAlert({ show: true, type: 'warning', title: 'Falta Justificación', message: 'Has modificado el precio o la mora. Justifica el cambio.' });
         }
@@ -252,7 +258,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
             reference_id: manualInvoiceNo || reference,
             items: cart.map(i => ({ product_id: i.id, quantity: i.quantity, price: i.price, name: i.name })),
             details_json: details,
-            collector_id: selectedCollector || null, // If cashier selects a specific collector for commission
+            collector_id: selectedCollector || user?.id, // Default to current user if none selected
             current_user_id: user?.id // WHO is actually processing the payment (The Logged In User)
         };
 
@@ -263,15 +269,12 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
             const data = await res.json();
 
             if (res.ok) {
-                setLastTransaction({
-                    transactionId: data.transactionId,
-                    client_name: client.full_name,
-                    contract_number: client.contract_number,
-                    amount: enteredAmount,
-                    description: description,
-                    items: cart
-                });
-                setShowReceipt(true);
+                // Success - Show Alert instead of Receipt
+                setAlert({ show: true, type: 'success', title: 'Cobrado con Éxito', message: 'La transacción ha sido registrada correctamente.' });
+                // Reset fields
+                setCart([]);
+                setReceivedAmount('');
+                setManualInvoiceNo('');
             } else {
                 setAlert({ show: true, type: 'error', title: 'Error', message: data.msg });
             }
@@ -502,9 +505,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
 
                         <button
                             onClick={handlePay}
-                            disabled={!receivedAmount || parseFloat(receivedAmount) < calculatedTotal}
+                            // disabled removed to allow validation clicks
                             className="btn-primary-glow"
-                            style={{ marginTop: 'auto', padding: '1.2rem', fontSize: '1.1rem', opacity: (!receivedAmount || parseFloat(receivedAmount) < calculatedTotal) ? 0.5 : 1 }}
+                            style={{ marginTop: 'auto', padding: '1.2rem', fontSize: '1.1rem' }}
                         >
                             💰 REALIZAR PAGO
                         </button>
