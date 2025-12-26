@@ -366,7 +366,7 @@ exports.getServiceOrders = async (req, res) => {
 exports.getClientTransactions = async (req, res) => {
     try {
         const [txs] = await db.query(`
-            SELECT t.id, t.amount, t.months_paid, t.created_at, t.reference_id, t.description, t.type,
+            SELECT t.id, t.amount, t.details_json, t.created_at, t.reference_id, t.description, t.type,
                    u.username as collector_username
             FROM transactions t
             LEFT JOIN users u ON t.user_id = u.id

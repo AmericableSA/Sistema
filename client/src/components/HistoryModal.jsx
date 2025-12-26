@@ -20,7 +20,13 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
             fetch(url)
                 .then(res => res.json())
                 .then(resData => {
-                    setData(resData);
+                    // Safety Check: Ensure array
+                    if (Array.isArray(resData)) {
+                        setData(resData);
+                    } else {
+                        console.error("Expected array but got:", resData);
+                        setData([]);
+                    }
                     setLoading(false);
                 })
                 .catch(err => {
@@ -117,16 +123,26 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                             </thead>
                             <tbody>
                                 {data.length === 0 && <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center' }}>No hay facturas registradas.</td></tr>}
-                                {data.map((tx, idx) => (
-                                    <tr key={tx.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <td style={{ padding: '0.75rem' }}>{new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}</td>
-                                        <td style={{ padding: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>{tx.reference_id || 'S/N'}</td>
-                                        <td style={{ padding: '0.75rem' }}>{tx.type === 'monthly_fee' ? 'Mensualidad' : tx.type}</td>
-                                        <td style={{ padding: '0.75rem' }}>{tx.description}</td>
-                                        <td style={{ padding: '0.75rem', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>C$ {parseFloat(tx.amount).toFixed(2)}</td>
-                                        <td style={{ padding: '0.75rem', fontSize: '0.9rem', color: '#94a3b8' }}>{tx.collector_username || 'Sistema'}</td>
-                                    </tr>
-                                ))}
+                                {data.map((tx, idx) => {
+                                    // Parse months if available
+                                    let months = '1';
+                                    if (tx.details_json) {
+                                        try { const sc = typeof tx.details_json === 'string' ? JSON.parse(tx.details_json) : tx.details_json; months = sc.months_paid || '1'; } catch (e) { }
+                                    }
+                                    return (
+                                        <tr key={tx.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <td style={{ padding: '0.75rem' }}>{new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}</td>
+                                            <td style={{ padding: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>{tx.reference_id || 'S/N'}</td>
+                                            <td style={{ padding: '0.75rem' }}>{tx.type === 'monthly_fee' ? 'Mensualidad' : tx.type}</td>
+                                            <td style={{ padding: '0.75rem' }}>
+                                                <div>{tx.description}</div>
+                                                <div style={{ fontSize: '0.8em', color: '#64748b' }}>({months} Meses)</div>
+                                            </td>
+                                            <td style={{ padding: '0.75rem', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>C$ {parseFloat(tx.amount).toFixed(2)}</td>
+                                            <td style={{ padding: '0.75rem', fontSize: '0.9rem', color: '#94a3b8' }}>{tx.collector_username || 'Sistema'}</td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     )}
