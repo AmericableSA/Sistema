@@ -440,7 +440,8 @@ exports.createManualServiceOrder = async (req, res) => {
 
 exports.getTechnicians = async (req, res) => {
     try {
-        const [techs] = await db.query("SELECT id, full_name, username FROM users WHERE role IN ('technician', 'admin')");
+        // User requested ONLY 'technician' or 'collector' in this list (removing admin)
+        const [techs] = await db.query("SELECT id, full_name, username FROM users WHERE role IN ('technician', 'collector')");
         res.json(techs);
     } catch (err) {
         console.error(err);
