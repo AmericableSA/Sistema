@@ -512,9 +512,15 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
                 </div>
             </div>
 
-            {/* Nested Modals */}
-            <CustomAlert isOpen={alert.show} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, show: false })} />
-            {showReceipt && <ReceiptModal transaction={lastTransaction} onClose={() => { onClose(); onPaymentSuccess(); }} autoPrint={false} />}
+            {/* Receipt Modal Removed as per user request */}
+            {/* Success Alert is handled via 'alert' state */}
+            <CustomAlert isOpen={alert.show} title={alert.title} message={alert.message} type={alert.type} onClose={() => {
+                setAlert({ ...alert, show: false });
+                if (alert.type === 'success') {
+                    onClose();
+                    onPaymentSuccess();
+                }
+            }} />
         </div>
     );
 };
