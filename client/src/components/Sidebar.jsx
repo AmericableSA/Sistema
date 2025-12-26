@@ -47,13 +47,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                     Menú
                 </Link>
 
-                {hasRole(['admin', 'office', 'collector']) && (
+                {hasRole(['admin', 'office', 'oficina', 'collector']) && (
                     <Link to="/billing" style={getStyle('/billing')} onClick={onClose}>
                         Facturación / Caja
                     </Link>
                 )}
 
-                {hasRole(['admin', 'office', 'technician']) && (
+                {hasRole(['admin', 'office', 'oficina', 'technician']) && (
                     <Link to="/clients" style={getStyle('/clients')} onClick={onClose}>
                         Clientes
                     </Link>

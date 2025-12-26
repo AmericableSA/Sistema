@@ -128,7 +128,7 @@ exports.createTransaction = async (req, res) => {
         // Check: Is it MY session or am I ADMIN?
         // Note: For "Charging", usually we allow charging to the OPEN session if valid, 
         // but strict request says "only who opened it".
-        if (session.user_id !== reqUserId && userRole !== 'admin') {
+        if (session.user_id !== reqUserId && userRole !== 'admin' && userRole !== 'oficina' && userRole !== 'office') {
             await conn.rollback();
             return res.status(403).json({ msg: 'No puedes cobrar en esta caja. Pertenece a otro usuario.' });
         }

@@ -39,6 +39,10 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
     const [justification, setJustification] = useState('');
     const [description, setDescription] = useState('');
 
+    // New Features
+    const [isPromo2x1, setIsPromo2x1] = useState(false);
+    const [manualInvoiceNo, setManualInvoiceNo] = useState('');
+
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
 
     // Receipt
@@ -95,7 +99,26 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
         }
         else if (type === 'monthly_fee' && clientStatus) {
             const rate = parseFloat(clientStatus.client.zone_tariff || client.zone_tariff || 0);
-            total += (monthsToPay * rate);
+
+
+            // 2x1 Logic: If active, we charge for (monthsToPay / 2). 
+            // Simplified Rule: User pays for 1 month but gets 2.
+            // Requirement from User: "se cobrara normal 1 mes pero se le facturaran 2"
+            // So if isPromo2x1 is TRUE, we force calculation to be based on monthsToPay - 1? 
+            // Or simpler: We calculate price as floor(monthsToPay / 2) + remainder? 
+            // Or strictly: if 2x1 is checked, we assume user picked "2 months" but we charge "1 month".
+
+            let billableMonths = monthsToPay;
+            if (isPromo2x1 && monthsToPay >= 2) {
+                // For every 2 months, pay 1. (e.g. 2->1, 4->2).
+                // User specific request: "pay 1 month but 2 are billed".
+                // We will simply deduct half the months from calculation if even?
+                // Let's stick to the specific "2x1" scenario.
+                // If isPromo2x1 is ON, we assume it applies to the pair.
+                billableMonths = Math.ceil(monthsToPay / 2);
+            }
+
+            total += (billableMonths * rate);
 
             if (clientStatus.client.last_paid_month) {
                 const startParams = new Date(clientStatus.client.last_paid_month);
@@ -129,7 +152,14 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
         else setEnteredAmount(total.toFixed(2));
 
         setDescription(desc);
-    }, [type, selectedPlanId, cart, plans, clientStatus, monthsToPay, applyMora, manualMoraAmount]);
+    }, [type, selectedPlanId, cart, plans, clientStatus, monthsToPay, applyMora, manualMoraAmount, isPromo2x1]);
+
+    // Update Description when 2x1 toggles
+    useEffect(() => {
+        if (type === 'monthly_fee' && isPromo2x1) {
+            setDescription(`Mensualidad: 2x1 Promoción (${monthsToPay} Meses)`);
+        }
+    }, [isPromo2x1, monthsToPay]);
 
 
     // ... [Mora Update Effect remains same] ...
@@ -203,7 +233,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
         const details = { months_paid: 0, mora_paid: 0 };
         if (type === 'monthly_fee' && clientStatus) {
             if (applyMora) details.mora_paid = manualMoraAmount;
+
             details.months_paid = monthsToPay;
+            if (isPromo2x1) details.promo = '2x1_APPLIED';
         }
         if (type === 'reconnection') {
             details.reconnection_paid = true;
@@ -212,8 +244,8 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
         const payload = {
             client_id: client.id, type, amount: enteredAmount, payment_method: paymentMethod,
             description, service_plan_id: selectedPlanId || null,
-            justification: needsJustification ? justification : null,
-            reference_id: reference,
+            justification: (needsJustification || isPromo2x1) ? (justification || (isPromo2x1 ? "Promoción 2x1 Aplicada" : null)) : null,
+            reference_id: manualInvoiceNo || reference,
             items: cart.map(i => ({ product_id: i.id, quantity: i.quantity, price: i.price, name: i.name })),
             details_json: details,
             collector_id: selectedCollector || null, // If cashier selects a specific collector for commission
@@ -300,6 +332,18 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
                             )}
                         </div>
 
+                        {/* Manual Invoice Number */}
+                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px', marginTop: '1rem' }}>
+                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem' }}>No. Factura Manual (Opcional)</label>
+                            <input
+                                type="text"
+                                className="input-dark"
+                                placeholder="Ej: 001523"
+                                value={manualInvoiceNo}
+                                onChange={e => setManualInvoiceNo(e.target.value)}
+                            />
+                        </div>
+
                         {/* Dynamic Fields based on Type */}
                         {type === 'monthly_fee' && (
                             <div className="flex-col animate-slide-up" style={{ background: 'rgba(59, 130, 246, 0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
@@ -313,6 +357,22 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
                                 </div>
                                 <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.5rem', textAlign: 'right' }}>
                                     Cobertura: <span style={{ color: '#fff' }}>{coverageText}</span>
+                                </div>
+
+                                {/* 2x1 Promo Checkbox */}
+                                <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                                    <label className="flex-center" style={{ gap: '0.5rem', cursor: 'pointer', color: '#fcd34d' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isPromo2x1}
+                                            onChange={e => {
+                                                setIsPromo2x1(e.target.checked);
+                                                if (e.target.checked && monthsToPay < 2) setMonthsToPay(2); // Auto set to 2
+                                            }}
+                                            style={{ transform: 'scale(1.2)' }}
+                                        />
+                                        <strong>🔥 Promoción 2x1</strong>
+                                    </label>
                                 </div>
 
                                 {/* Mora Control */}
@@ -450,7 +510,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
 
             {/* Nested Modals */}
             <CustomAlert isOpen={alert.show} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, show: false })} />
-            {showReceipt && <ReceiptModal transaction={lastTransaction} onClose={() => { onClose(); onPaymentSuccess(); }} autoPrint={true} />}
+            {showReceipt && <ReceiptModal transaction={lastTransaction} onClose={() => { onClose(); onPaymentSuccess(); }} autoPrint={false} />}
         </div>
     );
 };
