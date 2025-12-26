@@ -94,25 +94,38 @@ exports.deleteUser = async (req, res) => {
         if (admins.length > 0) {
             inheritId = admins[0].id;
         } else {
-            // Extreme case: Deleting the only admin? Should be prevented on frontend, but backend check:
-            // Just for safety, if no other admin, maybe we can't delete? 
-            // Or we assume ID 1 is safe if it exists and isn't us.
-            // Let's fallback to setting NULL if schema permits, otherwise error.
-            // But usually there is at least 'Waskar'.
+            // Fallback: If no other admin found, try to find ANY active user (e.g. office) 
+            // to prevent data loss or FK errors if we can't delete.
+            const [others] = await db.query(`SELECT id FROM users WHERE is_active = 1 AND id != ? LIMIT 1`, [id]);
+            if (others.length > 0) inheritId = others[0].id;
         }
 
         if (inheritId) {
             // 2. Reassign History
             await db.query(`UPDATE client_logs SET user_id = ? WHERE user_id = ?`, [inheritId, id]);
             await db.query(`UPDATE clients SET preferred_collector_id = ? WHERE preferred_collector_id = ?`, [inheritId, id]);
-            // Check if transactions table exists/has collector_id (Yes it does based on reportController)
             await db.query(`UPDATE transactions SET collector_id = ? WHERE collector_id = ?`, [inheritId, id]);
+
+            // Reassign Service Orders (Tech & Creator)
+            // Use IGNORE in case there are weird constraints, but theoretically safe updates
+            await db.query(`UPDATE service_orders SET assigned_tech_id = ? WHERE assigned_tech_id = ?`, [inheritId, id]);
+            try {
+                // Might fail if column doesn't exist in some versions, but confirmed exists in current code
+                await db.query(`UPDATE service_orders SET created_by_user_id = ? WHERE created_by_user_id = ?`, [inheritId, id]);
+            } catch (e) { console.log("Warning: Could not update created_by_user_id", e.message); }
+
+            // Reassign Cash Sessions
+            await db.query(`UPDATE cash_sessions SET user_id = ? WHERE user_id = ?`, [inheritId, id]);
+
         } else {
-            // If no one to inherit, we might have issues if columns are NOT NULL. 
-            // Attempting setting to NULL for nullable fields.
-            await db.query(`UPDATE client_logs SET user_id = NULL WHERE user_id = ?`, [id]); // Logs usually require user, might fail if NOT NULL
+            // If no one to inherit (Deleting the LAST user?), we try setting to NULL.
+            // This will fail if columns are NOT NULL.
+            await db.query(`UPDATE client_logs SET user_id = NULL WHERE user_id = ?`, [id]);
             await db.query(`UPDATE clients SET preferred_collector_id = NULL WHERE preferred_collector_id = ?`, [id]);
             await db.query(`UPDATE transactions SET collector_id = NULL WHERE collector_id = ?`, [id]);
+            await db.query(`UPDATE service_orders SET assigned_tech_id = NULL WHERE assigned_tech_id = ?`, [id]);
+            try { await db.query(`UPDATE service_orders SET created_by_user_id = NULL WHERE created_by_user_id = ?`, [id]); } catch (e) { }
+            await db.query(`UPDATE cash_sessions SET user_id = NULL WHERE user_id = ?`, [id]);
         }
 
         // 3. Delete
@@ -121,10 +134,10 @@ exports.deleteUser = async (req, res) => {
         res.json({ msg: 'Usuario eliminado permanentemente (Su historial fue transferido al Admin).' });
 
     } catch (err) {
-        console.error(err);
+        console.error("Delete User Error:", err);
         if (err.code === 'ER_ROW_IS_REFERENCED_2') {
-            return res.status(400).json({ msg: 'No se pudo reasignar el historial. (Error FK)' });
+            return res.status(400).json({ msg: 'No se pudo eliminar: El usuario tiene registros vinculados que no se pudieron reasignar (Foreign Key Error).' });
         }
-        res.status(500).send('Server Error');
+        res.status(500).send('Server Error: ' + err.message);
     }
 };

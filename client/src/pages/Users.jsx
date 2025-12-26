@@ -67,14 +67,22 @@ const Users = () => {
         try {
             const token = localStorage.getItem('token');
             const apiUrl = import.meta.env.VITE_API_URL || '/api';
-            await fetch(`${apiUrl}/users/${id}`, {
+            const res = await fetch(`${apiUrl}/users/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            fetchUsers();
-            setAlert({ show: true, type: 'success', title: 'Eliminado', message: 'Usuario eliminado.' });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                fetchUsers();
+                setAlert({ show: true, type: 'success', title: 'Eliminado', message: data.msg || 'Usuario eliminado.' });
+            } else {
+                setAlert({ show: true, type: 'error', title: 'Error', message: data.msg || 'No se pudo eliminar.' });
+            }
+
         } catch (err) {
-            setAlert({ show: true, type: 'error', title: 'Error', message: 'No se pudo eliminar.' });
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'Error de conexión o servidor.' });
         } finally {
             setConfirmDelete({ show: false, id: null });
         }
