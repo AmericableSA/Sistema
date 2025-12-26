@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import CustomAlert from './CustomAlert';
 
 const UserModal = ({ user, onClose, onSave }) => {
@@ -69,7 +70,7 @@ const UserModal = ({ user, onClose, onSave }) => {
         }
     };
 
-    return (
+    return ReactDOM.createPortal(
         <div className="modal-overlay">
             <div className="glass-card" style={{
                 width: '100%', maxWidth: '600px',
@@ -169,7 +170,8 @@ const UserModal = ({ user, onClose, onSave }) => {
                 </form>
             </div>
             <CustomAlert isOpen={alertInfo.show} title={alertInfo.title} message={alertInfo.message} type={alertInfo.type} onClose={() => setAlertInfo({ ...alertInfo, show: false })} />
-        </div>
+        </div>,
+        document.body
     );
 };
 

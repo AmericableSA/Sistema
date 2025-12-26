@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 
 const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onCancel, inputPlaceholder = '' }) => {
     const [inputValue, setInputValue] = useState('');
@@ -9,7 +10,7 @@ const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onC
 
     if (!isOpen) return null;
 
-    return (
+    return ReactDOM.createPortal(
         <div style={{
             position: 'fixed', inset: 0, zIndex: 10000,
             background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
@@ -54,7 +55,8 @@ const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onC
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

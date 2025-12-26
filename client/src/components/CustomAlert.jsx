@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 
 const CustomAlert = ({ isOpen, title, message, type = 'info', onClose, onConfirm, showCancel = false }) => {
     if (!isOpen) return null;
@@ -39,12 +40,11 @@ const CustomAlert = ({ isOpen, title, message, type = 'info', onClose, onConfirm
 
     const colors = getColors();
 
-    return (
+    return ReactDOM.createPortal(
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.8)', zIndex: 2000,
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-            paddingTop: '5rem',
+            background: 'rgba(0,0,0,0.8)', zIndex: 99999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', /* Changed to center/center */
             backdropFilter: 'blur(8px)',
             animation: 'fadeIn 0.2s ease-out'
         }}>
@@ -128,7 +128,8 @@ const CustomAlert = ({ isOpen, title, message, type = 'info', onClose, onConfirm
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
