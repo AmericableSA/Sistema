@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 // @ts-ignore
 import CustomAlert from '../components/CustomAlert';
+import HistoryModal from '../components/HistoryModal';
 
 const ClientMovements = () => {
     // Data State
@@ -30,6 +31,9 @@ const ClientMovements = () => {
     const [orders, setOrders] = useState([]);
     const [techs, setTechs] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
+
+    // History Modal State
+    const [showHistory, setShowHistory] = useState(false);
 
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
 
@@ -104,6 +108,22 @@ const ClientMovements = () => {
     };
 
     const handleUpdateOrder = async (orderId, field, value) => {
+        // Validation: Prevent completing without technician
+        if (field === 'status' && value === 'COMPLETED') {
+            const order = orders.find(o => o.id === orderId);
+            const assignedTech = field === 'assigned_tech_id' ? value : order.assigned_tech_id;
+
+            if (!assignedTech) {
+                setAlert({
+                    show: true,
+                    type: 'error',
+                    title: 'Falta Técnico',
+                    message: 'Debe asignar un técnico antes de finalizar la orden.'
+                });
+                return; // Stop execution
+            }
+        }
+
         // Optimistic Update
         const oldOrders = [...orders];
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, [field]: value } : o));
@@ -111,7 +131,12 @@ const ClientMovements = () => {
         try {
             // Prepare payload
             const order = orders.find(o => o.id === orderId);
-            const payload = { ...order, [field]: value };
+            const payload = {
+                ...order,
+                [field]: value,
+                // Map to 'notes' if we are editing the new textarea, otherwise keep existing notes
+                notes: field === 'technician_notes' ? value : order.technician_notes
+            };
 
             await fetch(`/api/clients/orders/${orderId}`, {
                 method: 'PUT',
@@ -410,9 +435,14 @@ const ClientMovements = () => {
             {/* STEP 2: MOVEMENT FORM (Kept when Client Selected) */}
             {selectedClient && viewMode === 'SEARCH' && (
                 <div className="animate-entry">
-                    <button onClick={() => setSelectedClient(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        ⬅ Volver a Búsqueda
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <button onClick={() => setSelectedClient(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            ⬅ Volver a Búsqueda
+                        </button>
+                        <button onClick={() => setShowHistory(true)} className="btn-secondary" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🕒 Ver Historial
+                        </button>
+                    </div>
 
                     <div className="glass-card" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', background: '#0f172a' }}>
                         <div style={{ borderBottom: '1px solid #334155', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
@@ -515,9 +545,24 @@ const ClientMovements = () => {
                                         <span style={{ fontWeight: 'bold', color: 'white' }}>{order.type}</span>
                                         <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>{new Date(order.created_at).toLocaleDateString()}</span>
                                     </div>
-                                    {/* ADDED: DESCRIPTION DISPLAY */}
-                                    <div style={{ marginBottom: '0.5rem', color: '#e2e8f0', fontSize: '0.95rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '4px' }}>
-                                        {order.description || order.details || 'Sin detalles'}
+                                    <div style={{ marginBottom: '1rem', color: '#e2e8f0', fontSize: '0.95rem' }}>
+                                        <div>
+                                            <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Solicitud:</span>
+                                            <span style={{ marginLeft: '0.5rem' }}>{order.description || 'Sin detalles previos'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* UPDATED: EDITABLE NOTES */}
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.25rem' }}>Detalles / Notas del Técnico</label>
+                                        <textarea
+                                            className="input-dark"
+                                            rows="2"
+                                            placeholder="Detalles sobre la reparación, materiales usados..."
+                                            value={order.technician_notes || ''}
+                                            onChange={(e) => handleUpdateOrder(order.id, 'technician_notes', e.target.value)}
+                                            style={{ width: '100%', fontSize: '0.9rem' }}
+                                        />
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'center' }}>
@@ -556,6 +601,15 @@ const ClientMovements = () => {
                     </div>
 
                 </div>
+            )}
+
+            {/* HISTORY MODAL */}
+            {showHistory && selectedClient && (
+                <HistoryModal
+                    client={selectedClient}
+                    initialTab="logs"
+                    onClose={() => setShowHistory(false)}
+                />
             )}
 
             <CustomAlert
