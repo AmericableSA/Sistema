@@ -57,7 +57,21 @@ const MainMenu = () => {
     ];
 
     // Filter modules based on user role
-    const visibleModules = allModules.filter(m => hasRole(m.roles));
+    const visibleModules = allModules.filter(m => {
+        // Special restriction for 'oficinista' / 'office' / 'oficina'
+        // User requested: ONLY Clients and Billing.
+        // Even if the module config says they have access (like Reports?), we must hide others.
+        const role = user?.role;
+        const officeRoles = ['oficina', 'oficinista', 'office'];
+
+        if (officeRoles.includes(role)) {
+            // Only allow specific paths
+            const allowed = ['/clients', '/billing'];
+            return allowed.includes(m.path);
+        }
+
+        return hasRole(m.roles);
+    });
 
     return (
         <div className="animate-entry" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', paddingBottom: '6rem' }}>

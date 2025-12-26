@@ -5,6 +5,7 @@ const clientController = require('../controllers/clientController');
 router.get('/', clientController.getClients);
 router.get('/history/global', clientController.getGlobalHistory);
 router.get('/:id/history', clientController.getClientHistory);
+router.get('/:id/transactions', clientController.getClientTransactions);
 router.post('/', clientController.createClient);
 router.put('/:id', clientController.updateClient);
 router.delete('/:id', clientController.deleteClient);

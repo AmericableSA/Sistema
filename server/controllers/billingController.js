@@ -231,6 +231,14 @@ exports.createTransaction = async (req, res) => {
             await conn.query("UPDATE clients SET status = 'active', reconnection_date = NOW() WHERE id = ?", [client_id]);
         }
 
+        // HISTORY LOGGING (Requirement: "que se asocie al historial")
+        // We log the payment so it appears in the Client Timeline
+        const logDetails = `Pago Registrado. Factura: #${req.body.reference_id || 'S/N'}. Meses: ${details_json.months_paid || 0}. Total: ${amount}.`;
+        await conn.query(
+            'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
+            [client_id, reqUserId, 'PAYMENT', logDetails]
+        );
+
         await conn.commit();
         res.json({ msg: 'Cobro registrado exitosamente', transactionId });
 
@@ -281,10 +289,10 @@ exports.getDailyTransactions = async (req, res) => {
         // Search (Client Name or Description)
         if (search) {
             const likeTerm = `%${search}%`;
-            querySales += ' AND (t.description LIKE ? OR c.full_name LIKE ? OR c.id LIKE ?)';
+            querySales += ' AND (t.description LIKE ? OR c.full_name LIKE ? OR c.id LIKE ? OR t.reference_id LIKE ?)';
             queryMoves += ' AND (description LIKE ? OR id LIKE ?)'; // Moves don't have client name
             // Add params twice for sales (desc, name) - wait, query uses 3 ?
-            paramsSales.push(likeTerm, likeTerm, likeTerm);
+            paramsSales.push(likeTerm, likeTerm, likeTerm, likeTerm);
             paramsMoves.push(likeTerm, likeTerm);
         }
 

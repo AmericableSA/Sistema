@@ -346,20 +346,37 @@ exports.deleteClient = async (req, res) => {
 
 // --- SERVICE ORDERS ---
 
+// --- Service Orders (Existing) ---
 exports.getServiceOrders = async (req, res) => {
-    const { id } = req.params; // client id
     try {
         const [orders] = await db.query(`
-            SELECT so.*, u.full_name as tech_name 
+            SELECT so.*, u.username as tech_name, u.full_name as tech_full_name
             FROM service_orders so
             LEFT JOIN users u ON so.assigned_tech_id = u.id
             WHERE so.client_id = ?
             ORDER BY so.created_at DESC
-        `, [id]);
+        `, [req.params.id]);
         res.json(orders);
     } catch (err) {
+        res.status(500).json({ msg: err.message });
+    }
+};
+
+// --- NEW: Client Transactions (Invoices) ---
+exports.getClientTransactions = async (req, res) => {
+    try {
+        const [txs] = await db.query(`
+            SELECT t.id, t.amount, t.months_paid, t.created_at, t.reference_id, t.description, t.type,
+                   u.username as collector_username
+            FROM transactions t
+            LEFT JOIN users u ON t.user_id = u.id
+            WHERE t.client_id = ?
+            ORDER BY t.created_at DESC
+        `, [req.params.id]);
+        res.json(txs);
+    } catch (err) {
         console.error(err);
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Error al obtener facturas' });
     }
 };
 

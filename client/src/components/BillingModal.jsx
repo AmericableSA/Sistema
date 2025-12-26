@@ -228,6 +228,10 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
             return setAlert({ show: true, type: 'warning', title: 'Monto Menor', message: 'Cobras menos de lo calculado. Justifícalo.' });
         }
 
+        if (!manualInvoiceNo.trim()) {
+            return setAlert({ show: true, type: 'warning', title: 'Faltan Datos', message: 'El número de factura manual es obligatorio.' });
+        }
+
         setIsSubmitting(true);
 
         const details = { months_paid: 0, mora_paid: 0 };
@@ -334,7 +338,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
 
                         {/* Manual Invoice Number */}
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px', marginTop: '1rem' }}>
-                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem' }}>No. Factura Manual (Opcional)</label>
+                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem' }}>No. Factura Manual (Requerido)</label>
                             <input
                                 type="text"
                                 className="input-dark"

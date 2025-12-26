@@ -18,6 +18,7 @@ const Clients = () => {
     // UI State
     const [showModal, setShowModal] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [initialHistoryTab, setInitialHistoryTab] = useState('logs'); // 'logs' or 'invoices'
     const [showZoneModal, setShowZoneModal] = useState(false);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [selectedClient, setSelectedClient] = useState(null);
@@ -163,7 +164,8 @@ const Clients = () => {
                 <HistoryModal
                     client={selectedClient}
                     global={!selectedClient}
-                    onClose={() => setShowHistory(false)}
+                    onClose={() => { setShowHistory(false); setInitialHistoryTab('logs'); }}
+                    initialTab={initialHistoryTab}
                 />
             )}
             {showUploadModal && (
@@ -296,8 +298,11 @@ const Clients = () => {
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                                            <button onClick={() => { setSelectedClient(c); setShowHistory(true); }} className="btn-secondary" style={{ flex: '0 0 auto', padding: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)' }} title="Ver Historial Completo">
+                                            <button onClick={() => { setSelectedClient(c); setShowHistory(true); }} className="btn-secondary" style={{ flex: '0 0 auto', padding: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)' }} title="Ver Bitácora de Cambios">
                                                 🕒 Historial
+                                            </button>
+                                            <button onClick={() => { setSelectedClient(c); setInitialHistoryTab('invoices'); setShowHistory(true); }} className="btn-secondary" style={{ flex: '0 0 auto', padding: '0.5rem', background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)' }} title="Ver Historial de Facturas">
+                                                🧾 Facturas
                                             </button>
                                             <button onClick={() => { setSelectedClient(c); setShowModal(true); }} className="btn-dark-glow" style={{ flex: 1, padding: '0.5rem' }}>
                                                 Editar

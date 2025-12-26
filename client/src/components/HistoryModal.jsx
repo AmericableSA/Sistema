@@ -1,40 +1,89 @@
 import React, { useState, useEffect } from 'react';
 
-const HistoryModal = ({ client, onClose, global = false }) => {
-    const [logs, setLogs] = useState([]);
+const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) => {
+    const [activeTab, setActiveTab] = useState(initialTab); // 'logs' | 'invoices'
+    const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Fetch Data based on active tab
     useEffect(() => {
-        const url = global
-            ? '/api/clients/history/global'
-            : `/api/clients/${client?.id}/history`;
+        setLoading(true);
+        let url = '';
 
-        if (global || client) {
+        if (activeTab === 'logs') {
+            url = global ? '/api/clients/history/global' : `/api/clients/${client?.id}/history`;
+        } else if (activeTab === 'invoices' && client) {
+            url = `/api/clients/${client.id}/transactions`;
+        }
+
+        if (url) {
             fetch(url)
                 .then(res => res.json())
-                .then(data => { setLogs(data); setLoading(false); })
-                .catch(err => { console.error(err); setLoading(false); });
+                .then(resData => {
+                    setData(resData);
+                    setLoading(false);
+                })
+                .catch(err => {
+                    console.error(err);
+                    setData([]); // Safety
+                    setLoading(false);
+                });
         }
-    }, [client, global]);
+    }, [client, global, activeTab]);
 
     return (
         <div className="modal-overlay">
-            <div className="glass-card" style={{ width: '800px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: '#0f172a' }}>
+            <div className="glass-card animate-entry" style={{ width: '900px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: '#0f172a' }}>
+
+                {/* Header */}
                 <div style={{ padding: '1.5rem', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h3 style={{ margin: 0, color: 'white' }}>{global ? 'HISTORIAL GLOBAL DE CAMBIOS' : 'HISTORIAL DE CAMBIOS'}</h3>
-                        {!global && <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Cliente: {client?.full_name}</div>}
+                        <h3 style={{ margin: 0, color: 'white' }}>
+                            {global ? 'HISTORIAL GLOBAL' : `HISTORIAL: ${client?.full_name?.toUpperCase()}`}
+                        </h3>
                     </div>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
                 </div>
 
+                {/* Tabs */}
+                {!global && (
+                    <div style={{ display: 'flex', borderBottom: '1px solid #334155', padding: '0 1.5rem' }}>
+                        <button
+                            onClick={() => setActiveTab('logs')}
+                            style={{
+                                padding: '1rem', background: 'none', border: 'none',
+                                color: activeTab === 'logs' ? '#60a5fa' : '#94a3b8',
+                                borderBottom: activeTab === 'logs' ? '2px solid #60a5fa' : 'none',
+                                cursor: 'pointer', fontWeight: 'bold'
+                            }}
+                        >
+                            📋 Bitácora de Cambios
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('invoices')}
+                            style={{
+                                padding: '1rem', background: 'none', border: 'none',
+                                color: activeTab === 'invoices' ? '#f59e0b' : '#94a3b8',
+                                borderBottom: activeTab === 'invoices' ? '2px solid #f59e0b' : 'none',
+                                cursor: 'pointer', fontWeight: 'bold'
+                            }}
+                        >
+                            🧾 Historial de Facturas
+                        </button>
+                    </div>
+                )}
+
+                {/* Content */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-                    {loading ? <div style={{ color: 'white' }}>Cargando...</div> : (
+                    {loading && <div style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>Cargando...</div>}
+
+                    {!loading && activeTab === 'logs' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {logs.length === 0 && <div style={{ color: '#64748b', textAlign: 'center' }}>No hay registros de cambios.</div>}
-                            {logs.map(log => (
-                                <div key={log.id} style={{
-                                    padding: '1rem', background: '#1e293b', borderRadius: '8px', borderLeft: log.action === 'CREATE' ? '4px solid #4ade80' : '4px solid #3b82f6'
+                            {data.length === 0 && <div style={{ color: '#64748b', textAlign: 'center' }}>No hay registros de cambios.</div>}
+                            {data.map((log, idx) => (
+                                <div key={log.id || idx} style={{
+                                    padding: '1rem', background: '#1e293b', borderRadius: '8px',
+                                    borderLeft: log.action === 'CREATE' ? '4px solid #4ade80' : (log.action === 'PAYMENT' ? '4px solid #f59e0b' : '4px solid #3b82f6')
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -53,6 +102,35 @@ const HistoryModal = ({ client, onClose, global = false }) => {
                             ))}
                         </div>
                     )}
+
+                    {!loading && activeTab === 'invoices' && (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #334155', textAlign: 'left', color: '#94a3b8' }}>
+                                    <th style={{ padding: '0.75rem' }}>Fecha</th>
+                                    <th style={{ padding: '0.75rem' }}>No. Factura</th>
+                                    <th style={{ padding: '0.75rem' }}>Tipo</th>
+                                    <th style={{ padding: '0.75rem' }}>Descripción / Meses</th>
+                                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>Monto</th>
+                                    <th style={{ padding: '0.75rem' }}>Cobrado Por</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.length === 0 && <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center' }}>No hay facturas registradas.</td></tr>}
+                                {data.map((tx, idx) => (
+                                    <tr key={tx.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '0.75rem' }}>{new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}</td>
+                                        <td style={{ padding: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>{tx.reference_id || 'S/N'}</td>
+                                        <td style={{ padding: '0.75rem' }}>{tx.type === 'monthly_fee' ? 'Mensualidad' : tx.type}</td>
+                                        <td style={{ padding: '0.75rem' }}>{tx.description}</td>
+                                        <td style={{ padding: '0.75rem', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>C$ {parseFloat(tx.amount).toFixed(2)}</td>
+                                        <td style={{ padding: '0.75rem', fontSize: '0.9rem', color: '#94a3b8' }}>{tx.collector_username || 'Sistema'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+
                 </div>
             </div>
         </div>
