@@ -237,6 +237,14 @@ const Users = () => {
                 />
             )}
 
+            <ConfirmModal
+                isOpen={confirmDelete.show}
+                title="¿Eliminar Usuario?"
+                message="Esta acción no se puede deshacer. Se transferirá el historial de operaciones de este usuario a un Administrador para preservar los datos."
+                onConfirm={() => handleConfirmDelete()}
+                onCancel={() => setConfirmDelete({ show: false, id: null })}
+            />
+
             <CustomAlert
                 isOpen={alert.show}
                 title={alert.title}
