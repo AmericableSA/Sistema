@@ -230,6 +230,13 @@ exports.createTransaction = async (req, res) => {
         // RECONNECTION LOGIC
         if (client_id && details_json && details_json.reconnection_paid) {
             await conn.query("UPDATE clients SET status = 'active', reconnection_date = NOW() WHERE id = ?", [client_id]);
+
+            // Create Service Order automatically (User Request)
+            await conn.query(
+                `INSERT INTO service_orders (client_id, type, status, created_by_user_id, created_at) 
+                 VALUES (?, 'RECONNECTION', 'PENDING', ?, NOW())`,
+                [client_id, reqUserId]
+            );
         }
 
         // HISTORY LOGGING (Requirement: "que se asocie al historial")
