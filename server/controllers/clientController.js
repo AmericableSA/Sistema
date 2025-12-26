@@ -365,18 +365,19 @@ exports.getServiceOrders = async (req, res) => {
 // --- NEW: Client Transactions (Invoices) ---
 exports.getClientTransactions = async (req, res) => {
     try {
+        // Use collector_id to show who is responsible/credited for the payment
         const [txs] = await db.query(`
             SELECT t.id, t.amount, t.details_json, t.created_at, t.reference_id, t.description, t.type,
-                   u.username as collector_username
+                   u.username as collector_username, u.full_name as collector_name
             FROM transactions t
-            LEFT JOIN users u ON t.user_id = u.id
+            LEFT JOIN users u ON t.collector_id = u.id
             WHERE t.client_id = ?
             ORDER BY t.created_at DESC
         `, [req.params.id]);
         res.json(txs);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ msg: 'Error al obtener facturas' });
+        res.status(500).json({ msg: 'Error al obtener facturas: ' + err.message });
     }
 };
 

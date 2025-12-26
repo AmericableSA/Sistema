@@ -207,8 +207,9 @@ exports.createTransaction = async (req, res) => {
             const [cRows] = await conn.query('SELECT last_paid_month FROM clients WHERE id = ?', [client_id]);
             const currentLastPaid = new Date(cRows[0].last_paid_month);
 
-            // Add months
-            currentLastPaid.setMonth(currentLastPaid.getMonth() + details_json.months_paid);
+            // Add months (Force Integer to prevent string concatenation "5"+"1" = "51" -> 4 years jump)
+            const monthsToAdd = parseInt(details_json.months_paid, 10) || 0;
+            currentLastPaid.setMonth(currentLastPaid.getMonth() + monthsToAdd);
             const newDateStr = currentLastPaid.toISOString().slice(0, 10); // YYYY-MM-DD
 
             // SMART STATUS: If paying months, reactivate client if suspended
