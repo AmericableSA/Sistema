@@ -236,12 +236,27 @@ const Reports = () => {
                     <Value>{orders.byStatus.reduce((acc, curr) => acc + curr.total, 0)}</Value>
                     <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Generadas este mes</div>
                 </Card>
-                {orders.byType.map((t, i) => (
-                    <Card key={i}>
-                        <Label>{t.type}</Label>
-                        <Value style={{ fontSize: '1.5rem' }}>{t.total}</Value>
-                    </Card>
-                ))}
+
+                {/* Specific Types (Guaranteed Display) */}
+                {['INSTALLATION', 'RECONNECTION', 'REPAIR', 'DISCONNECTION'].map((type, i) => {
+                    const found = orders.byType.find(t => t.type === type);
+                    const count = found ? found.total : 0;
+
+                    let label = type;
+                    let color = '#94a3b8';
+
+                    if (type === 'INSTALLATION') { label = 'Instalaciones'; color = '#10b981'; }
+                    if (type === 'RECONNECTION') { label = 'Reconexiones'; color = '#f59e0b'; }
+                    if (type === 'REPAIR') { label = 'Reparaciones'; color = '#8b5cf6'; }
+                    if (type === 'DISCONNECTION') { label = 'Desconexiones'; color = '#ef4444'; }
+
+                    return (
+                        <Card key={i}>
+                            <Label style={{ color }}>{label}</Label>
+                            <Value style={{ fontSize: '1.5rem' }}>{count}</Value>
+                        </Card>
+                    );
+                })}
             </Grid>
 
             <SectionTitle>Estado de Cartera de Clientes</SectionTitle>
