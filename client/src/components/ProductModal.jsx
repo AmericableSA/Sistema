@@ -20,8 +20,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
 
 
     useEffect(() => {
-
-        if (product) {
+        // If product has an ID, it's an EDIT.
+        if (product && product.id) {
             setFormData(product);
             if (product.type === 'bundle') {
                 fetch(`/api/products/${product.id}/bundle`)
@@ -32,11 +32,12 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                 setBundleItems([]);
             }
         } else {
-            // Reset for new
+            // Reset for new (or partial initial data provided like {type: 'bundle'})
             setFormData({
                 sku: '', name: '', description: '',
                 current_stock: 0, min_stock_alert: 5,
-                selling_price: 0, unit_cost: 0, type: 'product'
+                selling_price: 0, unit_cost: 0, type: 'product',
+                ...(product || {}) // Merge initial values if any
             });
             setBundleItems([]);
         }
@@ -83,8 +84,10 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         // Prepare payload with potentially new SKU
         const payload = { ...formData, sku: finalSku, bundle_items: bundleItems };
 
+        const isEdit = product && product.id;
+
         // VALIDATION: Validate Reason if Stock Changed (Only for edits)
-        if (product && formData.type === 'product') {
+        if (isEdit && formData.type === 'product') {
             const oldStock = Number(product.current_stock);
             const newStock = Number(formData.current_stock);
 
@@ -95,8 +98,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         }
 
         try {
-            const method = product ? 'PUT' : 'POST';
-            const url = product
+            const method = isEdit ? 'PUT' : 'POST';
+            const url = isEdit
                 ? `/api/products/${product.id}`
                 : '/api/products';
 
@@ -129,7 +132,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         }}>
             <div className="glass-card" style={{ width: '700px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto', background: '#0f172a', border: '1px solid #1e293b' }}>
                 <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid #334155', paddingBottom: '1rem', color: 'white' }}>
-                    {product ? `Editar ${product.name || 'Item'}` : 'Crear Nuevo Producto'}
+                    {product && product.id ? `Editar ${product.name || 'Item'}` : 'Crear Nuevo Producto'}
                 </h3>
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
@@ -235,7 +238,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                     )}
 
                     {/* Reason Field for Edits */}
-                    {product && formData.type === 'product' && (
+                    {product && product.id && formData.type === 'product' && (
                         <div style={{ marginBottom: '1rem', marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
                             <label className="label-dark" style={{ color: Number(product.current_stock) !== Number(formData.current_stock) ? '#ef4444' : '#fbbf24', fontWeight: 'bold' }}>
                                 {Number(product.current_stock) !== Number(formData.current_stock) ? '📝 Razón del Cambio (REQUERIDO)' : '📝 Razón del Cambio (Opcional)'}
@@ -259,7 +262,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <button type="button" onClick={onClose} className="btn-secondary" style={{ flex: 1, padding: '0.8rem', background: 'transparent', border: '1px solid #475569', color: '#cbd5e1' }}>Cancelar</button>
                         <button type="submit" className="btn-primary-glow" style={{ flex: 1, padding: '0.8rem' }}>
-                            {product ? 'Actualizar' : 'Guardar Producto'}
+                            {product && product.id ? 'Actualizar' : 'Guardar Producto'}
                         </button>
                     </div>
                 </form>
