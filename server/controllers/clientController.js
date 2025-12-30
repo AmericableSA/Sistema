@@ -109,6 +109,7 @@ exports.createClient = async (req, res) => {
         city_id, neighborhood_id, zone_id, // Added zone_id
         status,
         last_paid_month, last_payment_date, cutoff_date, reconnection_date, cutoff_reason,
+        installation_date, // New
         preferred_collector_id
     } = req.body;
 
@@ -145,14 +146,16 @@ exports.createClient = async (req, res) => {
                 city_id, neighborhood_id, zone_id,
                 status,
                 last_paid_month, last_payment_date, cutoff_date, reconnection_date, cutoff_reason,
+                installation_date,
                 preferred_collector_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 finalContract, identity_document || null, full_name,
                 phone_primary, address_street,
                 city_id || 1, neighborhood_id || 1, zone_id || 1,
                 status || 'active',
                 last_paid_month || null, last_payment_date || null, cutoff_date || null, reconnection_date || null, cutoff_reason || null,
+                installation_date || null,
                 preferred_collector_id || null
             ]
         );
@@ -181,6 +184,7 @@ exports.updateClient = async (req, res) => {
         city_id, neighborhood_id, zone_id,
         status,
         last_paid_month, last_payment_date, cutoff_date, reconnection_date, cutoff_reason,
+        installation_date, // New
         preferred_collector_id
     } = req.body;
 
@@ -236,13 +240,15 @@ exports.updateClient = async (req, res) => {
             { key: 'last_paid_month', label: 'Mes Pagado', isDate: true },
             { key: 'cutoff_date', label: 'Fecha Corte', isDate: true },
             { key: 'reconnection_date', label: 'Fecha Reconexión', isDate: true },
+            { key: 'installation_date', label: 'Fecha Instalación', isDate: true }, // Verified
             { key: 'cutoff_reason', label: 'Motivo Corte' }
         ];
 
         // Incoming values map
         const incoming = {
             full_name, identity_document, phone_primary, address_street, contract_number,
-            zone_id, status, last_paid_month, cutoff_date, reconnection_date, cutoff_reason
+            zone_id, status, last_paid_month, cutoff_date, reconnection_date, cutoff_reason,
+            installation_date
         };
 
         for (const field of fieldsToCheck) {
@@ -298,6 +304,7 @@ exports.updateClient = async (req, res) => {
                 city_id=?, neighborhood_id=?, zone_id=?,
                 status=?,
                 last_paid_month=?, last_payment_date=?, cutoff_date=?, reconnection_date=?, cutoff_reason=?,
+                installation_date=?,
                 preferred_collector_id=?
              WHERE id=?`,
             [
@@ -306,6 +313,7 @@ exports.updateClient = async (req, res) => {
                 city_id || 1, neighborhood_id || 1, zone_id || 1,
                 status,
                 last_paid_month || null, last_payment_date || null, cutoff_date || null, reconnection_date || null, cutoff_reason || null,
+                installation_date || null,
                 preferred_collector_id || null,
                 id
             ]

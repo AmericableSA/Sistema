@@ -14,11 +14,12 @@ const ClientModal = ({ client, onClose, onSave }) => {
         zone_id: '',
         status: 'active',
         last_paid_month: '',
-        last_payment_date: '', // New
+        last_payment_date: '',
         cutoff_date: '',
         cutoff_reason: '',
         reconnection_date: '',
-        preferred_collector_id: '' // New
+        installation_date: '', // New Field
+        preferred_collector_id: ''
     });
 
     const [zones, setZones] = useState([]);
@@ -65,6 +66,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
                 last_payment_date: formatDate(client.last_payment_date),
                 cutoff_date: formatDate(client.cutoff_date),
                 reconnection_date: formatDate(client.reconnection_date),
+                installation_date: formatDate(client.installation_date), // Load it
                 zone_id: client.zone_id || (zones.length > 0 ? zones[0].id : ''),
                 city_id: client.city_id || '',
                 preferred_collector_id: client.preferred_collector_id || ''
@@ -77,12 +79,25 @@ const ClientModal = ({ client, onClose, onSave }) => {
         setFormData({ ...formData, [name]: value });
     };
 
+    // PHONE MASKING LOGIC (0000-0000)
+    const handlePhoneChange = (e) => {
+        let val = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        if (val.length > 8) val = val.slice(0, 8); // Max 8 digits
+
+        // Add hyphen
+        if (val.length > 4) {
+            val = val.slice(0, 4) + '-' + val.slice(4);
+        }
+
+        setFormData({ ...formData, phone_primary: val });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Validation
-            if (!formData.full_name || !formData.address_street || !formData.zone_id) {
-                alert("Por favor complete todos los campos obligatorios.");
+            // Validation (Cedula no longer required)
+            if (!formData.full_name || !formData.address_street || !formData.zone_id || !formData.phone_primary) {
+                alert("Por favor complete todos los campos obligatorios (Nombre, Dirección, Zona, Teléfono).");
                 return;
             }
 
@@ -137,12 +152,19 @@ const ClientModal = ({ client, onClose, onSave }) => {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
-                                <label className="label-dark">Cédula *</label>
-                                <input className="input-dark" name="identity_document" value={formData.identity_document} onChange={handleChange} required />
+                                <label className="label-dark">Cédula (Opcional)</label>
+                                <input className="input-dark" name="identity_document" value={formData.identity_document} onChange={handleChange} />
                             </div>
                             <div>
-                                <label className="label-dark">Teléfono *</label>
-                                <input className="input-dark" name="phone_primary" value={formData.phone_primary} onChange={handleChange} required />
+                                <label className="label-dark">Teléfono * (0000-0000)</label>
+                                <input
+                                    className="input-dark"
+                                    name="phone_primary"
+                                    value={formData.phone_primary}
+                                    onChange={handlePhoneChange}
+                                    placeholder="8888-8888"
+                                    required
+                                />
                             </div>
                         </div>
 
@@ -204,6 +226,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
                             </div>
                         </div>
 
+                        {/* Payment Info */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
                                 <label className="label-dark">Mes Pagado (Vencimiento)</label>
@@ -214,6 +237,15 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                 <input type="date" className="input-dark" name="last_payment_date" value={formData.last_payment_date} onChange={handleChange} />
                             </div>
                         </div>
+
+                        {/* INSTALLATION DATE */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                            <div>
+                                <label className="label-dark" style={{ color: '#22c55e' }}>Fecha Instalación</label>
+                                <input type="date" className="input-dark" name="installation_date" value={formData.installation_date} onChange={handleChange} />
+                            </div>
+                        </div>
+
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                             <div style={{ gridColumn: '1 / -1' }}>
