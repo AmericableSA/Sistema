@@ -105,24 +105,23 @@ exports.getGlobalHistory = async (req, res) => {
 exports.createClient = async (req, res) => {
     const {
         contract_number, identity_document, full_name,
-        phone_primary, address_street,
-        city_id, neighborhood_id, zone_id, // Added zone_id
+        phone_primary, phone_secondary, address_street, // Added phone_secondary
+        city_id, neighborhood_id, zone_id,
         status,
         last_paid_month, last_payment_date, cutoff_date, reconnection_date, cutoff_reason,
-        installation_date, // New
+        installation_date,
         preferred_collector_id
     } = req.body;
 
-    // TODO: extracting user id from request (middleware needed later)
-    const userId = 1; // Default Admin for now until Auth is fully implemented
+    const userId = 1;
 
     try {
         let finalContract = contract_number;
 
         // Auto-Generate Contract if missing
         if (!finalContract) {
-            const datePart = Date.now().toString().slice(-8); // Last 8 digits of timestamp
-            const randomPart = Math.floor(1000 + Math.random() * 9000); // 4 random digits
+            const datePart = Date.now().toString().slice(-8);
+            const randomPart = Math.floor(1000 + Math.random() * 9000);
             finalContract = `CTR-${datePart}${randomPart}`;
         }
 
@@ -130,7 +129,6 @@ exports.createClient = async (req, res) => {
         if (finalContract) {
             const [existing] = await db.query('SELECT id FROM clients WHERE contract_number = ?', [finalContract]);
             if (existing.length > 0) {
-                // Should we retry if auto-generated? Rare collision.
                 return res.status(400).json({ msg: 'Número de contrato ya existe (Intenta de nuevo)' });
             }
         }
@@ -142,16 +140,16 @@ exports.createClient = async (req, res) => {
         const [result] = await db.query(
             `INSERT INTO clients (
                 contract_number, identity_document, full_name,
-                phone_primary, address_street,
+                phone_primary, phone_secondary, address_street, 
                 city_id, neighborhood_id, zone_id,
                 status,
                 last_paid_month, last_payment_date, cutoff_date, reconnection_date, cutoff_reason,
                 installation_date,
                 preferred_collector_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 finalContract, identity_document || null, full_name,
-                phone_primary, address_street,
+                phone_primary, phone_secondary || null, address_street,
                 city_id || 1, neighborhood_id || 1, zone_id || 1,
                 status || 'active',
                 last_paid_month || null, last_payment_date || null, cutoff_date || null, reconnection_date || null, cutoff_reason || null,
@@ -180,15 +178,14 @@ exports.updateClient = async (req, res) => {
     const { id } = req.params;
     const {
         contract_number, identity_document, full_name,
-        phone_primary, address_street,
+        phone_primary, phone_secondary, address_street,
         city_id, neighborhood_id, zone_id,
         status,
         last_paid_month, last_payment_date, cutoff_date, reconnection_date, cutoff_reason,
-        installation_date, // New
+        installation_date,
         preferred_collector_id
     } = req.body;
 
-    // TODO: Auth user ID
     const userId = 1;
 
     try {
@@ -217,22 +214,18 @@ exports.updateClient = async (req, res) => {
             'pending_install': 'Pendiente'
         };
 
-        // Format dates for comparison (naive approach)
         const normalizeDate = (d) => {
             if (!d) return null;
-            // Handle MySQL Date Object or String
             const dateObj = new Date(d);
-            // Use UTC methods to ensure we get the stored date 
             return dateObj.toISOString().split('T')[0];
         };
 
-        // Track changes
         let changes = [];
-        // Define fields to check
         const fieldsToCheck = [
             { key: 'full_name', label: 'Nombre Completo' },
             { key: 'identity_document', label: 'Cédula' },
             { key: 'phone_primary', label: 'Teléfono' },
+            { key: 'phone_secondary', label: 'Teléfono Adicional' },
             { key: 'address_street', label: 'Dirección' },
             { key: 'contract_number', label: 'Contrato' },
             { key: 'zone_id', label: 'Zona', isZone: true },
@@ -240,13 +233,12 @@ exports.updateClient = async (req, res) => {
             { key: 'last_paid_month', label: 'Mes Pagado', isDate: true },
             { key: 'cutoff_date', label: 'Fecha Corte', isDate: true },
             { key: 'reconnection_date', label: 'Fecha Reconexión', isDate: true },
-            { key: 'installation_date', label: 'Fecha Instalación', isDate: true }, // Verified
+            { key: 'installation_date', label: 'Fecha Instalación', isDate: true },
             { key: 'cutoff_reason', label: 'Motivo Corte' }
         ];
 
-        // Incoming values map
         const incoming = {
-            full_name, identity_document, phone_primary, address_street, contract_number,
+            full_name, identity_document, phone_primary, phone_secondary, address_street, contract_number,
             zone_id, status, last_paid_month, cutoff_date, reconnection_date, cutoff_reason,
             installation_date
         };
@@ -256,25 +248,21 @@ exports.updateClient = async (req, res) => {
             let oldVal = oldData[key];
             let newVal = incoming[key];
 
-            // Normalize for comparison
             let sOld = oldVal;
             let sNew = newVal;
 
             if (field.isDate) {
-                sOld = normalizeDate(oldVal); // "YYYY-MM-DD"
-                sNew = normalizeDate(newVal); // "YYYY-MM-DD"
+                sOld = normalizeDate(oldVal);
+                sNew = normalizeDate(newVal);
             } else {
-                // Ensure strings/empty for non-dates
                 sOld = sOld == null ? '' : String(sOld);
                 sNew = sNew == null ? '' : String(sNew);
             }
 
-            // Compare strings
             if (sNew !== sOld) {
                 let friendlyOld = sOld;
                 let friendlyNew = sNew;
 
-                // Enrich names for display
                 if (field.isZone) {
                     friendlyOld = oldData.zone_name || 'Sin Zona';
                     friendlyNew = newZoneName || 'Sin Zona';
@@ -300,7 +288,7 @@ exports.updateClient = async (req, res) => {
         await db.query(
             `UPDATE clients SET 
                 contract_number=?, identity_document=?, full_name=?,
-                phone_primary=?, address_street=?,
+                phone_primary=?, phone_secondary=?, address_street=?,
                 city_id=?, neighborhood_id=?, zone_id=?,
                 status=?,
                 last_paid_month=?, last_payment_date=?, cutoff_date=?, reconnection_date=?, cutoff_reason=?,
@@ -309,7 +297,7 @@ exports.updateClient = async (req, res) => {
              WHERE id=?`,
             [
                 contract_number || null, identity_document || null, full_name,
-                phone_primary, address_street,
+                phone_primary, phone_secondary || null, address_street,
                 city_id || 1, neighborhood_id || 1, zone_id || 1,
                 status,
                 last_paid_month || null, last_payment_date || null, cutoff_date || null, reconnection_date || null, cutoff_reason || null,
@@ -319,7 +307,6 @@ exports.updateClient = async (req, res) => {
             ]
         );
 
-        // Audit Log (Store JSON)
         if (changes.length > 0) {
             await db.query(
                 'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',

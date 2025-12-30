@@ -237,6 +237,18 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                 </div>
                             </div>
 
+                            {/* Secondary Phone */}
+                            <div>
+                                <label className="label-dark">Teléfono Adicional (Opcional)</label>
+                                <input
+                                    className="input-dark"
+                                    name="phone_secondary"
+                                    value={formData.phone_secondary || ''}
+                                    onChange={handlePhoneChange}
+                                    placeholder="8888-8888"
+                                />
+                            </div>
+
                             <div>
                                 <label className="label-dark">Dirección (Calle) *</label>
                                 <textarea className="input-dark" name="address_street" value={formData.address_street} onChange={handleChange} rows="2" required />
