@@ -81,7 +81,8 @@ const ClientModal = ({ client, onClose, onSave }) => {
 
     // PHONE MASKING LOGIC (0000-0000)
     const handlePhoneChange = (e) => {
-        let val = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        const { name, value } = e.target;
+        let val = value.replace(/\D/g, ''); // Remove non-digits
         if (val.length > 8) val = val.slice(0, 8); // Max 8 digits
 
         // Add hyphen
@@ -89,7 +90,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
             val = val.slice(0, 4) + '-' + val.slice(4);
         }
 
-        setFormData({ ...formData, phone_primary: val });
+        setFormData({ ...formData, [name]: val });
     };
 
     // NOTES Logic
