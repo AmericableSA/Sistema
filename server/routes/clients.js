@@ -17,4 +17,10 @@ router.put('/orders/:orderId', clientController.updateServiceOrder);
 router.post('/:id/manual-order', clientController.createManualServiceOrder);
 router.get('/technicians/list', clientController.getTechnicians);
 
+// Client Notes
+router.get('/:id/notes', clientController.getClientNotes);
+router.post('/:id/notes', clientController.createClientNote);
+router.put('/notes/:noteId', clientController.updateClientNote);
+router.delete('/notes/:noteId', clientController.deleteClientNote);
+
 module.exports = router;

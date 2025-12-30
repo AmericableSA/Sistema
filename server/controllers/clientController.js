@@ -472,3 +472,55 @@ exports.registerMovement = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// --- NOTES FEATURE ---
+exports.getClientNotes = async (req, res) => {
+    try {
+        const [notes] = await db.query(
+            'SELECT * FROM client_notes WHERE client_id = ? ORDER BY created_at DESC',
+            [req.params.id]
+        );
+        res.json(notes);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.createClientNote = async (req, res) => {
+    const { note_content } = req.body;
+    try {
+        await db.query(
+            'INSERT INTO client_notes (client_id, note_content) VALUES (?, ?)',
+            [req.params.id, note_content]
+        );
+        res.json({ msg: 'Nota agregada' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.updateClientNote = async (req, res) => {
+    const { note_content } = req.body;
+    try {
+        await db.query(
+            'UPDATE client_notes SET note_content = ? WHERE id = ?',
+            [note_content, req.params.noteId]
+        );
+        res.json({ msg: 'Nota actualizada' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.deleteClientNote = async (req, res) => {
+    try {
+        await db.query('DELETE FROM client_notes WHERE id = ?', [req.params.noteId]);
+        res.json({ msg: 'Nota eliminada' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
