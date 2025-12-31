@@ -289,9 +289,9 @@ exports.getServiceOrdersReport = async (req, res) => {
         const [statusRows] = await pool.query(`
             SELECT status, COUNT(*) as total 
             FROM service_orders 
-            WHERE ${dateFilter}
+            WHERE DATE(created_at) BETWEEN ? AND ?
             GROUP BY status
-        `);
+        `, [start, end]);
 
         pool.release();
 
