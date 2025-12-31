@@ -71,9 +71,7 @@ const Reports = () => {
     const [orders, setOrders] = useState({ byType: [], byStatus: [] });
     const [refresh, setRefresh] = useState(0);
 
-    // Date range state for reports
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const formatCurrency = (val) => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO' }).format(val || 0);
 
     const fetchData = useCallback(async () => {
@@ -90,10 +88,10 @@ const Reports = () => {
         try {
             const [statsRes, closingRes, topRes, moveRes, ordersRes] = await Promise.all([
                 fetch(`${apiBaseUrl}/cable-stats`, { headers }),
-                fetch(`${apiBaseUrl}/daily-closing?startDate=${startDate}&endDate=${endDate}`, { headers }),
+                fetch(`${apiBaseUrl}/daily-closing?date=${selectedDate}`, { headers }),
                 fetch(`${apiBaseUrl}/sales-by-user?startDate=${startOfMonth}&endDate=${endOfMonth}`, { headers }),
-                fetch(`${apiBaseUrl}/movements?startDate=${startDate}&endDate=${endDate}`, { headers }),
-                fetch(`${apiBaseUrl}/orders?startDate=${startDate}&endDate=${endDate}`, { headers })
+                fetch(`${apiBaseUrl}/movements?mode=daily&date=${selectedDate}`, { headers }),
+                fetch(`${apiBaseUrl}/orders?mode=daily&date=${selectedDate}`, { headers })
             ]);
 
             setCableStats(await statsRes.json());
@@ -103,7 +101,7 @@ const Reports = () => {
             setOrders(await ordersRes.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, [refresh, startDate, endDate]);
+    }, [refresh, selectedDate]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -118,50 +116,19 @@ const Reports = () => {
                     <p style={{ margin: 0, color: '#64748b' }}>Resumen de Caja, Morosidad y Estado de Red</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {/* Date Range Inputs */}
                     <input
                         type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
                         style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid #475569', padding: '0.5rem', borderRadius: '8px' }}
                     />
-                    <span style={{ margin: '0 0.5rem', color: '#94a3b8' }}>hasta</span>
-                    <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid #475569', padding: '0.5rem', borderRadius: '8px' }}
-                    />
-                    {/* Quick-select Buttons */}
-                    <button onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        setStartDate(today);
-                        setEndDate(today);
-                    }} style={{ background: '#3b82f6', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', color: 'white', marginLeft: '0.5rem' }}>Hoy</button>
-                    <button onClick={() => {
-                        const today = new Date();
-                        const oneMonthAgo = new Date();
-                        oneMonthAgo.setMonth(today.getMonth() - 1);
-                        const ago = oneMonthAgo.toISOString().split('T')[0];
-                        const now = today.toISOString().split('T')[0];
-                        setStartDate(ago);
-                        setEndDate(now);
-                    }} style={{ background: '#3b82f6', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', color: 'white', marginLeft: '0.5rem' }}>Hace un mes</button>
-                    <button onClick={() => {
-                        const today = new Date();
-                        const first = new Date(today.getFullYear(), today.getMonth(), 1);
-                        const start = first.toISOString().split('T')[0];
-                        const end = today.toISOString().split('T')[0];
-                        setStartDate(start);
-                        setEndDate(end);
-                    }} style={{ background: '#3b82f6', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', color: 'white', marginLeft: '0.5rem' }}>Mes actual</button>
                     <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <FaSync /> Actualizar
                     </button>
                 </div>
             </Header>
 
-            <SectionTitle>Actividad Operativa ({startDate} - {endDate})</SectionTitle>
+            <SectionTitle>Actividad Operativa ({selectedDate})</SectionTitle>
             <Grid>
                 <Card>
                     <Label style={{ color: '#db2777' }}>📝 Cambios Nombre</Label>
@@ -181,7 +148,7 @@ const Reports = () => {
                 </Card>
             </Grid>
 
-            <SectionTitle>Órdenes de Servicio ({startDate} - {endDate})</SectionTitle>
+            <SectionTitle>Órdenes de Servicio ({selectedDate})</SectionTitle>
             <Grid>
                 <Card>
                     <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>
@@ -197,7 +164,7 @@ const Reports = () => {
             </Grid>
 
             {/* Existing Sections Below */}
-            <SectionTitle>Cierre de Caja ({startDate} - {endDate})</SectionTitle>
+            <SectionTitle>Cierre de Caja ({selectedDate})</SectionTitle>
             <Grid>
                 <Card $highlight="linear-gradient(135deg, #059669 0%, #10b981 100%)">
                     <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos Hoy</Label>

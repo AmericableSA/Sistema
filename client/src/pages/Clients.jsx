@@ -8,7 +8,6 @@ import HistoryModal from '../components/HistoryModal';
 // @ts-ignore
 import ZoneModal from '../components/ZoneModal'; // @ts-ignore
 import BulkUploadModal from '../components/BulkUploadModal';
-import ExportModal from '../components/ExportModal';
 import { useAuth } from '../context/AuthContext';
 
 const Clients = () => {
@@ -25,7 +24,6 @@ const Clients = () => {
     const [selectedClient, setSelectedClient] = useState(null);
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
     const [confirmDelete, setConfirmDelete] = useState({ show: false, id: null });
-    const [showExportModal, setShowExportModal] = useState(false);
 
     // Filter State (Backend)
     const [search, setSearch] = useState('');
@@ -142,9 +140,6 @@ const Clients = () => {
                     <button className="btn-dark-glow" onClick={() => { setSelectedClient(null); setShowHistory(true); }} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
                         Historial Global
                     </button>
-                    <button className="btn-dark-glow" onClick={() => setShowExportModal(true)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}>
-                        Exportar
-                    </button>
                     <button className="btn-dark-glow" onClick={() => { setSelectedClient(null); setShowModal(true); }} style={{ fontSize: '1rem', padding: '1rem 2rem' }}>
                         <span style={{ fontSize: '1.2rem' }}>+</span>
                         NUEVO CLIENTE
@@ -200,7 +195,6 @@ const Clients = () => {
             />
 
             {/* Main Content (Hidden if any view is active to optimize performance) */}
-            <ExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
             {!isViewActive && (
                 <>
                     {/* Controls & Search */}

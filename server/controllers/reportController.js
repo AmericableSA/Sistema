@@ -148,24 +148,20 @@ exports.getCableStats = async (req, res) => {
 exports.getDailyClosing = async (req, res) => {
     let pool;
     try {
-        const { startDate, endDate } = req.query;
-        // Default to today if not provided, but frontend sends both.
-        const start = startDate || new Date().toISOString().split('T')[0];
-        const end = endDate || new Date().toISOString().split('T')[0];
-
+        const date = req.query.date || new Date().toISOString().split('T')[0];
         pool = await db.getConnection();
 
-        // 1. Sales Income (Aggregated)
+        // 1. Sales Income
         const [salesRows] = await pool.query(
-            "SELECT SUM(amount) as total FROM transactions WHERE type != 'void' AND DATE(created_at) BETWEEN ? AND ?",
-            [start, end]
+            "SELECT SUM(amount) as total FROM transactions WHERE type != 'void' AND DATE(created_at) = ?",
+            [date]
         );
         const salesTotal = parseFloat(salesRows[0].total || 0);
 
-        // 2. Manual Cash Movements (Aggregated)
+        // 2. Manual Cash Movements
         const [moveRows] = await pool.query(
-            "SELECT type, SUM(amount) as total FROM cash_movements WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY type",
-            [start, end]
+            "SELECT type, SUM(amount) as total FROM cash_movements WHERE DATE(created_at) = ? GROUP BY type",
+            [date]
         );
 
         let manualIn = 0;
@@ -175,19 +171,19 @@ exports.getDailyClosing = async (req, res) => {
             else if (r.type === 'OUT') manualOut += parseFloat(r.total);
         });
 
-        // 3. Breakdown by User (Aggregated)
+        // 3. Breakdown by User
         const [userRows] = await pool.query(`
             SELECT COALESCE(u.username, 'Sistema') as username, SUM(t.amount) as total
             FROM transactions t
             LEFT JOIN users u ON t.collector_id = u.id
-            WHERE t.type != 'void' AND DATE(t.created_at) BETWEEN ? AND ?
+            WHERE t.type != 'void' AND DATE(t.created_at) = ?
             GROUP BY t.collector_id, u.username
-        `, [start, end]);
+        `, [date]);
 
         res.json({
             ingresos: salesTotal + manualIn,
             egresos: manualOut,
-            balance_dia: (salesTotal + manualIn) - manualOut, // Renamed in UI? Or kept same key for compatibility.
+            balance_dia: (salesTotal + manualIn) - manualOut,
             por_usuario: userRows
         });
 
@@ -209,18 +205,20 @@ exports.getDashboardStats = async (req, res) => {
 exports.getMovementsReport = async (req, res) => {
     let pool;
     try {
-        const { startDate, endDate } = req.query;
-        const start = startDate || new Date().toISOString().split('T')[0];
-        const end = endDate || new Date().toISOString().split('T')[0];
-
+        const { date, mode } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
         pool = await db.getConnection();
 
-        const [rows] = await pool.query(`
-            SELECT action, COUNT(*) as total FROM client_logs 
-            WHERE DATE(timestamp) BETWEEN ? AND ? 
-            GROUP BY action
-        `, [start, end]);
+        let dateFilter;
+        if (mode === 'monthly') {
+            dateFilter = `MONTH(timestamp) = MONTH('${targetDate}') AND YEAR(timestamp) = YEAR('${targetDate}')`;
+        } else {
+            dateFilter = `DATE(timestamp) = '${targetDate}'`;
+        }
 
+        const [rows] = await pool.query(`
+            SELECT action, COUNT(*) as total FROM client_logs WHERE ${dateFilter} GROUP BY action
+        `);
 
         // Stats Map
         const stats = { CHANGE_NAME: 0, CHANGE_ADDRESS: 0, DISCONNECT_REQ: 0, DISCONNECT_MORA: 0, SERVICE_COMPLETED: 0 };
@@ -241,12 +239,9 @@ exports.getMovementsReport = async (req, res) => {
 // 7. Service Orders Report
 exports.getServiceOrdersReport = async (req, res) => {
     try {
-        const { startDate, endDate, list, status } = req.query;
-        const start = startDate || new Date().toISOString().split('T')[0];
-        const end = endDate || new Date().toISOString().split('T')[0];
-
+        const { date, mode, list, status } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
         const pool = await db.getConnection();
-
 
         // IF LIST IS REQUESTED (For ClientMovements View)
         if (list) {
@@ -264,9 +259,16 @@ exports.getServiceOrdersReport = async (req, res) => {
                 // Show ALL pending, ignoring date
                 query += ` WHERE so.status = 'PENDING'`;
             } else {
-                // Show Daily List (Filter by Date Range)
-                query += ` WHERE DATE(so.created_at) BETWEEN ? AND ?`;
-                params.push(start, end);
+                // Show Daily List (Filter by Date)
+                let dateFilter;
+                if (mode === 'monthly') {
+                    dateFilter = `MONTH(so.created_at) = MONTH(?) AND YEAR(so.created_at) = YEAR(?)`;
+                    params.push(targetDate, targetDate);
+                } else {
+                    dateFilter = `DATE(so.created_at) = ?`;
+                    params.push(targetDate);
+                }
+                query += ` WHERE ${dateFilter}`;
             }
 
             query += ` ORDER BY so.created_at DESC LIMIT 100`;
@@ -277,21 +279,28 @@ exports.getServiceOrdersReport = async (req, res) => {
         }
 
         // ORIGINAL STATS LOGIC (For Reports Dashboard)
+        let dateFilter;
+        if (mode === 'monthly') {
+            dateFilter = `MONTH(created_at) = MONTH('${targetDate}') AND YEAR(created_at) = YEAR('${targetDate}')`;
+        } else {
+            dateFilter = `DATE(created_at) = '${targetDate}'`;
+        }
+
         // Count by Type
         const [typeRows] = await pool.query(`
             SELECT type, COUNT(*) as total 
             FROM service_orders 
-            WHERE DATE(created_at) BETWEEN ? AND ?
+            WHERE ${dateFilter}
             GROUP BY type
-        `, [start, end]);
+        `);
 
         // Count by Status
         const [statusRows] = await pool.query(`
             SELECT status, COUNT(*) as total 
             FROM service_orders 
-            WHERE DATE(created_at) BETWEEN ? AND ?
+            WHERE ${dateFilter}
             GROUP BY status
-        `, [start, end]);
+        `);
 
         pool.release();
 

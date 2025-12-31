@@ -339,52 +339,6 @@ exports.deleteClient = async (req, res) => {
     }
 };
 
-// --- Export Clients (CSV/XLS) ---
-exports.exportClients = async (req, res) => {
-    const type = req.query.type || 'total'; // active, mora, total
-    try {
-        let where = '';
-        const params = [];
-        if (type === 'active') {
-            // Active and not in mora (last_paid_month >= today or null)
-            where = "WHERE c.status = 'active' AND (c.last_paid_month >= CURDATE() OR c.last_paid_month IS NULL)";
-        } else if (type === 'mora') {
-            // Active and overdue (last_paid_month < today)
-            where = "WHERE c.status = 'active' AND c.last_paid_month < CURDATE()";
-        } else {
-            // total: no filter
-            where = '';
-        }
-        const [rows] = await db.query(`SELECT c.id, c.contract_number, c.identity_document, c.full_name, c.phone_primary, c.phone_secondary, c.address_street, c.status, c.last_paid_month FROM clients c ${where}`);
-        // Build CSV header
-        const headers = ['ID', 'Contrato', 'Cédula', 'Nombre', 'Teléfono', 'Teléfono Secundario', 'Dirección', 'Estado', 'Último Mes Pagado'];
-        const csvLines = [];
-        csvLines.push(headers.join(','));
-        rows.forEach(r => {
-            const line = [
-                r.id,
-                `"${r.contract_number || ''}"`,
-                `"${r.identity_document || ''}"`,
-                `"${r.full_name || ''}"`,
-                `"${r.phone_primary || ''}"`,
-                `"${r.phone_secondary || ''}"`,
-                `"${r.address_street || ''}"`,
-                `"${r.status || ''}"`,
-                r.last_paid_month ? r.last_paid_month.toISOString().split('T')[0] : ''
-            ].join(',');
-            csvLines.push(line);
-        });
-        const csvContent = csvLines.join('\n');
-        const filename = `clientes_${type}.xls`;
-        res.setHeader('Content-Type', 'application/vnd.ms-excel');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.send(csvContent);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
-};
-
 // --- SERVICE ORDERS ---
 
 // --- Service Orders (Existing) ---
