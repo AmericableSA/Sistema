@@ -90,10 +90,10 @@ const Reports = () => {
         try {
             const [statsRes, closingRes, topRes, moveRes, ordersRes] = await Promise.all([
                 fetch(`${apiBaseUrl}/cable-stats`, { headers }),
-                fetch(`${apiBaseUrl}/daily-closing?date=${selectedDate}`, { headers }),
+                fetch(`${apiBaseUrl}/daily-closing?startDate=${startDate}&endDate=${endDate}`, { headers }),
                 fetch(`${apiBaseUrl}/sales-by-user?startDate=${startOfMonth}&endDate=${endOfMonth}`, { headers }),
-                fetch(`${apiBaseUrl}/movements?mode=daily&date=${selectedDate}`, { headers }),
-                fetch(`${apiBaseUrl}/orders?mode=daily&date=${selectedDate}`, { headers })
+                fetch(`${apiBaseUrl}/movements?startDate=${startDate}&endDate=${endDate}`, { headers }),
+                fetch(`${apiBaseUrl}/orders?startDate=${startDate}&endDate=${endDate}`, { headers })
             ]);
 
             setCableStats(await statsRes.json());
@@ -103,7 +103,7 @@ const Reports = () => {
             setOrders(await ordersRes.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, [refresh, selectedDate]);
+    }, [refresh, startDate, endDate]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -181,7 +181,7 @@ const Reports = () => {
                 </Card>
             </Grid>
 
-            <SectionTitle>Órdenes de Servicio ({selectedDate})</SectionTitle>
+            <SectionTitle>Órdenes de Servicio ({startDate} - {endDate})</SectionTitle>
             <Grid>
                 <Card>
                     <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>
@@ -197,7 +197,7 @@ const Reports = () => {
             </Grid>
 
             {/* Existing Sections Below */}
-            <SectionTitle>Cierre de Caja ({startDate})</SectionTitle>
+            <SectionTitle>Cierre de Caja ({startDate} - {endDate})</SectionTitle>
             <Grid>
                 <Card $highlight="linear-gradient(135deg, #059669 0%, #10b981 100%)">
                     <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos Hoy</Label>

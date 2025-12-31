@@ -356,29 +356,35 @@ exports.exportClients = async (req, res) => {
             where = '';
         }
         const [rows] = await db.query(`SELECT c.id, c.contract_number, c.identity_document, c.full_name, c.phone_primary, c.phone_secondary, c.address_street, c.status, c.last_paid_month FROM clients c ${where} ORDER BY c.full_name ASC`);
-        // Build CSV header
-        const headers = ['ID', 'Contrato', 'Cédula', 'Nombre', 'Teléfono', 'Teléfono Secundario', 'Dirección', 'Estado', 'Último Mes Pagado'];
-        const csvLines = [];
-        csvLines.push(headers.join(','));
+        // Create Excel workbook
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Clientes');
+
+        // Header row
+        worksheet.addRow(['ID', 'Contrato', 'Cédula', 'Nombre', 'Teléfono', 'Teléfono Secundario', 'Dirección', 'Estado', 'Último Mes Pagado']);
+
+        // Data rows
         rows.forEach(r => {
-            const line = [
+            worksheet.addRow([
                 r.id,
-                `"${r.contract_number || ''}"`,
-                `"${r.identity_document || ''}"`,
-                `"${r.full_name || ''}"`,
-                `"${r.phone_primary || ''}"`,
-                `"${r.phone_secondary || ''}"`,
-                `"${r.address_street || ''}"`,
-                `"${r.status || ''}"`,
+                r.contract_number || '',
+                r.identity_document || '',
+                r.full_name || '',
+                r.phone_primary || '',
+                r.phone_secondary || '',
+                r.address_street || '',
+                r.status || '',
                 r.last_paid_month ? r.last_paid_month.toISOString().split('T')[0] : ''
-            ].join(',');
-            csvLines.push(line);
+            ]);
         });
-        const csvContent = csvLines.join('\r\n');
-        const filename = `clientes_${type}.xls`;
-        res.setHeader('Content-Type', 'application/vnd.ms-excel');
+
+        // Generate Excel file buffer
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        const filename = `clientes_${type}.xlsx`;
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.send(csvContent);
+        res.send(buffer);
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
