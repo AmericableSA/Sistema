@@ -355,7 +355,7 @@ exports.exportClients = async (req, res) => {
             // total: no filter
             where = '';
         }
-        const [rows] = await db.query(`SELECT c.id, c.contract_number, c.identity_document, c.full_name, c.phone_primary, c.phone_secondary, c.address_street, c.status, c.last_paid_month FROM clients c ${where}`);
+        const [rows] = await db.query(`SELECT c.id, c.contract_number, c.identity_document, c.full_name, c.phone_primary, c.phone_secondary, c.address_street, c.status, c.last_paid_month FROM clients c ${where} ORDER BY c.full_name ASC`);
         // Build CSV header
         const headers = ['ID', 'Contrato', 'Cédula', 'Nombre', 'Teléfono', 'Teléfono Secundario', 'Dirección', 'Estado', 'Último Mes Pagado'];
         const csvLines = [];
@@ -374,7 +374,7 @@ exports.exportClients = async (req, res) => {
             ].join(',');
             csvLines.push(line);
         });
-        const csvContent = csvLines.join('\n');
+        const csvContent = csvLines.join('\r\n');
         const filename = `clientes_${type}.xls`;
         res.setHeader('Content-Type', 'application/vnd.ms-excel');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
