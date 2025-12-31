@@ -10,6 +10,8 @@ router.post('/', clientController.createClient);
 router.put('/:id', clientController.updateClient);
 router.delete('/:id', clientController.deleteClient);
 router.post('/movements', clientController.registerMovement);
+// Export clients to CSV/XLS
+router.get('/export', clientController.exportClients);
 
 // Service Orders
 router.get('/:id/orders', clientController.getServiceOrders);
