@@ -1,5 +1,4 @@
 const db = require('../config/db');
-const ExcelJS = require('exceljs');
 
 // --- List Clients (with Pagination) ---
 // --- List Clients (with Pagination & Filters) ---
@@ -341,55 +340,10 @@ exports.deleteClient = async (req, res) => {
 };
 
 // --- Export Clients (CSV/XLS) ---
+// --- Export Clients (CSV/XLS) ---
 exports.exportClients = async (req, res) => {
-    const type = req.query.type || 'total'; // active, mora, total
-    try {
-        let where = '';
-        const params = [];
-        if (type === 'active') {
-            // Active and not in mora (last_paid_month >= today or null)
-            where = "WHERE c.status = 'active' AND (c.last_paid_month >= CURDATE() OR c.last_paid_month IS NULL)";
-        } else if (type === 'mora') {
-            // Active and overdue (last_paid_month < today)
-            where = "WHERE c.status = 'active' AND c.last_paid_month < CURDATE()";
-        } else {
-            // total: no filter
-            where = '';
-        }
-        const [rows] = await db.query(`SELECT c.id, c.contract_number, c.identity_document, c.full_name, c.phone_primary, c.phone_secondary, c.address_street, c.status, c.last_paid_month FROM clients c ${where} ORDER BY c.full_name ASC`);
-        // Create Excel workbook
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Clientes');
-
-        // Header row
-        worksheet.addRow(['ID', 'Contrato', 'Cédula', 'Nombre', 'Teléfono', 'Teléfono Secundario', 'Dirección', 'Estado', 'Último Mes Pagado']);
-
-        // Data rows
-        rows.forEach(r => {
-            worksheet.addRow([
-                r.id,
-                r.contract_number || '',
-                r.identity_document || '',
-                r.full_name || '',
-                r.phone_primary || '',
-                r.phone_secondary || '',
-                r.address_street || '',
-                r.status || '',
-                r.last_paid_month ? r.last_paid_month.toISOString().split('T')[0] : ''
-            ]);
-        });
-
-        // Generate Excel file buffer
-        const buffer = await workbook.xlsx.writeBuffer();
-
-        const filename = `clientes_${type}.xlsx`;
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.send(buffer);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
+    // TEMPORARILY DISABLED TO FIX PROD CRASH
+    res.status(503).send('Feature temporarily disabled pending server update');
 };
 
 // --- SERVICE ORDERS ---
