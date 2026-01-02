@@ -223,7 +223,9 @@ const Clients = () => {
                             }}
                         >
                             <option value="all">📁 Todos los Estados</option>
-                            <option value="active">🟢 Activos</option>
+                            <option value="up_to_date">✅ Al Día</option>
+                            <option value="in_arrears">⚠️ En Mora</option>
+                            <option value="active">🟢 Activos (Todos)</option>
                             <option value="suspended">🔒 Cortados</option>
                             <option value="disconnected">⛔ Retirados</option>
                             <option value="pending_install">⏳ Pendientes</option>

@@ -27,8 +27,17 @@ exports.getClients = async (req, res) => {
         }
 
         if (req.query.status && req.query.status !== 'all') {
-            whereClauses.push('c.status = ?');
-            params.push(req.query.status);
+            if (req.query.status === 'up_to_date') {
+                // Active clients who paid current month or future
+                whereClauses.push("c.status = 'active' AND c.last_paid_month >= DATE_FORMAT(CURDATE(), '%Y-%m-01')");
+            } else if (req.query.status === 'in_arrears') {
+                // Active clients who have NOT paid current month
+                whereClauses.push("c.status = 'active' AND c.last_paid_month < DATE_FORMAT(CURDATE(), '%Y-%m-01')");
+            } else {
+                // Standard Status
+                whereClauses.push('c.status = ?');
+                params.push(req.query.status);
+            }
         }
 
         const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
