@@ -520,3 +520,104 @@ exports.deleteClientNote = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+// --- Export Clients XLS ---
+exports.exportClientsXLS = async (req, res) => {
+    try {
+        const search = req.query.search || '';
+        const start_letter = req.query.start_letter || '';
+
+        // Replicating Filter Logic strictly for Export
+        let whereClauses = [];
+        let params = [];
+
+        if (search) {
+            const like = `%${search}%`;
+            whereClauses.push('(c.full_name LIKE ? OR c.identity_document LIKE ? OR c.contract_number LIKE ?)');
+            params.push(like, like, like);
+        }
+
+        if (start_letter) {
+            whereClauses.push('c.full_name LIKE ?');
+            params.push(`${start_letter}%`);
+        }
+
+        if (req.query.status && req.query.status !== 'all') {
+            if (req.query.status === 'up_to_date') {
+                whereClauses.push("c.status = 'active' AND c.last_paid_month >= DATE_FORMAT(CURDATE(), '%Y-%m-01')");
+            } else if (req.query.status === 'in_arrears') {
+                whereClauses.push("c.status = 'active' AND c.last_paid_month < DATE_FORMAT(CURDATE(), '%Y-%m-01')");
+            } else {
+                whereClauses.push('c.status = ?');
+                params.push(req.query.status);
+            }
+        }
+
+        const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+        // Query All Data (No Limit)
+        const [rows] = await db.query(`
+            SELECT c.*, 
+                   cities.name as city_name, 
+                   z.name as zone_name
+            FROM clients c
+            LEFT JOIN cities ON c.city_id = cities.id
+            LEFT JOIN zones z ON c.zone_id = z.id
+            ${whereSql}
+            ORDER BY c.full_name ASC
+        `, params);
+
+        // Generate HTML Table for Excel
+        let htmlNode = `
+            <html xmlns:x="urn:schemas-microsoft-com:office:excel">
+            <head>
+                <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+            </head>
+            <body>
+                <table border="1">
+                    <thead>
+                        <tr style="background-color: #cccccc;">
+                            <th>Contrato</th>
+                            <th>Nombre Completo</th>
+                            <th>Cédula</th>
+                            <th>Teléfono</th>
+                            <th>Dirección</th>
+                            <th>Zona</th>
+                            <th>Estado</th>
+                            <th>Último Mes Pagado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        rows.forEach(c => {
+            const lastPaid = c.last_paid_month ? new Date(c.last_paid_month).toLocaleDateString() : 'N/A';
+            htmlNode += `
+                <tr>
+                    <td>${c.contract_number || ''}</td>
+                    <td>${c.full_name || ''}</td>
+                    <td>${c.identity_document || ''}</td>
+                    <td>${c.phone_primary || ''}</td>
+                    <td>${c.address_street || ''}</td>
+                    <td>${c.zone_name || ''}</td>
+                    <td>${c.status}</td>
+                    <td>${lastPaid}</td>
+                </tr>
+            `;
+        });
+
+        htmlNode += `
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        res.setHeader('Content-Type', 'application/vnd.ms-excel');
+        res.setHeader('Content-Disposition', 'attachment; filename=Reporte_Clientes.xls');
+        res.send(htmlNode);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error exportando excel');
+    }
+};

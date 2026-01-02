@@ -129,6 +129,22 @@ const Clients = () => {
                 </div>
 
                 <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
+                    {/* EXPORT BUTTON */}
+                    <button
+                        className="btn-dark-glow"
+                        onClick={() => {
+                            const params = new URLSearchParams({
+                                search: debouncedSearch,
+                                start_letter: letterFilter,
+                                status: statusFilter
+                            });
+                            window.open(`${import.meta.env.VITE_API_URL || '/api'}/clients/export-xls?${params.toString()}`, '_blank');
+                        }}
+                        style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}
+                    >
+                        📊 Exportar Excel
+                    </button>
+
                     {user?.role === 'admin' && (
                         <button className="btn-dark-glow" onClick={() => setShowUploadModal(true)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}>
                             📤 Carga Masiva

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const clientController = require('../controllers/clientController');
 
+router.get('/export-xls', clientController.exportClientsXLS); // Must be before /:id routes to avoid conflict
+
 router.get('/', clientController.getClients);
 router.get('/history/global', clientController.getGlobalHistory);
 router.get('/:id/history', clientController.getClientHistory);
