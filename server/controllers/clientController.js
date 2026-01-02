@@ -520,6 +520,7 @@ exports.deleteClientNote = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
 // --- Export Clients XLS ---
 exports.exportClientsXLS = async (req, res) => {
     try {
@@ -554,13 +555,11 @@ exports.exportClientsXLS = async (req, res) => {
 
         const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
 
-        // Query All Data (No Limit)
+        // Safely Query Data (Explicit Columns)
         const [rows] = await db.query(`
-            SELECT c.*, 
-                   cities.name as city_name, 
+            SELECT c.contract_number, c.full_name, c.identity_document, c.phone_primary, c.address_street, c.last_paid_month, c.status,
                    z.name as zone_name
             FROM clients c
-            LEFT JOIN cities ON c.city_id = cities.id
             LEFT JOIN zones z ON c.zone_id = z.id
             ${whereSql}
             ORDER BY c.full_name ASC
@@ -589,21 +588,41 @@ exports.exportClientsXLS = async (req, res) => {
                     <tbody>
         `;
 
-        rows.forEach(c => {
-            const lastPaid = c.last_paid_month ? new Date(c.last_paid_month).toLocaleDateString() : 'N/A';
+        for (const c of rows) {
+            let lastPaid = 'N/A';
+            try {
+                if (c.last_paid_month) {
+                    const d = new Date(c.last_paid_month);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        lastPaid = `${day}/${month}/${year}`;
+                    } else {
+                        // Handle '0000-00-00' strings or valid non-date strings
+                        lastPaid = String(c.last_paid_month);
+                    }
+                }
+            } catch (e) { lastPaid = 'Error Fecha'; }
+
+            const statusLabel =
+                c.status === 'active' ? 'Activo' :
+                    c.status === 'suspended' ? 'Cortado' :
+                        c.status === 'disconnected' ? 'Retirado' : c.status;
+
             htmlNode += `
                 <tr>
-                    <td>${c.contract_number || ''}</td>
+                    <td style="mso-number-format:'@'">${c.contract_number || ''}</td>
                     <td>${c.full_name || ''}</td>
-                    <td>${c.identity_document || ''}</td>
-                    <td>${c.phone_primary || ''}</td>
+                    <td style="mso-number-format:'@'">${c.identity_document || ''}</td>
+                    <td style="mso-number-format:'@'">${c.phone_primary || ''}</td>
                     <td>${c.address_street || ''}</td>
                     <td>${c.zone_name || ''}</td>
-                    <td>${c.status}</td>
+                    <td>${statusLabel}</td>
                     <td>${lastPaid}</td>
                 </tr>
             `;
-        });
+        }
 
         htmlNode += `
                     </tbody>
@@ -613,11 +632,11 @@ exports.exportClientsXLS = async (req, res) => {
         `;
 
         res.setHeader('Content-Type', 'application/vnd.ms-excel');
-        res.setHeader('Content-Disposition', 'attachment; filename=Reporte_Clientes.xls');
+        res.setHeader('Content-Disposition', 'attachment; filename="Reporte_Clientes.xls"');
         res.send(htmlNode);
 
     } catch (err) {
         console.error(err);
-        res.status(500).send('Error exportando excel');
+        res.status(500).send('Error exportando excel: ' + (err.message || 'Desconocido'));
     }
 };
