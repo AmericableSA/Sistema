@@ -142,12 +142,12 @@ const Clients = () => {
                         }}
                         style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}
                     >
-                        📊 Exportar Excel
+                        Exportar Excel
                     </button>
 
                     {user?.role === 'admin' && (
                         <button className="btn-dark-glow" onClick={() => setShowUploadModal(true)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}>
-                            📤 Carga Masiva
+                            Carga Masiva
                         </button>
                     )}
                     <button className="btn-dark-glow" onClick={() => setShowZoneModal(true)} style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
