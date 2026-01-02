@@ -521,13 +521,16 @@ exports.deleteClientNote = async (req, res) => {
     }
 };
 
-// --- Export Clients XLS ---
+// --- Export Clients XLS (Use ExcelJS for true XLSX) ---
 exports.exportClientsXLS = async (req, res) => {
     try {
+        // Lazy require to avoid top-level issues if dependency is strict, though we installed it.
+        const ExcelJS = require('exceljs');
+
         const search = req.query.search || '';
         const start_letter = req.query.start_letter || '';
 
-        // Replicating Filter Logic strictly for Export
+        // Replicating Filter Logic
         let whereClauses = [];
         let params = [];
 
@@ -565,30 +568,27 @@ exports.exportClientsXLS = async (req, res) => {
             ORDER BY c.full_name ASC
         `, params);
 
-        // Generate HTML Table for Excel
-        let htmlNode = `
-            <html xmlns:x="urn:schemas-microsoft-com:office:excel">
-            <head>
-                <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-            </head>
-            <body>
-                <table border="1">
-                    <thead>
-                        <tr style="background-color: #cccccc;">
-                            <th>Contrato</th>
-                            <th>Nombre Completo</th>
-                            <th>Cédula</th>
-                            <th>Teléfono</th>
-                            <th>Dirección</th>
-                            <th>Zona</th>
-                            <th>Estado</th>
-                            <th>Último Mes Pagado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+        // CREATE WORKBOOK
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Clientes');
 
-        for (const c of rows) {
+        // COLUMNS
+        worksheet.columns = [
+            { header: 'Contrato', key: 'contract', width: 15 },
+            { header: 'Nombre Completo', key: 'name', width: 35 },
+            { header: 'Cédula', key: 'identity', width: 20 },
+            { header: 'Teléfono', key: 'phone', width: 15 },
+            { header: 'Dirección', key: 'address', width: 40 },
+            { header: 'Zona', key: 'zone', width: 20 },
+            { header: 'Estado', key: 'status', width: 15 },
+            { header: 'Último Mes Pagado', key: 'last_paid', width: 20 }
+        ];
+
+        // STYLE
+        worksheet.getRow(1).font = { bold: true };
+
+        // DATA
+        rows.forEach(c => {
             let lastPaid = 'N/A';
             try {
                 if (c.last_paid_month) {
@@ -599,41 +599,37 @@ exports.exportClientsXLS = async (req, res) => {
                         const year = d.getFullYear();
                         lastPaid = `${day}/${month}/${year}`;
                     } else {
-                        // Handle '0000-00-00' strings or valid non-date strings
                         lastPaid = String(c.last_paid_month);
                     }
                 }
             } catch (e) { lastPaid = 'Error Fecha'; }
 
-            const statusLabel =
-                c.status === 'active' ? 'Activo' :
-                    c.status === 'suspended' ? 'Cortado' :
-                        c.status === 'disconnected' ? 'Retirado' : c.status;
+            const statusMap = {
+                'active': 'Activo',
+                'suspended': 'Cortado',
+                'disconnected': 'Retirado',
+                'pending_install': 'Pendiente'
+            };
 
-            htmlNode += `
-                <tr>
-                    <td style="mso-number-format:'@'">${c.contract_number || ''}</td>
-                    <td>${c.full_name || ''}</td>
-                    <td style="mso-number-format:'@'">${c.identity_document || ''}</td>
-                    <td style="mso-number-format:'@'">${c.phone_primary || ''}</td>
-                    <td>${c.address_street || ''}</td>
-                    <td>${c.zone_name || ''}</td>
-                    <td>${statusLabel}</td>
-                    <td>${lastPaid}</td>
-                </tr>
-            `;
-        }
+            worksheet.addRow({
+                contract: c.contract_number || '',
+                name: c.full_name || '',
+                identity: c.identity_document || '',
+                phone: c.phone_primary || '',
+                address: c.address_street || '',
+                zone: c.zone_name || '',
+                status: statusMap[c.status] || c.status,
+                last_paid: lastPaid
+            });
+        });
 
-        htmlNode += `
-                    </tbody>
-                </table>
-            </body>
-            </html>
-        `;
+        // HEADERS FOR DOWNLOAD
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="Reporte_Clientes.xlsx"');
 
-        res.setHeader('Content-Type', 'application/vnd.ms-excel');
-        res.setHeader('Content-Disposition', 'attachment; filename="Reporte_Clientes.xls"');
-        res.send(htmlNode);
+        // STREAM
+        await workbook.xlsx.write(res);
+        res.end();
 
     } catch (err) {
         console.error(err);
