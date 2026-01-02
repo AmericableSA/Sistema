@@ -91,7 +91,8 @@ const Reports = () => {
     const [orders, setOrders] = useState({ byType: [], byStatus: [] });
     const [refresh, setRefresh] = useState(0);
 
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const formatCurrency = (val) => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO' }).format(val || 0);
 
     const fetchData = useCallback(async () => {
@@ -100,7 +101,7 @@ const Reports = () => {
         const apiBaseUrl = (import.meta.env.VITE_API_URL || '/api') + '/reports';
         const headers = { 'Authorization': `Bearer ${token}` };
 
-        // Dates for Month Range
+        // Dates for Month Range (for cable stats context if needed, though mostly unused now)
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -108,10 +109,10 @@ const Reports = () => {
         try {
             const [statsRes, closingRes, topRes, moveRes, ordersRes] = await Promise.all([
                 fetch(`${apiBaseUrl}/cable-stats`, { headers }),
-                fetch(`${apiBaseUrl}/daily-closing?date=${selectedDate}`, { headers }),
+                fetch(`${apiBaseUrl}/daily-closing?startDate=${startDate}&endDate=${endDate}`, { headers }),
                 fetch(`${apiBaseUrl}/sales-by-user?startDate=${startOfMonth}&endDate=${endOfMonth}`, { headers }),
-                fetch(`${apiBaseUrl}/movements?mode=daily&date=${selectedDate}`, { headers }),
-                fetch(`${apiBaseUrl}/orders?mode=daily&date=${selectedDate}`, { headers })
+                fetch(`${apiBaseUrl}/movements?startDate=${startDate}&endDate=${endDate}`, { headers }),
+                fetch(`${apiBaseUrl}/orders?startDate=${startDate}&endDate=${endDate}`, { headers })
             ]);
 
             setCableStats(await statsRes.json());
@@ -121,7 +122,7 @@ const Reports = () => {
             setOrders(await ordersRes.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, [refresh, selectedDate]);
+    }, [refresh, startDate, endDate]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -135,13 +136,23 @@ const Reports = () => {
                     <TitleHeader>Reportes Operativos</TitleHeader>
                     <p style={{ margin: 0, color: '#64748b' }}>Resumen de Caja, Morosidad y Estado de Red</p>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <DateInputContainer>
                         <FaCalendarAlt style={{ color: '#94a3b8' }} />
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginRight: '0.5rem' }}>Desde:</span>
                         <DateInput
                             type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                    </DateInputContainer>
+                    <DateInputContainer>
+                        <FaCalendarAlt style={{ color: '#94a3b8' }} />
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginRight: '0.5rem' }}>Hasta:</span>
+                        <DateInput
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
                         />
                     </DateInputContainer>
                     <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -150,7 +161,7 @@ const Reports = () => {
                 </div>
             </Header>
 
-            <SectionTitle>Actividad Operativa ({selectedDate})</SectionTitle>
+            <SectionTitle>Actividad Operativa ({startDate} - {endDate})</SectionTitle>
             <Grid>
                 <Card>
                     <Label style={{ color: '#db2777' }}>📝 Cambios Nombre</Label>
@@ -170,12 +181,12 @@ const Reports = () => {
                 </Card>
             </Grid>
 
-            <SectionTitle>Órdenes de Servicio ({selectedDate})</SectionTitle>
+            <SectionTitle>Órdenes de Servicio ({startDate} - {endDate})</SectionTitle>
             <Grid>
                 <Card>
                     <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>
                     <Value>{orders.byStatus.reduce((acc, curr) => acc + curr.total, 0)}</Value>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Generadas en fecha</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Generadas en periodo</div>
                 </Card>
                 {orders.byType.map((t, i) => (
                     <Card key={i}>
@@ -186,15 +197,15 @@ const Reports = () => {
             </Grid>
 
             {/* Existing Sections Below */}
-            <SectionTitle>Cierre de Caja ({selectedDate})</SectionTitle>
+            <SectionTitle>Cierre de Caja ({startDate} - {endDate})</SectionTitle>
             <Grid>
                 <Card $highlight="linear-gradient(135deg, #059669 0%, #10b981 100%)">
-                    <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos Hoy</Label>
+                    <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos</Label>
                     <Value>{formatCurrency(dailyClosing.ingresos)}</Value>
                     <div style={{ color: '#d1fae5', fontSize: '0.9rem' }}>Cobrado en transacciones</div>
                 </Card>
                 <Card $highlight="linear-gradient(135deg, #dc2626 0%, #ef4444 100%)">
-                    <Label style={{ color: 'white' }}><FaExchangeAlt /> Gastos Hoy</Label>
+                    <Label style={{ color: 'white' }}><FaExchangeAlt /> Gastos</Label>
                     <Value>{formatCurrency(dailyClosing.egresos)}</Value>
                     <div style={{ color: '#fecaca' }}>Pagos y Salidas</div>
                 </Card>
@@ -209,7 +220,7 @@ const Reports = () => {
 
             {dailyClosing.por_usuario && dailyClosing.por_usuario.length > 0 && (
                 <Card style={{ marginBottom: '2rem' }}>
-                    <Label>Desglose por Cajero (Solo Hoy)</Label>
+                    <Label>Desglose por Cajero (Periodo)</Label>
                     <CashClosingTable>
                         <thead>
                             <tr>
@@ -231,27 +242,9 @@ const Reports = () => {
                 </Card>
             )}
 
-            <SectionTitle>Actividad Operativa (Hoy)</SectionTitle>
-            <Grid>
-                <Card>
-                    <Label style={{ color: '#db2777' }}>📝 Cambios Nombre</Label>
-                    <Value style={{ color: 'white' }}>{movements.CHANGE_NAME || 0}</Value>
-                </Card>
-                <Card>
-                    <Label style={{ color: '#9333ea' }}>📍 Traslados</Label>
-                    <Value style={{ color: 'white' }}>{movements.CHANGE_ADDRESS || 0}</Value>
-                </Card>
-                <Card>
-                    <Label style={{ color: '#ef4444' }}>✂️ Solicitudes Baja</Label>
-                    <Value style={{ color: 'white' }}>{movements.DISCONNECT_REQ || 0}</Value>
-                </Card>
-                <Card>
-                    <Label style={{ color: '#f59e0b' }}>⚖️ Cortes Mora</Label>
-                    <Value style={{ color: 'white' }}>{movements.DISCONNECT_MORA || 0}</Value>
-                </Card>
-            </Grid>
 
-            <SectionTitle>Órdenes de Servicio (Mes Actual)</SectionTitle>
+
+
             <Grid>
                 <Card>
                     <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>
