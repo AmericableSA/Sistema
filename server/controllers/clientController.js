@@ -1,8 +1,6 @@
 const db = require('../config/db');
 
 // --- List Clients (with Pagination) ---
-// --- List Clients (with Pagination & Filters) ---
-// --- List Clients (with Pagination & Filters) ---
 exports.getClients = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -335,11 +333,6 @@ exports.deleteClient = async (req, res) => {
     const { id } = req.params;
     const userId = 1;
     try {
-        // Log delete before deleting (if soft delete preferred, but here we hard delete so maybe log globally? 
-        // Or keep logs and cascade? Schema said cascade logs. 
-        // Real-world: Don't hard delete clients usually. But user asked for delete. 
-        // We can't log to client_logs if client row is gone due to FK Cascade.
-        // We will just delete for now.)
         await db.query('DELETE FROM clients WHERE id = ?', [id]);
         res.json({ msg: 'Cliente eliminado' });
     } catch (err) {
@@ -524,11 +517,15 @@ exports.deleteClientNote = async (req, res) => {
 // --- Export Clients XLS (Use ExcelJS for true XLSX) ---
 exports.exportClientsXLS = async (req, res) => {
     try {
+        console.log('--- EXPORT REQUEST RECEIVED ---');
+        console.log('Query Params:', req.query);
+
         // Lazy require to avoid top-level issues if dependency is strict, though we installed it.
         const ExcelJS = require('exceljs');
 
-        const search = req.query.search || '';
-        const start_letter = req.query.start_letter || '';
+        const search = (req.query.search || '').trim();
+        const start_letter = (req.query.start_letter || '').trim();
+        const status = (req.query.status || 'all').trim();
 
         // Replicating Filter Logic
         let whereClauses = [];
@@ -545,18 +542,20 @@ exports.exportClientsXLS = async (req, res) => {
             params.push(`${start_letter}%`);
         }
 
-        if (req.query.status && req.query.status !== 'all') {
-            if (req.query.status === 'up_to_date') {
+        if (status && status !== 'all') {
+            if (status === 'up_to_date') {
                 whereClauses.push("c.status = 'active' AND c.last_paid_month >= DATE_FORMAT(CURDATE(), '%Y-%m-01')");
-            } else if (req.query.status === 'in_arrears') {
+            } else if (status === 'in_arrears') {
                 whereClauses.push("c.status = 'active' AND c.last_paid_month < DATE_FORMAT(CURDATE(), '%Y-%m-01')");
             } else {
                 whereClauses.push('c.status = ?');
-                params.push(req.query.status);
+                params.push(status);
             }
         }
 
         const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+        console.log('Generated SQL WHERE:', whereSql);
+        console.log('Params:', params);
 
         // Safely Query Data (Explicit Columns)
         const [rows] = await db.query(`
@@ -567,6 +566,8 @@ exports.exportClientsXLS = async (req, res) => {
             ${whereSql}
             ORDER BY c.full_name ASC
         `, params);
+
+        console.log(`Exporting ${rows.length} rows`);
 
         // CREATE WORKBOOK
         const workbook = new ExcelJS.Workbook();
