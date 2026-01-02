@@ -61,6 +61,26 @@ const CashClosingTable = styled.table`
     tr:last-child td { border-bottom: none; }
 `;
 
+const DateInputContainer = styled.div`
+  position: relative;
+  display: flex; align-items: center;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  &:hover { border-color: rgba(255,255,255,0.3); background: rgba(30, 41, 59, 0.8); }
+`;
+
+const DateInput = styled.input`
+  background: transparent; border: none; color: white;
+  font-family: inherit; font-size: 0.95rem;
+  &::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; transition: filter 0.2s; }
+  &::-webkit-calendar-picker-indicator:hover { filter: invert(1); }
+  outline: none;
+`;
+
 const Reports = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -116,12 +136,14 @@ const Reports = () => {
                     <p style={{ margin: 0, color: '#64748b' }}>Resumen de Caja, Morosidad y Estado de Red</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid #475569', padding: '0.5rem', borderRadius: '8px' }}
-                    />
+                    <DateInputContainer>
+                        <FaCalendarAlt style={{ color: '#94a3b8' }} />
+                        <DateInput
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                        />
+                    </DateInputContainer>
                     <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <FaSync /> Actualizar
                     </button>
@@ -261,6 +283,11 @@ const Reports = () => {
 
             <SectionTitle>Estado de Cartera de Clientes</SectionTitle>
             <Grid>
+                <Card>
+                    <Label style={{ color: '#10b981' }}><FaUserCheck /> Clientes al Día</Label>
+                    <Value style={{ color: '#10b981' }}>{cableStats.al_dia || 0}</Value>
+                    <div style={{ color: '#94a3b8' }}>Sin pagos pendientes</div>
+                </Card>
                 <Card>
                     <Label style={{ color: '#ef4444' }}><FaUserTimes /> Cortados por Mora</Label>
                     <Value style={{ color: '#ef4444' }}>{cableStats.morosos.count}</Value>

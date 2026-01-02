@@ -120,6 +120,11 @@ exports.getCableStats = async (req, res) => {
         const [sRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'suspended'");
         const [rRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status IN ('retired', 'inactive', 'disconnected')");
 
+        // NEW: Active Clients for Al Dia calculation
+        const [activeRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'active'");
+        const activeCount = activeRows[0]?.c || 0;
+        const alDiaCount = Math.max(0, activeCount - morososCount);
+
         // 3. New Installations
         const [nRows] = await pool.query(`
             SELECT COUNT(*) as c FROM clients 
@@ -131,6 +136,7 @@ exports.getCableStats = async (req, res) => {
 
         res.json({
             morosos: { count: morososCount, deuda: morososDebt || 0 },
+            al_dia: alDiaCount,
             suspendidos: sRows[0]?.c || 0,
             retirados: rRows[0]?.c || 0,
             instalaciones_mes: nRows[0]?.c || 0,
