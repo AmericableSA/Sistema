@@ -116,18 +116,22 @@ exports.addMovement = async (req, res) => {
     const userId = await getValidUser(req.user?.id);
 
     try {
-        let [sessions] = await db.query('SELECT id FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
-
-        // Fallback: If no personal session, allow adding movement to GLOBAL session (Shared Drawer)
+        // Fallback: If no personal session, allow adding movement to GLOBAL session
         if (sessions.length === 0) {
             [sessions] = await db.query('SELECT id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
         }
 
-        if (sessions.length === 0) return res.status(400).json({ msg: 'No hay caja abierta.' });
+        if (sessions.length === 0) return res.status(400).json({ msg: 'No hay ninguna caja abierta en el sistema.' });
+
+        // Get User Name for Attribution in Description (Since we share the session)
+        const [actors] = await db.query('SELECT username FROM users WHERE id = ?', [userId]);
+        const actorName = actors[0]?.username || 'Usuario';
+
+        const finalDesc = `${description} (Por: ${actorName})`;
 
         await db.query(
             'INSERT INTO cash_movements (session_id, type, amount, description) VALUES (?, ?, ?, ?)',
-            [sessions[0].id, type, amount, description]
+            [sessions[0].id, type, amount, finalDesc]
         );
         res.json({ msg: 'Movimiento registrado' });
     } catch (err) { res.status(500).send(err); }
