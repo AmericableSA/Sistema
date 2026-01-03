@@ -302,9 +302,8 @@ const Reports = () => {
                     <div style={{ color: '#94a3b8' }}>Base instalada total</div>
                 </Card>
             </Grid>
+            {showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} />}
         </PageWrapper>
-        { showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} /> }
-    </>
     );
 };
 
