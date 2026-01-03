@@ -84,6 +84,33 @@ const DailyReportModal = ({ onClose }) => {
 
     const formatMoney = (amount) => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO' }).format(amount);
 
+    const handleExport = async () => {
+        const btn = document.getElementById('btn-export-daily');
+        if (btn) btn.innerText = '⌛...';
+
+        try {
+            const res = await fetch(`/api/reports/daily-details/export?startDate=${date}&endDate=${date}`);
+
+            if (!res.ok) throw new Error('Error generando reporte');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Bitacora_Diaria_${date}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            console.error('Export Failed:', error);
+            alert('Error al exportar el archivo');
+        } finally {
+            if (btn) btn.innerText = '📊 Exportar Excel';
+        }
+    };
+
     return (
         <ModalOverlay onClick={e => e.target === e.currentTarget && onClose()}>
             <ModalContent className="animate-slide-up">
@@ -102,7 +129,8 @@ const DailyReportModal = ({ onClose }) => {
                             />
                         </InputGroup>
                         <button
-                            onClick={() => window.open(`/api/reports/daily-details/export?startDate=${date}&endDate=${date}`, '_blank')}
+                            id="btn-export-daily"
+                            onClick={handleExport}
                             style={{
                                 background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399',
                                 padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
