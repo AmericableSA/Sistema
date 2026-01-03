@@ -17,6 +17,7 @@ router.get('/dashboard', reportController.getDashboardStats);
 router.get('/cable-stats', reportController.getCableStats);
 router.get('/daily-closing', reportController.getDailyClosing);
 router.get('/daily-details', reportController.getDailyDetails);
+router.get('/daily-details/export', reportController.exportDailyDetailsXLS);
 
 // Operational Reports (Movements & Orders)
 router.get('/movements', reportController.getMovementsReport);

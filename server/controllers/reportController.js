@@ -252,8 +252,10 @@ exports.getDailyDetails = async (req, res) => {
                 'N/A' as reference_id,
                 'Movimiento Manual' as client_name,
                 '' as contract_number,
-                'Cajero' as collector
+                COALESCE(u.username, 'Cajero') as collector
             FROM cash_movements m
+            LEFT JOIN cash_sessions s ON m.session_id = s.id
+            LEFT JOIN users u ON s.user_id = u.id
             WHERE DATE(m.created_at) BETWEEN ? AND ?
             ORDER BY m.created_at DESC
         `, [sDate, eDate]);
@@ -292,6 +294,95 @@ exports.getDailyDetails = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Report Error' });
+    } finally {
+        if (pool) pool.release();
+    }
+};
+
+exports.exportDailyDetailsXLS = async (req, res) => {
+    let pool;
+    try {
+        const { startDate, endDate } = req.query;
+        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const eDate = endDate || sDate;
+
+        pool = await db.getConnection();
+
+        // reuse queries - code duplication for safety/speed vs refactor
+        const [txRows] = await pool.query(`
+            SELECT 
+                t.created_at, t.amount, t.type, t.payment_method, t.description,
+                c.full_name as client_name, c.contract_number, COALESCE(u.username, 'Sistema') as collector
+            FROM transactions t
+            LEFT JOIN clients c ON t.client_id = c.id
+            LEFT JOIN users u ON t.collector_id = u.id
+            WHERE t.type != 'void' AND DATE(t.created_at) BETWEEN ? AND ?
+        `, [sDate, eDate]);
+
+        const [moveRows] = await pool.query(`
+            SELECT 
+                m.created_at, m.amount, m.type, 'cash' as payment_method, m.description,
+                'Movimiento Manual' as client_name, '' as contract_number, COALESCE(u.username, 'Cajero') as collector
+            FROM cash_movements m
+            LEFT JOIN cash_sessions s ON m.session_id = s.id
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE DATE(m.created_at) BETWEEN ? AND ?
+        `, [sDate, eDate]);
+
+        const combined = [
+            ...txRows.map(r => ({ ...r, category: 'TRANSACTION' })),
+            ...moveRows.map(r => ({ ...r, category: 'MOVEMENT' }))
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        const ExcelJS = require('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Bitácora Diaria');
+
+        sheet.columns = [
+            { header: 'Fecha/Hora', key: 'time', width: 20 },
+            { header: 'Tipo', key: 'type', width: 15 },
+            { header: 'Cliente / Descripción', key: 'desc', width: 40 },
+            { header: 'Cajero', key: 'collector', width: 15 },
+            { header: 'Método', key: 'method', width: 10 },
+            { header: 'Monto', key: 'amount', width: 15 },
+        ];
+
+        combined.forEach(row => {
+            const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
+            const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA');
+
+            sheet.addRow({
+                time: new Date(row.created_at).toLocaleString('es-NI'),
+                type: typeLabel,
+                desc: (row.client_name || row.description) + (row.contract_number ? ` (#${row.contract_number})` : ''),
+                collector: row.collector,
+                method: row.payment_method,
+                amount: (isIncome ? 1 : -1) * parseFloat(row.amount)
+            });
+        });
+
+        // Totals Row
+        // Calculate
+        let net = 0;
+        combined.forEach(item => {
+            const val = parseFloat(item.amount);
+            if (item.category === 'TRANSACTION') net += val;
+            else if (item.type === 'IN') net += val;
+            else if (item.type === 'OUT') net -= val;
+        });
+
+        sheet.addRow({});
+        sheet.addRow({ desc: 'BALANCE NETO', amount: net });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Bitacora_${sDate}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (error) {
+        console.error('Export Error:', error);
+        res.status(500).send('Error exportando excel');
     } finally {
         if (pool) pool.release();
     }
