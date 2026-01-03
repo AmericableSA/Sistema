@@ -102,92 +102,92 @@ const DailyReportModal = ({ onClose }) => {
                             />
                         </InputGroup>
                         <button
-                            onClick={() => window.open(\`/api/reports/daily-details/export?startDate=\${date}&endDate=\${date}\`, '_blank')}
-                        style={{
-                            background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399',
-                            padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-                        }}
+                            onClick={() => window.open(`/api/reports/daily-details/export?startDate=${date}&endDate=${date}`, '_blank')}
+                            style={{
+                                background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399',
+                                padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
+                            }}
                         >
-                        📊 Exportar Excel
-                    </button>
-                </div>
-                <button onClick={onClose} className="btn-icon" style={{ fontSize: '1.5rem', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-            </Header>
+                            📊 Exportar Excel
+                        </button>
+                    </div>
+                    <button onClick={onClose} className="btn-icon" style={{ fontSize: '1.5rem', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                </Header>
 
-            <Content>
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>Cargando movimientos...</div>
-                ) : data.details.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>📭</div>
-                        No hay movimientos registrados en esta fecha.
-                    </div>
-                ) : (
-                    <Table>
-                        <thead>
-                            <tr>
-                                <th>Hora</th>
-                                <th>Tipo</th>
-                                <th>Cliente / Descripción</th>
-                                <th>Cajero</th>
-                                <th>Método</th>
-                                <th style={{ textAlign: 'right' }}>Monto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.details.map((row, i) => {
-                                const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
-                                return (
-                                    <tr key={i}>
-                                        <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
-                                            {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </td>
-                                        <td>
-                                            <Badge type={row.category === 'TRANSACTION' ? 'SALE' : row.type}>
-                                                {row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA')}
-                                            </Badge>
-                                        </td>
-                                        <td>
-                                            <div style={{ fontWeight: '500', color: 'white' }}>{row.client_name || row.description}</div>
-                                            {row.client_name && row.description && row.client_name !== row.description && (
-                                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{row.description}</div>
-                                            )}
-                                            {row.contract_number && <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>#{row.contract_number}</div>}
-                                        </td>
-                                        <td>{row.collector}</td>
-                                        <td style={{ textTransform: 'capitalize' }}>{row.payment_method}</td>
-                                        <td style={{ textAlign: 'right', fontWeight: 'bold', color: isIncome ? '#34d399' : '#f87171' }}>
-                                            {isIncome ? '+' : '-'} {Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </Table>
-                )}
-            </Content>
+                <Content>
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>Cargando movimientos...</div>
+                    ) : data.details.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+                            <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>📭</div>
+                            No hay movimientos registrados en esta fecha.
+                        </div>
+                    ) : (
+                        <Table>
+                            <thead>
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>Tipo</th>
+                                    <th>Cliente / Descripción</th>
+                                    <th>Cajero</th>
+                                    <th>Método</th>
+                                    <th style={{ textAlign: 'right' }}>Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.details.map((row, i) => {
+                                    const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
+                                    return (
+                                        <tr key={i}>
+                                            <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
+                                                {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td>
+                                                <Badge type={row.category === 'TRANSACTION' ? 'SALE' : row.type}>
+                                                    {row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA')}
+                                                </Badge>
+                                            </td>
+                                            <td>
+                                                <div style={{ fontWeight: '500', color: 'white' }}>{row.client_name || row.description}</div>
+                                                {row.client_name && row.description && row.client_name !== row.description && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{row.description}</div>
+                                                )}
+                                                {row.contract_number && <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>#{row.contract_number}</div>}
+                                            </td>
+                                            <td>{row.collector}</td>
+                                            <td style={{ textTransform: 'capitalize' }}>{row.payment_method}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 'bold', color: isIncome ? '#34d399' : '#f87171' }}>
+                                                {isIncome ? '+' : '-'} {Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </Table>
+                    )}
+                </Content>
 
-            <Footer>
-                <div style={{ display: 'flex', gap: '2rem' }}>
-                    <div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Total Cobrado</div>
-                        <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalSales)}</div>
+                <Footer>
+                    <div style={{ display: 'flex', gap: '2rem' }}>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Total Cobrado</div>
+                            <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalSales)}</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Ingresos Manuales</div>
+                            <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalManualIn)}</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Salidas</div>
+                            <div style={{ fontSize: '1.2rem', color: '#f87171', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalManualOut)}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Ingresos Manuales</div>
-                        <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalManualIn)}</div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Balance Neto</div>
+                        <div style={{ fontSize: '2rem', color: 'white', fontWeight: 'bold' }}>{formatMoney(data.summary?.netBalance)}</div>
                     </div>
-                    <div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Salidas</div>
-                        <div style={{ fontSize: '1.2rem', color: '#f87171', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalManualOut)}</div>
-                    </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Balance Neto</div>
-                    <div style={{ fontSize: '2rem', color: 'white', fontWeight: 'bold' }}>{formatMoney(data.summary?.netBalance)}</div>
-                </div>
-            </Footer>
-        </ModalContent>
+                </Footer>
+            </ModalContent>
         </ModalOverlay >
     );
 };
