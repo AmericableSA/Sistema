@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../components/CustomAlert';
+import DailyReportModal from '../components/DailyReportModal';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
 
@@ -89,6 +90,7 @@ const Reports = () => {
     const [topCollectors, setTopCollectors] = useState([]);
     const [movements, setMovements] = useState({});
     const [orders, setOrders] = useState({ byType: [], byStatus: [] });
+    const [showDailyReport, setShowDailyReport] = useState(false);
     const [refresh, setRefresh] = useState(0);
 
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -155,6 +157,9 @@ const Reports = () => {
                             onChange={(e) => setEndDate(e.target.value)}
                         />
                     </DateInputContainer>
+                    <button onClick={() => setShowDailyReport(true)} style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', padding: '0.8rem 1.5rem', borderRadius: '12px', color: '#60a5fa', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <FaChartBar /> Detalle Diario
+                    </button>
                     <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <FaSync /> Actualizar
                     </button>
@@ -296,14 +301,10 @@ const Reports = () => {
                     <Value style={{ color: 'white' }}>{cableStats.total_clientes}</Value>
                     <div style={{ color: '#94a3b8' }}>Base instalada total</div>
                 </Card>
-                <Card>
-                    <Label style={{ color: '#3b82f6' }}><FaUserCheck /> Nuevas (Mes)</Label>
-                    <Value style={{ color: '#3b82f6' }}>{cableStats.instalaciones_mes}</Value>
-                    <div style={{ color: '#94a3b8' }}>Instalaciones del mes</div>
-                </Card>
             </Grid>
-
         </PageWrapper>
+        { showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} /> }
+    </>
     );
 };
 

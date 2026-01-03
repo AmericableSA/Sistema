@@ -208,6 +208,95 @@ exports.getDashboardStats = async (req, res) => {
     res.json({}); // Placeholder if rarely used
 };
 
+// 6. Detailed Daily Report (Bitacora)
+exports.getDailyDetails = async (req, res) => {
+    let pool;
+    try {
+        const { startDate, endDate } = req.query;
+        // Default to today if not provided
+        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const eDate = endDate || sDate;
+
+        pool = await db.getConnection();
+
+        // 1. Transactions (Income/Sales)
+        const [txRows] = await pool.query(`
+            SELECT 
+                t.id, 
+                t.created_at, 
+                t.amount, 
+                t.type, 
+                t.payment_method, 
+                t.description,
+                t.reference_id,
+                c.full_name as client_name,
+                c.contract_number,
+                COALESCE(u.username, 'Sistema') as collector
+            FROM transactions t
+            LEFT JOIN clients c ON t.client_id = c.id
+            LEFT JOIN users u ON t.collector_id = u.id
+            WHERE t.type != 'void' 
+            AND DATE(t.created_at) BETWEEN ? AND ?
+            ORDER BY t.created_at DESC
+        `, [sDate, eDate]);
+
+        // 2. Manual Cash Movements
+        const [moveRows] = await pool.query(`
+            SELECT 
+                m.id, 
+                m.created_at, 
+                m.amount, 
+                m.type, 
+                'cash' as payment_method,
+                m.description,
+                'N/A' as reference_id,
+                'Movimiento Manual' as client_name,
+                '' as contract_number,
+                'Cajero' as collector
+            FROM cash_movements m
+            WHERE DATE(m.created_at) BETWEEN ? AND ?
+            ORDER BY m.created_at DESC
+        `, [sDate, eDate]);
+
+        // Combine and Sort
+        const combined = [
+            ...txRows.map(r => ({ ...r, category: 'TRANSACTION' })),
+            ...moveRows.map(r => ({ ...r, category: 'MOVEMENT' }))
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        // Calculate Totals
+        let totalSales = 0;
+        let totalManualIn = 0;
+        let totalManualOut = 0;
+
+        combined.forEach(item => {
+            const val = parseFloat(item.amount);
+            if (item.category === 'TRANSACTION') {
+                totalSales += val;
+            } else {
+                if (item.type === 'IN') totalManualIn += val;
+                if (item.type === 'OUT') totalManualOut += val;
+            }
+        });
+
+        res.json({
+            details: combined,
+            summary: {
+                totalSales,
+                totalManualIn,
+                totalManualOut,
+                netBalance: (totalSales + totalManualIn) - totalManualOut
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Report Error' });
+    } finally {
+        if (pool) pool.release();
+    }
+};
+
 // --- NEW BLOCKS FOR MOVEMENTS & SERVICE ORDERS ---
 
 // 6. Movements (Trámites) Report

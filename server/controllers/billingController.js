@@ -111,27 +111,30 @@ exports.createTransaction = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        const [sessions] = await conn.query('SELECT id, exchange_rate, user_id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
+        // 1. Determine Correct Cash Session
+        // PRIORITY 1: Check if the current user has their OWN session open
+        let [sessions] = await conn.query(
+            'SELECT id, exchange_rate, user_id FROM cash_sessions WHERE user_id = ? AND status = "open" LIMIT 1',
+            [reqUserId]
+        );
+
+        // PRIORITY 2: Fallback to ANY open session (Shared Drawer Model)
+        // If the current user (e.g., employee) doesn't have a box, use the Admin's box (or whoever opened one).
+        if (sessions.length === 0) {
+            [sessions] = await conn.query('SELECT id, exchange_rate, user_id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
+        }
+
         if (sessions.length === 0) {
             await conn.rollback();
-            return res.status(403).json({ msg: 'No hay turno de caja abierto.' });
+            return res.status(403).json({ msg: 'No hay ninguna caja abierta. Pide a un administrador que abra caja.' });
         }
 
         const session = sessions[0];
         const sessionId = session.id;
         const currentRate = session.exchange_rate;
 
-        // SECURITY: Verify User
-        const [users] = await conn.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
-        const userRole = users.length ? users[0].role : 'cashier';
-
-        // Check: Is it MY session or am I ADMIN?
-        // Note: For "Charging", usually we allow charging to the OPEN session if valid, 
-        // but strict request says "only who opened it".
-        if (session.user_id !== reqUserId && userRole !== 'admin' && userRole !== 'oficina' && userRole !== 'office') {
-            await conn.rollback();
-            return res.status(403).json({ msg: 'No puedes cobrar en esta caja. Pertenece a otro usuario.' });
-        }
+        // REMOVED: Ownership restriction. 
+        // We now explicitly allow users to sell into sessions they don't own (Shared Drawer).
 
         const [trxRes] = await conn.query(
             `INSERT INTO transactions 

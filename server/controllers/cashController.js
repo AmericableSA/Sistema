@@ -21,7 +21,7 @@ exports.getStatus = async (req, res) => {
 
 // Get Live Statistics for Dashboard
 exports.getSessionStats = async (req, res) => {
-    const userId = 1;
+    const userId = await getValidUser(req.user?.id);
     try {
         const [sessions] = await db.query('SELECT id, start_amount FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
         if (!sessions.length) return res.json(null);
@@ -33,7 +33,7 @@ exports.getSessionStats = async (req, res) => {
         const [payments] = await db.query(`
             SELECT payment_method, SUM(amount) as total, COUNT(*) as count 
             FROM transactions 
-            WHERE session_id = ? 
+            WHERE session_id = ? AND type != 'void'
             GROUP BY payment_method
         `, [sessionId]);
 
@@ -50,7 +50,7 @@ exports.getSessionStats = async (req, res) => {
             if (p.payment_method === 'cash') stats.sales_cash = parseFloat(p.total);
             else if (p.payment_method === 'card') stats.sales_card = parseFloat(p.total);
             else if (p.payment_method === 'transfer') stats.sales_transfer = parseFloat(p.total);
-            else if (p.payment_method === 'dollars') stats.sales_dollars = parseFloat(p.total);
+            else if (p.payment_method === 'dollars') stats.sales_dollars = parseFloat(p.total); // Dollar face value
 
             stats.tx_count += p.count;
         });
@@ -67,11 +67,14 @@ exports.getSessionStats = async (req, res) => {
         });
 
         // 3. Totals
-        // "Cash in Drawer" = Start + Sales(Cash) + ManualIn - ManualOut
-        // Note: Dollars might be kept separate or converted. Assuming separate drawer for this MVP or mixed.
-        // Let's assume strict Cordobas drawer for now, or total value.
+        // "Cash in Drawer" = Start + Sales(Cash) + Sales(Dollars * Rate) + ManualIn - ManualOut
+        // Note: Dollars are typically kept as physical bills. If we mix them in the "Total System Value" we might convert them.
+        // For accurate balancing, let's assume the dashboard shows the COMBINED Cordoba Value.
 
-        const cashInDrawer = startAmount + stats.sales_cash + manualIn - manualOut;
+        const currentRate = parseFloat(sessions[0].exchange_rate || 37);
+        const dollarsInCordobas = stats.sales_dollars * currentRate;
+
+        const cashInDrawer = startAmount + stats.sales_cash + dollarsInCordobas + manualIn - manualOut;
 
         res.json({
             ...stats,
@@ -110,10 +113,16 @@ exports.openSession = async (req, res) => {
 // Add Manual Movement (Ingreso/Egreso)
 exports.addMovement = async (req, res) => {
     const { type, amount, description } = req.body;
-    const userId = 1;
+    const userId = await getValidUser(req.user?.id);
 
     try {
-        const [sessions] = await db.query('SELECT id FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
+        let [sessions] = await db.query('SELECT id FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
+
+        // Fallback: If no personal session, allow adding movement to GLOBAL session (Shared Drawer)
+        if (sessions.length === 0) {
+            [sessions] = await db.query('SELECT id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
+        }
+
         if (sessions.length === 0) return res.status(400).json({ msg: 'No hay caja abierta.' });
 
         await db.query(
@@ -171,12 +180,23 @@ exports.closeSession = async (req, res) => {
 
         // RE-QUERY accurate cash total
         const [cashIncome] = await db.query(
-            'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND (payment_method = "cash" OR payment_method = "dollars")',
+            'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND payment_method = "cash" AND type != "void"',
             [session_id]
         );
-        const cashSales = Number(cashIncome[0].total || 0);
+        const [dollarIncome] = await db.query(
+            'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND payment_method = "dollars" AND type != "void"',
+            [session_id]
+        );
 
-        const systemTotal = startAmount + cashSales + manualIn - manualOut;
+        const cashSales = Number(cashIncome[0].total || 0);
+        const dollarSales = Number(dollarIncome[0].total || 0);
+
+        // Convert Dollars to Cordobas for the System Total check
+        // Check if session has exchange_rate, else default
+        const sessionRate = parseFloat(session[0].exchange_rate || 37);
+        const dollarValueInCordobas = dollarSales * sessionRate;
+
+        const systemTotal = startAmount + cashSales + dollarValueInCordobas + manualIn - manualOut;
         const difference = Number(end_amount_physical) - systemTotal;
 
         // 2. Strict Check
