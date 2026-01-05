@@ -137,6 +137,9 @@ exports.getCableStats = async (req, res) => {
         // 5. Averias Pendientes
         const [avRows] = await pool.query("SELECT COUNT(*) as c FROM averias WHERE estado = 'Pendiente'");
 
+        // 6. Contactos Pendientes
+        const [contactRows] = await pool.query("SELECT COUNT(*) as c FROM contactos WHERE atendido = 0");
+
         res.json({
             morosos: { count: morososCount, deuda: morososDebt || 0 },
             al_dia: alDiaCount,
@@ -144,7 +147,8 @@ exports.getCableStats = async (req, res) => {
             retirados: rRows[0]?.c || 0,
             instalaciones_mes: nRows[0]?.c || 0,
             total_clientes: tRows[0]?.c || 0,
-            averias_pendientes: avRows[0]?.c || 0
+            averias_pendientes: avRows[0]?.c || 0,
+            contactos_pendientes: contactRows[0]?.c || 0
         });
 
     } catch (err) {

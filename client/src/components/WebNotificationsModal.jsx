@@ -24,13 +24,14 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            if (activeTab === 'averias') {
-                const res = await fetch(`/api/notifications/averias?status=${filterStatus}&startDate=${filterDate}&endDate=${filterDate}`);
-                setAverias(await res.json());
-            } else {
-                const res = await fetch(`/api/notifications/contactos?status=all`); // Contactos logic kept simple or update if needed
-                setContactos(await res.json());
-            }
+            // Fetch BOTH to ensure tab counts are accurate immediately
+            const [averiasRes, contactosRes] = await Promise.all([
+                fetch(`/api/notifications/averias?status=${filterStatus}&startDate=${filterDate}&endDate=${filterDate}`),
+                fetch(`/api/notifications/contactos?status=all`)
+            ]);
+
+            setAverias(await averiasRes.json());
+            setContactos(await contactosRes.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
