@@ -205,3 +205,20 @@ exports.deleteContacto = async (req, res) => {
     }
 };
 
+
+exports.getCajas = async (req, res) => {
+    try {
+        const { status } = req.query;
+        // Placeholder implementation to stop 500 error
+        // Logic for 'cajas' notifications (e.g. pending closing requests) can be added here
+        // For now, return empty array
+        const results = [];
+        // Example logic if we had a request table:
+        // const [results] = await db.query("SELECT * FROM cash_requests WHERE status = ?", [status]);
+
+        res.json(results);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};

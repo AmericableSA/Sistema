@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom';
 import ProductModal from '../components/ProductModal';
 // @ts-ignore
 // @ts-ignore
+// @ts-ignore
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 // @ts-ignore
 import CustomAlert from '../components/CustomAlert';
 import ComboManagerModal from '../components/ComboManagerModal';
 import InventoryHistoryModal from '../components/InventoryHistoryModal';
+import FullPageLoader from '../components/FullPageLoader';
 
 const Inventory = () => {
     const [products, setProducts] = useState([]);
@@ -115,6 +117,7 @@ const Inventory = () => {
 
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '100%' }}>
+            {loading && <FullPageLoader />}
 
             {/* Header (Matching Clients.jsx) */}
             <div className="animate-entry header-flex" style={{

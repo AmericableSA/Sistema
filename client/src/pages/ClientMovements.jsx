@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import CustomAlert from '../components/CustomAlert';
 import HistoryModal from '../components/HistoryModal';
 import WebNotificationsModal from '../components/WebNotificationsModal';
+import FullPageLoader from '../components/FullPageLoader';
 
 const ClientMovements = () => {
     // Data State
@@ -279,6 +280,7 @@ const ClientMovements = () => {
 
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
+            {(loading || loadingDaily || actionLoading) && <FullPageLoader />}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
@@ -292,7 +294,7 @@ const ClientMovements = () => {
                 <div style={{ background: '#1e293b', padding: '0.5rem', borderRadius: '12px', display: 'flex', gap: '0.5rem' }}>
                     <button
                         onClick={() => setShowNotifications(true)}
-                        className="btn-dark-glow"
+                        className={`btn-dark-glow ${notificationCount > 0 ? 'animate-pulse-red' : ''}`}
                         style={{ position: 'relative', background: '#e11d48', border: 'none', color: 'white', marginRight: '1rem' }}
                     >
                         🚨 Alertas Web
