@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 // @ts-ignore
 import CustomAlert from '../components/CustomAlert';
 import HistoryModal from '../components/HistoryModal';
+import WebNotificationsModal from '../components/WebNotificationsModal';
 
 const ClientMovements = () => {
     // Data State
@@ -34,6 +35,8 @@ const ClientMovements = () => {
 
     // History Modal State
     const [showHistory, setShowHistory] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notificationCount, setNotificationCount] = useState(0);
 
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
 
@@ -76,6 +79,20 @@ const ClientMovements = () => {
 
         fetchClients();
     }, [debouncedSearch, letterFilter]);
+
+    // Check Notifications Count
+    useEffect(() => {
+        const checkNotifs = async () => {
+            try {
+                const resA = await fetch('/api/notifications/averias?status=Pendiente');
+                const dataA = await resA.json();
+                const resC = await fetch('/api/notifications/contactos?status=pending');
+                const dataC = await resC.json();
+                setNotificationCount((Array.isArray(dataA) ? dataA.length : 0) + (Array.isArray(dataC) ? dataC.length : 0));
+            } catch (e) { }
+        };
+        checkNotifs();
+    }, []);
 
 
     const handleSelectClient = (client) => {
@@ -241,6 +258,18 @@ const ClientMovements = () => {
 
                 {/* TABS */}
                 <div style={{ background: '#1e293b', padding: '0.5rem', borderRadius: '12px', display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        onClick={() => setShowNotifications(true)}
+                        className="btn-dark-glow"
+                        style={{ position: 'relative', background: '#e11d48', border: 'none', color: 'white', marginRight: '1rem' }}
+                    >
+                        🚨 Alertas Web
+                        {notificationCount > 0 && (
+                            <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'white', color: '#e11d48', borderRadius: '50%', width: '20px', height: '20px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                {notificationCount}
+                            </span>
+                        )}
+                    </button>
                     <button
                         onClick={() => setViewMode('SEARCH')}
                         style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: viewMode === 'SEARCH' ? '#3b82f6' : 'transparent', color: viewMode === 'SEARCH' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
@@ -609,6 +638,18 @@ const ClientMovements = () => {
                     client={selectedClient}
                     initialTab="logs"
                     onClose={() => setShowHistory(false)}
+                />
+            )}
+
+            {showNotifications && (
+                <WebNotificationsModal
+                    onClose={() => setShowNotifications(false)}
+                    onAssignClient={(averia) => {
+                        setShowNotifications(false);
+                        setSearch(averia.nombre_completo); // Auto-search
+                        setViewMode('SEARCH');
+                        setAlert({ show: true, type: 'info', title: 'Buscando Cliente', message: `Buscando coincidencias para: ${averia.nombre_completo}` });
+                    }}
                 />
             )}
 

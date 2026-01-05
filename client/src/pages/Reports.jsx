@@ -287,6 +287,11 @@ const Reports = () => {
                     <div style={{ color: '#94a3b8' }}>Sin pagos pendientes</div>
                 </Card>
                 <Card>
+                    <Label style={{ color: '#f59e0b' }}>⚠️ Averías Web</Label>
+                    <Value style={{ color: 'white' }}>{cableStats.averias_pendientes || 0}</Value>
+                    <div style={{ color: '#94a3b8' }}>Reportes Pendientes</div>
+                </Card>
+                <Card>
                     <Label style={{ color: '#ef4444' }}><FaUserTimes /> Cortados por Mora</Label>
                     <Value style={{ color: '#ef4444' }}>{cableStats.morosos.count}</Value>
                     <div style={{ color: '#94a3b8' }}>Deuda: <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(cableStats.morosos.deuda)}</span></div>
