@@ -148,71 +148,76 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
             </button>
         </td>
     </tr>
+                                    ))}
+                            </tbody >
+                        </table >
+                    </div >
+                )}
 
-    {
-        activeTab === 'contactos' && (
-            <div className="animate-fade-in">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                    <button onClick={() => downloadFile('/api/notifications/contactos/export', 'Contactos_Web.xlsx')} className="btn-secondary">📥 Exportar Excel</button>
-                </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #334155', textAlign: 'left', color: '#94a3b8' }}>
-                            <th style={{ padding: '1rem' }}>Fecha</th>
-                            <th style={{ padding: '1rem' }}>Nombre</th>
-                            <th style={{ padding: '1rem' }}>Whatsapp</th>
-                            <th style={{ padding: '1rem' }}>Mensaje</th>
-                            <th style={{ padding: '1rem' }}>Estado</th>
-                            <th style={{ padding: '1rem' }}>Asignado A</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Cargando...</td></tr> :
-                            contactos.map(c => (
-                                <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={{ padding: '1rem' }}>{new Date(c.fecha_contacto).toLocaleDateString()}</td>
-                                    <td style={{ padding: '1rem', fontWeight: 'bold', color: 'white' }}>{c.nombre_completo}</td>
-                                    <td style={{ padding: '1rem' }}>{c.telefono_whatsapp}</td>
-                                    <td style={{ padding: '1rem', maxWidth: '250px' }}>{c.mensaje}</td>
-                                    <td style={{ padding: '1rem' }}>
-                                        <button
-                                            onClick={() => handleToggleStatus(c.id, !c.atendido)}
-                                            style={{
-                                                background: c.atendido ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                                                color: c.atendido ? '#34d399' : '#f87171',
-                                                border: 'none', padding: '0.25rem 0.5rem', borderRadius: '4px', cursor: 'pointer'
-                                            }}
-                                        >
-                                            {c.atendido ? 'Atendido' : 'Pendiente'}
-                                        </button>
-                                    </td>
-                                    <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <select
-                                            className="input-dark"
-                                            style={{ padding: '0.25rem', maxWidth: '120px' }}
-                                            value={c.assigned_user_id || ''}
-                                            onChange={(e) => handleAssignContact(c.id, e.target.value)}
-                                        >
-                                            <option value="">-- Sin Asignar --</option>
-                                            {users.map(u => (
-                                                <option key={u.id} value={u.id}>{u.username}</option>
-                                            ))}
-                                        </select>
-                                        <button
-                                            onClick={() => handleDeleteClick(c.id, 'contacto')}
-                                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', marginLeft: 'auto' }}
-                                            title="Eliminar"
-                                        >
-                                            🗑️
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                    </tbody>
-                </table>
+{
+    activeTab === 'contactos' && (
+        <div className="animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                <button onClick={() => downloadFile('/api/notifications/contactos/export', 'Contactos_Web.xlsx')} className="btn-secondary">📥 Exportar Excel</button>
             </div>
-        )
-    }
+            <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
+                <thead>
+                    <tr style={{ borderBottom: '1px solid #334155', textAlign: 'left', color: '#94a3b8' }}>
+                        <th style={{ padding: '1rem' }}>Fecha</th>
+                        <th style={{ padding: '1rem' }}>Nombre</th>
+                        <th style={{ padding: '1rem' }}>Whatsapp</th>
+                        <th style={{ padding: '1rem' }}>Mensaje</th>
+                        <th style={{ padding: '1rem' }}>Estado</th>
+                        <th style={{ padding: '1rem' }}>Asignado A</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {loading ? <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Cargando...</td></tr> :
+                        contactos.map(c => (
+                            <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <td style={{ padding: '1rem' }}>{new Date(c.fecha_contacto).toLocaleDateString()}</td>
+                                <td style={{ padding: '1rem', fontWeight: 'bold', color: 'white' }}>{c.nombre_completo}</td>
+                                <td style={{ padding: '1rem' }}>{c.telefono_whatsapp}</td>
+                                <td style={{ padding: '1rem', maxWidth: '250px' }}>{c.mensaje}</td>
+                                <td style={{ padding: '1rem' }}>
+                                    <button
+                                        onClick={() => handleToggleStatus(c.id, !c.atendido)}
+                                        style={{
+                                            background: c.atendido ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                            color: c.atendido ? '#34d399' : '#f87171',
+                                            border: 'none', padding: '0.25rem 0.5rem', borderRadius: '4px', cursor: 'pointer'
+                                        }}
+                                    >
+                                        {c.atendido ? 'Atendido' : 'Pendiente'}
+                                    </button>
+                                </td>
+                                <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <select
+                                        className="input-dark"
+                                        style={{ padding: '0.25rem', maxWidth: '120px' }}
+                                        value={c.assigned_user_id || ''}
+                                        onChange={(e) => handleAssignContact(c.id, e.target.value)}
+                                    >
+                                        <option value="">-- Sin Asignar --</option>
+                                        {users.map(u => (
+                                            <option key={u.id} value={u.id}>{u.username}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => handleDeleteClick(c.id, 'contacto')}
+                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', marginLeft: 'auto' }}
+                                        title="Eliminar"
+                                    >
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                </tbody>
+            </table>
+        </div>
+    )
+}
             </div >
             <style>{`
                 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; align-items: center; justifyContent: center; z-index: 99999; backdrop-filter: blur(5px); }
