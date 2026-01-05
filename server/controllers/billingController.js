@@ -448,9 +448,9 @@ exports.cancelTransaction = async (req, res) => {
 
         // 3. Register Refund (OUT)
         await conn.query(
-            `INSERT INTO cash_movements (user_id, amount, description, type, created_at) 
+            `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
              VALUES (?, ?, ?, 'OUT', NOW())`,
-            [validUserId, tx.amount, `Devolución Factura #${tx.reference_id || id}. Motivo: ${reason}`, 'OUT']
+            [sessions[0].id, tx.amount, `Devolución Factura #${tx.reference_id || id}. Motivo: ${reason}`]
         );
 
         // 4. Update Transaction Status
