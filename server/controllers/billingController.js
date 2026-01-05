@@ -101,10 +101,11 @@ exports.getBillingDetails = async (req, res) => {
 exports.createTransaction = async (req, res) => {
     const {
         client_id, type, amount, payment_method, description,
-        items, service_plan_id, justification,
-        details_json, collector_id, current_user_id // { months_paid: 2, mora_paid: 50, etc }
+        items, service_plan_id, justification, reference_id, // EXPLICIT DESTRUCTURE
+        details_json, collector_id, current_user_id
     } = req.body;
     console.log("Create Transaction Body:", req.body);
+    console.log("Using Reference ID:", reference_id);
 
     const reqUserId = await getValidUser(current_user_id);
     const conn = await db.getConnection();
@@ -141,7 +142,7 @@ exports.createTransaction = async (req, res) => {
             `INSERT INTO transactions 
             (session_id, client_id, amount, type, payment_method, description, justification, service_plan_id, reference_id, exchange_rate, details_json, collector_id) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [sessionId, client_id || null, amount, type, payment_method, description, justification, service_plan_id, req.body.reference_id, currentRate, JSON.stringify({ ...details_json, items }), collector_id || null]
+            [sessionId, client_id || null, amount, type, payment_method, description, justification, service_plan_id, reference_id || null, currentRate, JSON.stringify({ ...details_json, items }), collector_id || null]
         );
         const transactionId = trxRes.insertId;
 
@@ -271,7 +272,7 @@ exports.getDailyTransactions = async (req, res) => {
 
         // Base Query
         let querySales = `
-            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type, c.full_name as client_name, t.status, t.cancellation_reason, t.reference_id
+            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type, c.full_name as client_name, t.status, t.cancellation_reason, COALESCE(t.reference_id, 'S/N_DB') as reference_id
             FROM transactions t 
             LEFT JOIN clients c ON t.client_id = c.id
             WHERE 1=1
