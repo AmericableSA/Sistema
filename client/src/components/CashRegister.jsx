@@ -39,6 +39,7 @@ const CashRegister = (props) => {
     // New Modals
     const [showSettings, setShowSettings] = useState(false);
     const [receiptTransaction, setReceiptTransaction] = useState(null);
+    const [cancelTxId, setCancelTxId] = useState(null);
 
     useEffect(() => { fetchStatus(); fetchHistory(); }, []);
 
@@ -146,6 +147,28 @@ const CashRegister = (props) => {
         fetchHistory();
     };
 
+    const handleCancel = async (reason) => {
+        if (!reason) return alert('Debe indicar un motivo');
+        try {
+            const res = await fetch(`/api/billing/transaction/${cancelTxId}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: reason, current_user_id: user?.id })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setAlertInfo({ show: true, type: 'success', title: 'Cancelado', message: 'Transacción cancelada correctamente' });
+                setCancelTxId(null);
+                fetchHistory(); // Refresh list to show CANCELLED status
+            } else {
+                setAlertInfo({ show: true, type: 'error', title: 'Error', message: data.msg });
+            }
+        } catch (e) {
+            console.error(e);
+            setAlertInfo({ show: true, type: 'error', title: 'Error', message: 'Fallo de conexión' });
+        }
+    };
+
     const handleReprint = async (txId) => {
         try {
             const res = await fetch(`/api/billing/transaction/${txId}`);
@@ -196,6 +219,16 @@ const CashRegister = (props) => {
 
                 {/* MODALS */}
                 <ConfirmModal isOpen={showClosePrompt} title="Cierre de Turno" message="Cuente todo el dinero y digite el total:" type="prompt" inputPlaceholder="Total Efectivo (C$)" onConfirm={(val) => attemptClose(val)} onCancel={() => setShowClosePrompt(false)} />
+                <ConfirmModal
+                    isOpen={!!cancelTxId}
+                    title="Cancelar Transacción"
+                    message="IMPORTANTE: Esta acción descontará el dinero de la caja actual y revertirá el pago del cliente. Ingrese el motivo:"
+                    type="prompt"
+                    inputType="text"
+                    inputPlaceholder="Motivo de cancelación..."
+                    onConfirm={handleCancel}
+                    onCancel={() => setCancelTxId(null)}
+                />
 
                 {/* Style for hover effects */}
                 <style>{`
@@ -324,11 +357,24 @@ const CashRegister = (props) => {
                                                                 {isIncome ? '+' : '-'} C$ {Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                             </span>
                                                         </td>
-                                                        <td className="text-center">
+                                                        <td className="text-center" style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                                                             {isSale && (
                                                                 <button onClick={() => handleReprint(tx.id)} className="btn-icon-soft" title="Reimprimir Recibo">
                                                                     🖨️
                                                                 </button>
+                                                            )}
+                                                            {tx.status !== 'CANCELLED' && isSale && (
+                                                                <button
+                                                                    onClick={() => setCancelTxId(tx.id)}
+                                                                    className="btn-icon-soft"
+                                                                    title="Cancelar Factura"
+                                                                    style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
+                                                                >
+                                                                    ❌
+                                                                </button>
+                                                            )}
+                                                            {tx.status === 'CANCELLED' && (
+                                                                <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: 'bold', border: '1px solid #f87171', padding: '2px 4px', borderRadius: '4px' }}>CANCELADO</span>
                                                             )}
                                                         </td>
                                                     </tr>

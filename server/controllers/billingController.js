@@ -270,13 +270,13 @@ exports.getDailyTransactions = async (req, res) => {
 
         // Base Query
         let querySales = `
-            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type, c.full_name as client_name
+            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type, c.full_name as client_name, t.status, t.cancellation_reason
             FROM transactions t 
             LEFT JOIN clients c ON t.client_id = c.id
             WHERE 1=1
         `;
         let queryMoves = `
-            SELECT id, amount, description, created_at, type as type_code, 'MOVE' as type, NULL as client_name
+            SELECT id, amount, description, created_at, type as type_code, 'MOVE' as type, NULL as client_name, 'COMPLETED' as status, NULL as cancellation_reason
             FROM cash_movements
             WHERE 1=1
         `;

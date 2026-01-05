@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 
-const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onCancel, inputPlaceholder = '' }) => {
+const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onCancel, inputPlaceholder = '', inputType = 'number' }) => {
     const [inputValue, setInputValue] = useState('');
 
     useEffect(() => {
@@ -26,7 +26,7 @@ const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onC
 
                 {type === 'prompt' && (
                     <input
-                        type="number"
+                        type={inputType}
                         className="input-dark"
                         placeholder={inputPlaceholder}
                         value={inputValue}
