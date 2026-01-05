@@ -342,9 +342,13 @@ const CashRegister = (props) => {
                                                             <div style={{ fontSize: '0.75rem' }}>{dateObj.toLocaleDateString()}</div>
                                                         </td>
                                                         <td>
-                                                            <span className={`badge ${isIncome ? 'badge-success' : 'badge-danger'}`}>
-                                                                {tx.type === 'SALE' ? 'VENTA' : tx.type}
-                                                            </span>
+                                                            {tx.status === 'CANCELLED' ? (
+                                                                <span className="badge" style={{ background: '#64748b', color: 'white' }}>ANULADO</span>
+                                                            ) : (
+                                                                <span className={`badge ${isIncome ? 'badge-success' : 'badge-danger'}`}>
+                                                                    {tx.type === 'SALE' ? 'VENTA' : tx.type}
+                                                                </span>
+                                                            )}
                                                         </td>
                                                         <td>
                                                             <div style={{ color: '#f1f5f9', fontWeight: '500' }}>{tx.client_name || tx.description}</div>
