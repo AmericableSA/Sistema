@@ -49,8 +49,34 @@ exports.resolveAveria = async (req, res) => {
 
 exports.exportAveriasXLS = async (req, res) => {
     try {
+        const { status, startDate, endDate } = req.query;
         const ExcelJS = require('exceljs');
-        const [rows] = await db.query('SELECT * FROM averias ORDER BY fecha_reporte DESC');
+
+        let query = 'SELECT * FROM averias';
+        let params = [];
+        let conditions = [];
+
+        if (status && status !== 'all') {
+            if (status === 'attended') {
+                conditions.push("estado IN ('Atendido', 'Revisado')");
+            } else {
+                conditions.push('estado = ?');
+                params.push(status);
+            }
+        }
+
+        if (startDate && endDate) {
+            conditions.push('DATE(fecha_reporte) BETWEEN ? AND ?');
+            params.push(startDate, endDate);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY fecha_reporte DESC';
+
+        const [rows] = await db.query(query, params);
 
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Averías');
@@ -187,13 +213,30 @@ exports.assignAveriaToClient = async (req, res) => {
 
 exports.exportContactosXLS = async (req, res) => {
     try {
+        const { status, startDate, endDate } = req.query;
         const ExcelJS = require('exceljs');
-        const [rows] = await db.query(`
+
+        let query = `
             SELECT c.*, u.username as assigned_user 
             FROM contactos c
             LEFT JOIN users u ON c.assigned_user_id = u.id
-            ORDER BY c.fecha_contacto DESC
-        `);
+        `;
+        let params = [];
+        let where = [];
+
+        if (status === 'pending') where.push('c.atendido = 0');
+        if (status === 'attended') where.push('c.atendido = 1');
+
+        if (startDate && endDate) {
+            where.push('DATE(c.fecha_contacto) BETWEEN ? AND ?');
+            params.push(startDate, endDate);
+        }
+
+        if (where.length > 0) query += ' WHERE ' + where.join(' AND ');
+
+        query += ' ORDER BY c.fecha_contacto DESC';
+
+        const [rows] = await db.query(query, params);
 
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Contactos');

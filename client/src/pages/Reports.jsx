@@ -110,7 +110,7 @@ const Reports = () => {
 
         try {
             const [statsRes, closingRes, topRes, moveRes, ordersRes] = await Promise.all([
-                fetch(`${apiBaseUrl}/cable-stats`, { headers }),
+                fetch(`${apiBaseUrl}/cable-stats?startDate=${startDate}&endDate=${endDate}`, { headers }),
                 fetch(`${apiBaseUrl}/daily-closing?startDate=${startDate}&endDate=${endDate}`, { headers }),
                 fetch(`${apiBaseUrl}/sales-by-user?startDate=${startOfMonth}&endDate=${endOfMonth}`, { headers }),
                 fetch(`${apiBaseUrl}/movements?startDate=${startDate}&endDate=${endDate}`, { headers }),
@@ -281,18 +281,19 @@ const Reports = () => {
 
             <SectionTitle>Notificaciones Web</SectionTitle>
             <Grid>
+                {/* PENDING CARDS */}
                 <Card>
                     <Label style={{ color: '#f59e0b' }}>⚠️ Averías Pendientes</Label>
                     <Value style={{ color: 'white' }}>{cableStats.averias_pendientes || 0}</Value>
                     <button
                         onClick={() => {
-                            fetch('/api/notifications/averias/export')
+                            fetch('/api/notifications/averias/export?status=Pendiente')
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);
                                     const a = document.createElement('a');
                                     a.href = url;
-                                    a.download = 'Averias_Web.xlsx';
+                                    a.download = 'Averias_Pendientes.xlsx';
                                     document.body.appendChild(a);
                                     a.click();
                                     a.remove();
@@ -307,19 +308,65 @@ const Reports = () => {
                     <Value style={{ color: 'white' }}>{cableStats.contactos_pendientes || 0}</Value>
                     <button
                         onClick={() => {
-                            fetch('/api/notifications/contactos/export')
+                            fetch('/api/notifications/contactos/export?status=pending')
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);
                                     const a = document.createElement('a');
                                     a.href = url;
-                                    a.download = 'Contactos_Web.xlsx';
+                                    a.download = 'Contactos_Pendientes.xlsx';
                                     document.body.appendChild(a);
                                     a.click();
                                     a.remove();
                                 });
                         }}
                         style={{ marginTop: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        📥 Exportar Excel
+                    </button>
+                </Card>
+
+                {/* ATTENDED CARDS */}
+                <Card>
+                    <Label style={{ color: '#10b981' }}>✅ Averías Atendidas</Label>
+                    <Value style={{ color: 'white' }}>{cableStats.averias_atendidas || 0}</Value>
+                    <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.5rem' }}>En periodo seleccionado</div>
+                    <button
+                        onClick={() => {
+                            fetch(`/api/notifications/averias/export?status=attended&startDate=${startDate}&endDate=${endDate}`)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `Averias_Atendidas_${startDate}.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
+                        style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        📥 Exportar Excel
+                    </button>
+                </Card>
+                <Card>
+                    <Label style={{ color: '#8b5cf6' }}>✅ Contactos Atendidos</Label>
+                    <Value style={{ color: 'white' }}>{cableStats.contactos_atendidos || 0}</Value>
+                    <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.5rem' }}>En periodo seleccionado</div>
+                    <button
+                        onClick={() => {
+                            fetch(`/api/notifications/contactos/export?status=attended&startDate=${startDate}&endDate=${endDate}`)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `Contactos_Atendidos_${startDate}.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
+                        style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
                         📥 Exportar Excel
                     </button>
                 </Card>

@@ -103,6 +103,16 @@ exports.getSalesChart = async (req, res) => {
 exports.getCableStats = async (req, res) => {
     let pool;
     try {
+        const { startDate, endDate } = req.query;
+        // Default to current month for stats if not provided? Or just ignore dates for snapshot stats?
+        // User wants "of the date", so let's respect the range if provided, otherwise maybe all time?
+        // Actually, Reports.jsx passes today by default if we hook it up.
+        // Let's use provided dates or default to 'all time' for attended to avoid confusion? 
+        // No, 'de la fecha' implies date filter.
+
+        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const eDate = endDate || sDate;
+
         pool = await db.getConnection();
 
         // 1. Morosos 
@@ -125,7 +135,7 @@ exports.getCableStats = async (req, res) => {
         const activeCount = activeRows[0]?.c || 0;
         const alDiaCount = Math.max(0, activeCount - morososCount);
 
-        // 3. New Installations
+        // 3. New Installations (Use Date Range if provided? Or keep monthly context? Let's keep monthly for this specific stat as it says "instalaciones_mes")
         const [nRows] = await pool.query(`
             SELECT COUNT(*) as c FROM clients 
             WHERE MONTH(installation_date) = MONTH(CURRENT_DATE()) AND YEAR(installation_date) = YEAR(CURRENT_DATE())
@@ -134,11 +144,25 @@ exports.getCableStats = async (req, res) => {
         // 4. Total
         const [tRows] = await pool.query("SELECT COUNT(*) as c FROM clients");
 
-        // 5. Averias Pendientes
+        // 5. Averias Pendientes (Snapshot, always all pending)
         const [avRows] = await pool.query("SELECT COUNT(*) as c FROM averias WHERE estado = 'Pendiente'");
 
-        // 6. Contactos Pendientes
+        // 6. Contactos Pendientes (Snapshot, always all pending)
         const [contactRows] = await pool.query("SELECT COUNT(*) as c FROM contactos WHERE atendido = 0");
+
+        // 7. NEW: Averias Atendidas (In Date Range)
+        const [avAttendedRows] = await pool.query(`
+            SELECT COUNT(*) as c FROM averias 
+            WHERE estado IN ('Revisado', 'Atendido') 
+            AND DATE(fecha_reporte) BETWEEN ? AND ?
+        `, [sDate, eDate]);
+
+        // 8. NEW: Contactos Atendidos (In Date Range)
+        const [contactAttendedRows] = await pool.query(`
+            SELECT COUNT(*) as c FROM contactos 
+            WHERE atendido = 1 
+            AND DATE(fecha_contacto) BETWEEN ? AND ?
+        `, [sDate, eDate]);
 
         res.json({
             morosos: { count: morososCount, deuda: morososDebt || 0 },
@@ -148,7 +172,9 @@ exports.getCableStats = async (req, res) => {
             instalaciones_mes: nRows[0]?.c || 0,
             total_clientes: tRows[0]?.c || 0,
             averias_pendientes: avRows[0]?.c || 0,
-            contactos_pendientes: contactRows[0]?.c || 0
+            contactos_pendientes: contactRows[0]?.c || 0,
+            averias_atendidas: avAttendedRows[0]?.c || 0,
+            contactos_atendidos: contactAttendedRows[0]?.c || 0
         });
 
     } catch (err) {
