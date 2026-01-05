@@ -544,9 +544,12 @@ exports.exportClientsXLS = async (req, res) => {
 
         if (status && status !== 'all') {
             if (status === 'up_to_date') {
-                whereClauses.push("c.status = 'active' AND c.last_paid_month >= DATE_FORMAT(CURDATE(), '%Y-%m-01')");
+                // Include NULLs to match Dashboard 'Al Dia' (which are Non-Morosos)
+                whereClauses.push("c.status = 'active' AND (c.last_paid_month >= DATE_FORMAT(CURDATE(), '%Y-%m-01') OR c.last_paid_month IS NULL)");
             } else if (status === 'in_arrears') {
                 whereClauses.push("c.status = 'active' AND c.last_paid_month < DATE_FORMAT(CURDATE(), '%Y-%m-01')");
+            } else if (status === 'suspended') {
+                whereClauses.push("c.status = 'suspended'");
             } else {
                 whereClauses.push('c.status = ?');
                 params.push(status);
