@@ -178,6 +178,7 @@ exports.deleteProduct = async (req, res) => {
     }
 };
 
+
 // Get All Inventory History
 exports.getAllInventoryHistory = async (req, res) => {
     try {
@@ -192,5 +193,69 @@ exports.getAllInventoryHistory = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
+    }
+};
+
+// Export Products to Excel
+exports.exportProductsXLS = async (req, res) => {
+    try {
+        const ExcelJS = require('exceljs');
+        const search = (req.query.search || '').trim();
+
+        let whereClauses = [];
+        let params = [];
+
+        if (search) {
+            const like = `%${search}%`;
+            whereClauses.push('(name LIKE ? OR sku LIKE ?)');
+            params.push(like, like);
+        }
+
+        const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+        const [rows] = await db.query(`SELECT * FROM products ${whereSql} ORDER BY name ASC`, params);
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Inventario');
+
+        worksheet.columns = [
+            { header: 'SKU', key: 'sku', width: 15 },
+            { header: 'Producto', key: 'name', width: 40 },
+            { header: 'Descripción', key: 'description', width: 40 },
+            { header: 'Tipo', key: 'type', width: 15 },
+            { header: 'Stock', key: 'stock', width: 10 },
+            { header: 'Precio', key: 'price', width: 15 },
+            { header: 'Costo', key: 'cost', width: 15 }
+        ];
+
+        worksheet.getRow(1).font = { bold: true };
+
+        rows.forEach(p => {
+            let typeMap = {
+                'product': 'Producto',
+                'service': 'Servicio',
+                'bundle': 'Combo'
+            };
+
+            worksheet.addRow({
+                sku: p.sku || '',
+                name: p.name,
+                description: p.description || '',
+                type: typeMap[p.type] || p.type,
+                stock: p.current_stock,
+                price: parseFloat(p.selling_price),
+                cost: parseFloat(p.unit_cost)
+            });
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="Reporte_Inventario.xlsx"');
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error exportando excel: ' + err.message);
     }
 };

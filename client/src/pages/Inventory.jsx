@@ -83,6 +83,36 @@ const Inventory = () => {
         });
     };
 
+    // Handle Export
+    const handleExport = async () => {
+        try {
+            setAlert({ show: true, type: 'info', title: 'Exportando...', message: 'Generando archivo Excel, por favor espere.' });
+
+            const params = new URLSearchParams({
+                search: searchTerm
+            });
+
+            const res = await fetch(`/api/products/export-xls?${params.toString()}`);
+
+            if (!res.ok) throw new Error('Error generando reporte');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Reporte_Inventario.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            setAlert({ show: true, type: 'success', title: 'Éxito', message: 'Reporte descargado correctamente.' });
+        } catch (error) {
+            console.error(error);
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'No se pudo exportar el archivo. Intente nuevamente.' });
+        }
+    };
+
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '100%' }}>
 
@@ -101,6 +131,13 @@ const Inventory = () => {
                 </div>
 
                 <div className="header-actions" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <button
+                        className="btn-dark-glow"
+                        onClick={handleExport}
+                        style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}
+                    >
+                        Exportar Excel
+                    </button>
                     <button className="btn-dark-glow" onClick={() => setShowComboManager(true)} style={{ background: 'rgba(124, 58, 237, 0.1)', border: '1px solid rgba(124, 58, 237, 0.3)', color: '#a78bfa' }}>
                         Administrar Combos
                     </button>

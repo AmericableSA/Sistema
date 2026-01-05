@@ -6,6 +6,10 @@ const productController = require('../controllers/productController');
 // @desc    Get all inventory history (global)
 router.get('/history/all', productController.getAllInventoryHistory); // Global History - Must be before /:id routes
 
+// @route   GET /api/products/export-xls
+// @desc    Export products to Excel
+router.get('/export-xls', productController.exportProductsXLS);
+
 // @route   GET /api/products
 // @desc    Get all products
 // @desc    Get all products
