@@ -48,34 +48,39 @@ exports.getHistory = async (req, res) => {
         }
 
         // --- DATA QUERY ---
-        const unionQuery = `
-            SELECT * FROM (
-                SELECT 
-                    t.id, 
-                    t.amount, 
-                    t.description, 
-                    t.created_at, 
-                    'SALE' as type, 
-                    IFNULL(c.full_name, 'Cliente General') as client_name 
+        SELECT * FROM(
+            SELECT 
+                    t.id,
+            t.amount,
+            t.description,
+            t.created_at,
+            'SALE' as type,
+            IFNULL(c.full_name, 'Cliente General') as client_name,
+            t.status,
+            t.cancellation_reason,
+            COALESCE(NULLIF(t.reference_id, ''), '⚠️ SIN NUMERO ⚠️') as reference_id
                 FROM transactions t
                 LEFT JOIN clients c ON t.client_id = c.id
-                WHERE ${tWhere}
+                WHERE ${ tWhere }
                 
                 UNION ALL
                 
                 SELECT 
-                    id, 
-                    amount, 
-                    description, 
-                    created_at, 
-                    IF(type='IN', 'INGRESO', 'GASTO') as type, 
-                    NULL as client_name 
+                    id,
+            amount,
+            description,
+            created_at,
+            IF(type = 'IN', 'INGRESO', 'GASTO') as type,
+            NULL as client_name,
+            'COMPLETED' as status,
+            NULL as cancellation_reason,
+            NULL as reference_id
                 FROM cash_movements
-                WHERE ${mWhere}
-            ) as combined_history
+                WHERE ${ mWhere }
+        ) as combined_history
             ORDER BY created_at DESC
-            LIMIT ? OFFSET ?
-        `;
+        LIMIT ? OFFSET ?
+            `;
 
         const finalParams = [...tParams, ...mParams, pageSize, offset];
 
@@ -83,10 +88,10 @@ exports.getHistory = async (req, res) => {
 
         // --- COUNT QUERY ---
         const countQuery = `
-            SELECT COUNT(*) as total FROM (
-                SELECT t.id FROM transactions t LEFT JOIN clients c ON t.client_id = c.id WHERE ${tWhere}
+            SELECT COUNT(*) as total FROM(
+                SELECT t.id FROM transactions t LEFT JOIN clients c ON t.client_id = c.id WHERE ${ tWhere }
                 UNION ALL
-                SELECT id FROM cash_movements WHERE ${mWhere}
+                SELECT id FROM cash_movements WHERE ${ mWhere }
             ) as total_tbl
         `;
 
