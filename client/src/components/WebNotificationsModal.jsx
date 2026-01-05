@@ -12,7 +12,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
 
     // Filters
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
-    const [filterStatus, setFilterStatus] = useState('Pendiente'); // 'Pendiente' | 'all' | 'Atendido'
+    const [filterStatus, setFilterStatus] = useState('all'); // 'Pendiente' | 'all' | 'Atendido'
 
     // Delete Confirmation State
     const [confirm, setConfirm] = useState({ show: false, title: '', message: '', id: null, type: null });
@@ -21,23 +21,32 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     const [searchModal, setSearchModal] = useState({ show: false, averia: null });
 
     useEffect(() => {
-        fetchData();
-        fetchUsers();
-    }, [activeTab, filterDate, filterStatus]);
+        // Initial fetch with loader
+        fetchData(false);
 
-    const fetchData = async () => {
-        setLoading(true);
+        // Optional: Auto-refresh every 30 seconds
+        const interval = setInterval(() => fetchData(true), 30000);
+        return () => clearInterval(interval);
+    }, [activeTab, filterDate, filterStatus]); // re-fetch if filters change
+
+    const fetchData = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         try {
+            // Map UI filter to Backend filter
+            let contactStatusParam = 'all';
+            if (filterStatus === 'Pendiente') contactStatusParam = 'pending';
+            if (filterStatus === 'Atendido') contactStatusParam = 'attended';
+
             // Fetch BOTH to ensure tab counts are accurate immediately
             const [averiasRes, contactosRes] = await Promise.all([
                 fetch(`/api/notifications/averias?status=${filterStatus}&startDate=${filterDate}&endDate=${filterDate}`),
-                fetch(`/api/notifications/contactos?status=all`)
+                fetch(`/api/notifications/contactos?status=${contactStatusParam}`)
             ]);
 
             setAverias(await averiasRes.json());
             setContactos(await contactosRes.json());
         } catch (e) { console.error(e); }
-        finally { setLoading(false); }
+        finally { if (!isBackground) setLoading(false); }
     };
 
     const fetchUsers = async () => {
@@ -77,10 +86,10 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: userId })
             });
-            // No strict need to re-fetch if optimistic update works, but can do silently
+            fetchData(true); // Silent update to sync
         } catch (error) {
             console.error(error);
-            fetchData(); // Revert on error
+            fetchData(false); // Revert/Reload on error
         }
     };
 
@@ -91,7 +100,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
             });
-            fetchData();
+            fetchData(true); // Silent update
         } catch (e) {
             console.error(e);
             alert('Error al actualizar estado.');
@@ -118,8 +127,8 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
 
             // Close modals and refresh
             setSearchModal({ show: false, averia: null });
-            fetchData();
-            alert(`Avería asignada a ${client.full_name} correctamente. Se ha creado una Orden de Reparación.`);
+            fetchData(true); // Silent update
+            alert(`Avería asignada a ${client.full_name} correctamente.`);
         } catch (error) {
             console.error(error);
             alert('Error al asignar la avería.');
@@ -127,25 +136,28 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     };
 
     const handleToggleStatus = async (id, newStatus) => {
-        await fetch(`/api/notifications/contactos/${id}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ atendido: newStatus })
-        });
-        fetchData();
+        // Optimistic Update can be added here too for smoother feel
+        try {
+            await fetch(`/api/notifications/contactos/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ atendido: newStatus })
+            });
+            fetchData(true); // Silent update
+        } catch (e) { console.error(e); }
     };
 
     const handleDeleteClick = (id, type) => {
         setConfirm({
             show: true,
             title: 'Confirmar Eliminación',
-            message: '¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.',
+            message: '¿Eliminar registro?',
             id,
             type // 'averia' or 'contacto'
         });
     };
 
-    const handleConfirmDelete = async (confirmationInput) => {
+    const handleConfirmDelete = async () => {
         const { id, type } = confirm;
         const endpoint = type === 'averia'
             ? `/api/notifications/averias/${id}`
@@ -154,7 +166,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
         try {
             await fetch(endpoint, { method: 'DELETE' });
             setConfirm({ ...confirm, show: false });
-            fetchData();
+            fetchData(true); // Silent update
         } catch (e) { console.error(e); }
     };
 
@@ -165,27 +177,25 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                     <h2 style={{ color: 'white', margin: 0 }}>🔔 Notificaciones Web</h2>
 
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        {activeTab === 'averias' && (
-                            <>
-                                <select
-                                    className="input-dark"
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    style={{ padding: '0.4rem', fontSize: '0.9rem' }}
-                                >
-                                    <option value="Pendiente">Pendientes</option>
-                                    <option value="Atendido">Atendidos</option>
-                                    <option value="all">Todos</option>
-                                </select>
-                                <input
-                                    type="date"
-                                    className="input-dark"
-                                    value={filterDate}
-                                    onChange={(e) => setFilterDate(e.target.value)}
-                                    style={{ padding: '0.4rem', fontSize: '0.9rem' }}
-                                />
-                            </>
-                        )}
+                        {/* Always show filters, but maybe adjust logic if needed per tab. 
+                            For now, sharing date/status is fine as requested. */}
+                        <select
+                            className="input-dark"
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                        >
+                            <option value="Pendiente">Pendientes</option>
+                            <option value="Atendido">Atendidos</option>
+                            <option value="all">Todos</option>
+                        </select>
+                        <input
+                            type="date"
+                            className="input-dark"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                        />
                         <button onClick={onClose} className="btn-icon">✖</button>
                     </div>
                 </div>
