@@ -1,0 +1,5 @@
+ALTER TABLE transactions
+ADD COLUMN status VARCHAR(20) DEFAULT 'COMPLETED',
+ADD COLUMN cancellation_reason VARCHAR(255) NULL,
+ADD COLUMN cancelled_by INT NULL,
+ADD COLUMN cancelled_at DATETIME NULL;

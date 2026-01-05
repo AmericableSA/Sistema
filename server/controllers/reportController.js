@@ -345,7 +345,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         // reuse queries - code duplication for safety/speed vs refactor
         const [txRows] = await pool.query(`
             SELECT 
-                t.created_at, t.amount, t.type, t.payment_method, t.description,
+                t.created_at, t.amount, t.type, t.payment_method, t.description, t.status, t.cancellation_reason,
                 c.full_name as client_name, c.contract_number, COALESCE(u.username, 'Sistema') as collector
             FROM transactions t
             LEFT JOIN clients c ON t.client_id = c.id
@@ -355,7 +355,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
 
         const [moveRows] = await pool.query(`
             SELECT 
-                m.created_at, m.amount, m.type, 'cash' as payment_method, m.description,
+                m.created_at, m.amount, m.type, 'cash' as payment_method, m.description, 'COMPLETED' as status, NULL as cancellation_reason,
                 'Movimiento Manual' as client_name, '' as contract_number, COALESCE(u.username, 'Cajero') as collector
             FROM cash_movements m
             LEFT JOIN cash_sessions s ON m.session_id = s.id
@@ -379,6 +379,8 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             { header: 'Cajero', key: 'collector', width: 15 },
             { header: 'Método', key: 'method', width: 10 },
             { header: 'Monto', key: 'amount', width: 15 },
+            { header: 'Estado', key: 'status', width: 15 },
+            { header: 'Motivo Cancelación', key: 'reason', width: 30 },
         ];
 
         combined.forEach(row => {
@@ -391,7 +393,9 @@ exports.exportDailyDetailsXLS = async (req, res) => {
                 desc: (row.client_name || row.description) + (row.contract_number ? ` (#${row.contract_number})` : ''),
                 collector: row.collector,
                 method: row.payment_method,
-                amount: (isIncome ? 1 : -1) * parseFloat(row.amount)
+                amount: (isIncome ? 1 : -1) * parseFloat(row.amount),
+                status: row.status === 'CANCELLED' ? 'CANCELADO' : (row.status || 'COMPLETED'),
+                reason: row.cancellation_reason || ''
             });
         });
 

@@ -365,6 +365,7 @@ exports.getClientTransactions = async (req, res) => {
         // Use collector_id to show who is responsible/credited for the payment
         const [txs] = await db.query(`
             SELECT t.id, t.amount, t.details_json, t.created_at, t.reference_id, t.description, t.type,
+                   t.status, t.cancellation_reason,
                    u.username as collector_username, u.full_name as collector_name
             FROM transactions t
             LEFT JOIN users u ON t.collector_id = u.id

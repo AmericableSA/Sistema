@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) => {
+    const { token, user } = useAuth();
     const [activeTab, setActiveTab] = useState(initialTab); // 'logs' | 'invoices'
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Cancel State
+    const [cancelTxId, setCancelTxId] = useState(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [processing, setProcessing] = useState(false);
+
     // Fetch Data based on active tab
-    useEffect(() => {
+    const fetchData = useCallback(() => {
         setLoading(true);
         let url = '';
 
@@ -17,10 +24,12 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
         }
 
         if (url) {
-            fetch(url)
+            // Add Auth Header just in case (though existing code didn't use it, better safe)
+            fetch(url, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            })
                 .then(res => res.json())
                 .then(resData => {
-                    // Safety Check: Ensure array
                     if (Array.isArray(resData)) {
                         setData(resData);
                     } else {
@@ -31,15 +40,54 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                 })
                 .catch(err => {
                     console.error(err);
-                    setData([]); // Safety
+                    setData([]);
                     setLoading(false);
                 });
         }
-    }, [client, global, activeTab]);
+    }, [client, global, activeTab, token]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const handleCancel = async () => {
+        if (!cancelReason.trim()) return alert('Debe ingresar un motivo');
+        if (!window.confirm('¿Está seguro de cancelar esta factura? Esta acción descontará el dinero de su caja actual.')) return;
+
+        setProcessing(true);
+        try {
+            const res = await fetch(`/api/billing/transaction/${cancelTxId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    reason: cancelReason,
+                    current_user_id: user?.id
+                })
+            });
+            const json = await res.json();
+
+            if (res.ok) {
+                alert('Factura Cancelada Correctamente');
+                setCancelTxId(null);
+                setCancelReason('');
+                fetchData(); // Refresh
+            } else {
+                alert('Error: ' + json.msg);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+        } finally {
+            setProcessing(false);
+        }
+    };
 
     return (
-        <div className="modal-overlay">
-            <div className="glass-card animate-entry" style={{ width: '900px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: '#0f172a' }}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+            <div className="glass-card animate-entry" style={{ width: '900px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: '#0f172a', position: 'relative' }}>
 
                 {/* Header */}
                 <div style={{ padding: '1.5rem', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -89,7 +137,7 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                             {data.map((log, idx) => (
                                 <div key={log.id || idx} style={{
                                     padding: '1rem', background: '#1e293b', borderRadius: '8px',
-                                    borderLeft: log.action === 'CREATE' ? '4px solid #4ade80' : (log.action === 'PAYMENT' ? '4px solid #f59e0b' : '4px solid #3b82f6')
+                                    borderLeft: log.action === 'CREATE' ? '4px solid #4ade80' : (log.action === 'PAYMENT' ? '4px solid #f59e0b' : (log.action === 'CANCELLATION' ? '4px solid #ef4444' : '4px solid #3b82f6'))
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -119,27 +167,42 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                                     <th style={{ padding: '0.75rem' }}>Descripción / Meses</th>
                                     <th style={{ padding: '0.75rem', textAlign: 'right' }}>Monto</th>
                                     <th style={{ padding: '0.75rem' }}>Cobrado Por</th>
+                                    <th style={{ padding: '0.75rem' }}>Acción</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.length === 0 && <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center' }}>No hay facturas registradas.</td></tr>}
+                                {data.length === 0 && <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center' }}>No hay facturas registradas.</td></tr>}
                                 {data.map((tx, idx) => {
-                                    // Parse months if available
                                     let months = '1';
                                     if (tx.details_json) {
                                         try { const sc = typeof tx.details_json === 'string' ? JSON.parse(tx.details_json) : tx.details_json; months = sc.months_paid || '1'; } catch (e) { }
                                     }
+                                    const isCancelled = tx.status === 'CANCELLED';
                                     return (
-                                        <tr key={tx.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <td style={{ padding: '0.75rem' }}>{new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}</td>
-                                            <td style={{ padding: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>{tx.reference_id || 'S/N'}</td>
+                                        <tr key={tx.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', opacity: isCancelled ? 0.6 : 1, textDecoration: isCancelled ? 'none' : 'none' }}>
+                                            <td style={{ padding: '0.75rem' }}>
+                                                {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
+                                                {isCancelled && <div style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 'bold' }}>CANCELADA</div>}
+                                            </td>
+                                            <td style={{ padding: '0.75rem', color: isCancelled ? '#ef4444' : '#f59e0b', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>{tx.reference_id || 'S/N'}</td>
                                             <td style={{ padding: '0.75rem' }}>{tx.type === 'monthly_fee' ? 'Mensualidad' : tx.type}</td>
                                             <td style={{ padding: '0.75rem' }}>
-                                                <div>{tx.description}</div>
+                                                <div style={{ textDecoration: isCancelled ? 'line-through' : 'none' }}>{tx.description}</div>
                                                 <div style={{ fontSize: '0.8em', color: '#64748b' }}>({months} Meses)</div>
+                                                {isCancelled && <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.2rem' }}>Motivo: {tx.cancellation_reason}</div>}
                                             </td>
-                                            <td style={{ padding: '0.75rem', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>C$ {parseFloat(tx.amount).toFixed(2)}</td>
+                                            <td style={{ padding: '0.75rem', textAlign: 'right', color: isCancelled ? '#ef4444' : '#4ade80', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>C$ {parseFloat(tx.amount).toFixed(2)}</td>
                                             <td style={{ padding: '0.75rem', fontSize: '0.9rem', color: '#94a3b8' }}>{tx.collector_username || 'Sistema'}</td>
+                                            <td style={{ padding: '0.75rem' }}>
+                                                {!isCancelled && tx.type !== 'RECONNECTION' && ( // Allow cancelling anything except simpler automated ones? No, allow all.
+                                                    <button
+                                                        onClick={() => setCancelTxId(tx.id)}
+                                                        style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: 'none', padding: '0.3rem 0.6rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                )}
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -148,6 +211,35 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                     )}
 
                 </div>
+
+                {/* Cancel Modal Overlay */}
+                {cancelTxId && (
+                    <div style={{
+                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)',
+                        display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200
+                    }}>
+                        <div style={{ background: '#1e293b', padding: '2rem', borderRadius: '12px', width: '400px', border: '1px solid #ef4444', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+                            <h3 style={{ marginTop: 0, color: '#ef4444' }}>Cancelar Factura</h3>
+                            <p style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Ingrese el motivo de la cancelación. Esta acción es irreversible.</p>
+                            <textarea
+                                autoFocus
+                                value={cancelReason}
+                                onChange={e => setCancelReason(e.target.value)}
+                                placeholder="Ej: Error de digitación, Cliente solicitó cambio..."
+                                style={{ width: '100%', padding: '0.8rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px', minHeight: '80px', marginBottom: '1rem' }}
+                            />
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                <button onClick={() => { setCancelTxId(null); setCancelReason(''); }} disabled={processing} style={{ padding: '0.6rem 1rem', background: 'transparent', border: '1px solid #475569', color: '#cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>
+                                    Volver
+                                </button>
+                                <button onClick={handleCancel} disabled={processing} style={{ padding: '0.6rem 1rem', background: '#ef4444', border: 'none', color: 'white', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: processing ? 0.7 : 1 }}>
+                                    {processing ? 'Procesando...' : 'Confirmar Cancelación'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </div>
     );

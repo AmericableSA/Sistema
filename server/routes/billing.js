@@ -19,6 +19,7 @@ router.get('/details/:clientId', billing.getBillingDetails); // New
 router.get('/history', billing.getDailyTransactions); // New
 router.get('/transaction/:id', billing.getTransactionById); // MISSING ROUTE RESTORED
 router.post('/pay', billing.createTransaction);
+router.post('/transaction/:id/cancel', billing.cancelTransaction);
 router.get('/plans', servicePlan.getPlans); // New Plan Route
 
 // Inventory for Billing

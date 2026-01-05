@@ -46,8 +46,36 @@ app.get('/login', (req, res) => {
 
 // Test DB Connection
 db.getConnection()
-    .then(conn => {
+    .then(async conn => {
         log("✅ Database Connected Successfully (IPv4)");
+
+        // --- AUTO MIGRATION FOR CANCELLATION ---
+        try {
+            const [cols] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'status'");
+            if (cols.length === 0) {
+                await conn.query("ALTER TABLE transactions ADD COLUMN status VARCHAR(20) DEFAULT 'COMPLETED'");
+                log("🔄 Migration: Added 'status' to transactions");
+            }
+            const [reason] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'cancellation_reason'");
+            if (reason.length === 0) {
+                await conn.query("ALTER TABLE transactions ADD COLUMN cancellation_reason VARCHAR(255) NULL");
+                log("🔄 Migration: Added 'cancellation_reason'");
+            }
+            const [by] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'cancelled_by'");
+            if (by.length === 0) {
+                await conn.query("ALTER TABLE transactions ADD COLUMN cancelled_by INT NULL");
+                log("🔄 Migration: Added 'cancelled_by'");
+            }
+            const [at] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'cancelled_at'");
+            if (at.length === 0) {
+                await conn.query("ALTER TABLE transactions ADD COLUMN cancelled_at DATETIME NULL");
+                log("🔄 Migration: Added 'cancelled_at'");
+            }
+        } catch (migErr) {
+            log("⚠️ Migration Error: " + migErr.message);
+        }
+        // ---------------------------------------
+
         conn.release();
     })
     .catch(err => {
