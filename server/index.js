@@ -51,21 +51,31 @@ db.getConnection()
 
         // --- AUTO MIGRATION FOR CANCELLATION ---
         try {
+            // 1. Status
             const [cols] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'status'");
             if (cols.length === 0) {
                 await conn.query("ALTER TABLE transactions ADD COLUMN status VARCHAR(20) DEFAULT 'COMPLETED'");
                 log("🔄 Migration: Added 'status' to transactions");
             }
+            // 2. Cancellation Reason
             const [reason] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'cancellation_reason'");
             if (reason.length === 0) {
                 await conn.query("ALTER TABLE transactions ADD COLUMN cancellation_reason VARCHAR(255) NULL");
                 log("🔄 Migration: Added 'cancellation_reason'");
             }
+            // 3. Reference ID
+            const [ref] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'reference_id'");
+            if (ref.length === 0) {
+                await conn.query("ALTER TABLE transactions ADD COLUMN reference_id VARCHAR(100) NULL");
+                log("🔄 Migration: Added 'reference_id' to transactions");
+            }
+            // 4. Cancelled By
             const [by] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'cancelled_by'");
             if (by.length === 0) {
                 await conn.query("ALTER TABLE transactions ADD COLUMN cancelled_by INT NULL");
                 log("🔄 Migration: Added 'cancelled_by'");
             }
+            // 5. Cancelled At
             const [at] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'cancelled_at'");
             if (at.length === 0) {
                 await conn.query("ALTER TABLE transactions ADD COLUMN cancelled_at DATETIME NULL");

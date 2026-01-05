@@ -104,6 +104,7 @@ exports.createTransaction = async (req, res) => {
         items, service_plan_id, justification,
         details_json, collector_id, current_user_id // { months_paid: 2, mora_paid: 50, etc }
     } = req.body;
+    console.log("Create Transaction Body:", req.body);
 
     const reqUserId = await getValidUser(current_user_id);
     const conn = await db.getConnection();
