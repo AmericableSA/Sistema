@@ -442,7 +442,12 @@ exports.getServiceOrdersReport = async (req, res) => {
 
         // IF LIST IS REQUESTED (For ClientMovements View)
         if (list) {
-            let query = `
+            const sDate = startDate || new Date().toISOString().split('T')[0];
+            const eDate = endDate || sDate;
+            let params = [];
+
+            // 1. Fetch Service Orders
+            let querySO = `
                 SELECT so.id, so.created_at, so.type, so.status, so.technician_notes as description,
                        c.full_name as client_name, c.id as client_id,
                        c.address_street, c.contract_number, c.status as client_status
@@ -450,22 +455,43 @@ exports.getServiceOrdersReport = async (req, res) => {
                 LEFT JOIN clients c ON so.client_id = c.id
             `;
 
-            let params = [];
-
             if (status === 'PENDING') {
-                // Show ALL pending, ignoring date
-                query += ` WHERE so.status = 'PENDING'`;
+                querySO += ` WHERE so.status = 'PENDING'`;
             } else {
-                // Show Daily List (Filter by Date Range)
-                query += ` WHERE DATE(so.created_at) BETWEEN ? AND ?`;
+                querySO += ` WHERE DATE(so.created_at) BETWEEN ? AND ?`;
                 params.push(sDate, eDate);
             }
+            querySO += ` ORDER BY so.created_at DESC LIMIT 100`;
 
-            query += ` ORDER BY so.created_at DESC LIMIT 100`;
+            const [soRows] = await pool.query(querySO, params);
 
-            const [rows] = await pool.query(query, params);
+            // 2. Fetch Web Averias (ONLY if not filtering by PENDING status)
+            // We want to see "Revisado" or "Atendido" averias in the Daily View
+            let averiaRows = [];
+            if (status !== 'PENDING') {
+                const [avRows] = await pool.query(`
+                    SELECT id, fecha_reporte as created_at, 'REPORTE WEB' as type, estado as status, detalles_averia as description,
+                           nombre_completo as client_name, NULL as client_id,
+                           zona_barrio as address_street, NULL as contract_number, 'N/A' as client_status
+                    FROM averias
+                    WHERE estado IN ('Revisado', 'Atendido')
+                    AND DATE(fecha_reporte) BETWEEN ? AND ?
+                    ORDER BY fecha_reporte DESC
+                `, [sDate, eDate]);
+
+                // Format Averias to match Service Order structure
+                averiaRows = avRows.map(a => ({
+                    ...a,
+                    id: `WEB-${a.id}`, // Avoid ID collision in UI keys
+                    status: a.status === 'Revisado' ? 'FINALIZADO' : 'COMPLETED'
+                }));
+            }
+
+            // 3. Combine and Sort
+            const combined = [...soRows, ...averiaRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
             pool.release();
-            return res.json(rows);
+            return res.json(combined);
         }
 
         // ORIGINAL STATS LOGIC (For Reports Dashboard)
