@@ -276,7 +276,7 @@ exports.getDailyTransactions = async (req, res) => {
             WHERE 1=1
         `;
         let queryMoves = `
-            SELECT id, amount, description, created_at, type as type_code, 'MOVE' as type, NULL as client_name, 'COMPLETED' as status, NULL as cancellation_reason
+            SELECT id, amount, description, created_at, type, NULL as client_name, 'COMPLETED' as status, NULL as cancellation_reason
             FROM cash_movements
             WHERE 1=1
         `;
