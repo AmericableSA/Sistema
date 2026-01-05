@@ -48,7 +48,8 @@ exports.getHistory = async (req, res) => {
         }
 
         // --- DATA QUERY ---
-        SELECT * FROM(
+        const unionQuery = `
+            SELECT * FROM(
             SELECT 
                     t.id,
             t.amount,
@@ -61,7 +62,7 @@ exports.getHistory = async (req, res) => {
             COALESCE(NULLIF(t.reference_id, ''), '⚠️ SIN NUMERO ⚠️') as reference_id
                 FROM transactions t
                 LEFT JOIN clients c ON t.client_id = c.id
-                WHERE ${ tWhere }
+                WHERE ${tWhere}
                 
                 UNION ALL
                 
@@ -76,7 +77,7 @@ exports.getHistory = async (req, res) => {
             NULL as cancellation_reason,
             NULL as reference_id
                 FROM cash_movements
-                WHERE ${ mWhere }
+                WHERE ${mWhere}
         ) as combined_history
             ORDER BY created_at DESC
         LIMIT ? OFFSET ?
@@ -89,9 +90,9 @@ exports.getHistory = async (req, res) => {
         // --- COUNT QUERY ---
         const countQuery = `
             SELECT COUNT(*) as total FROM(
-                SELECT t.id FROM transactions t LEFT JOIN clients c ON t.client_id = c.id WHERE ${ tWhere }
+                SELECT t.id FROM transactions t LEFT JOIN clients c ON t.client_id = c.id WHERE ${tWhere}
                 UNION ALL
-                SELECT id FROM cash_movements WHERE ${ mWhere }
+                SELECT id FROM cash_movements WHERE ${mWhere}
             ) as total_tbl
         `;
 
