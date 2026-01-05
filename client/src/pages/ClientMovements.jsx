@@ -33,6 +33,11 @@ const ClientMovements = () => {
     const [techs, setTechs] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
 
+    // Daily Orders State
+    const [dailyOrders, setDailyOrders] = useState([]);
+    const [loadingDaily, setLoadingDaily] = useState(false);
+    const [dailyDate, setDailyDate] = useState(new Date().toISOString().split('T')[0]);
+
     // History Modal State
     const [showHistory, setShowHistory] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -214,16 +219,16 @@ const ClientMovements = () => {
 
     // List View State
     const [viewMode, setViewMode] = useState('SEARCH'); // 'SEARCH' | 'LIST'
-    const [dailyOrders, setDailyOrders] = useState([]);
-    const [loadingDaily, setLoadingDaily] = useState(false);
 
     // Fetch Daily Orders
     const fetchDailyOrders = async () => {
         setLoadingDaily(true);
         try {
-            let url = '/api/reports/orders?list=true';
+            let url = `/api/reports/orders?list=true`;
             if (viewMode === 'PENDING') {
                 url += '&status=PENDING';
+            } else {
+                url += `&startDate=${dailyDate}&endDate=${dailyDate}&status=ALL`;
             }
 
             const res = await fetch(url);
@@ -243,7 +248,34 @@ const ClientMovements = () => {
 
     useEffect(() => {
         if (viewMode === 'LIST' || viewMode === 'PENDING') fetchDailyOrders();
-    }, [viewMode]);
+    }, [viewMode, dailyDate]);
+    // Create Repair Order
+    const handleCreateRepair = async () => {
+        if (!selectedClient) return;
+        if (!formReason.trim()) {
+            setAlert({ show: true, title: 'Error', message: 'Debe ingresar un motivo o detalle de la avería.', type: 'error' });
+            return;
+        }
+        setActionLoading(true);
+        try {
+            await fetch(`/api/clients/${selectedClient.id}/manual-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'REPAIR',
+                    description: formReason
+                })
+            });
+            setAlert({ show: true, title: 'Éxito', message: 'Reporte de avería creado correctamente.', type: 'success' });
+            setSelectedAction('');
+            setFormReason('');
+            fetchOrders(selectedClient.id);
+        } catch (e) {
+            setAlert({ show: true, title: 'Error', message: 'No se pudo crear el reporte.', type: 'error' });
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
@@ -295,8 +327,24 @@ const ClientMovements = () => {
             {viewMode === 'LIST' && (
                 <div className="animate-fade-in">
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <h3 style={{ color: 'white', margin: 0 }}>Órdenes y Trámites Recientes</h3>
-                        <button onClick={fetchDailyOrders} className="btn-secondary" style={{ fontSize: '0.8rem' }}>🔄 Actualizar</button>
+                        <h3 style={{ color: 'white', margin: 0 }}>Trámites del Día</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input
+                                type="date"
+                                className="input-dark"
+                                value={dailyDate}
+                                onChange={(e) => setDailyDate(e.target.value)}
+                                style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                            />
+                            <button
+                                onClick={() => window.open(`/api/reports/orders/export?startDate=${dailyDate}&endDate=${dailyDate}`, '_blank')}
+                                className="btn-secondary"
+                                style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                            >
+                                📥 Excel
+                            </button>
+                            <button onClick={fetchDailyOrders} className="btn-secondary" style={{ fontSize: '0.8rem' }}>🔄 Actualizar</button>
+                        </div>
                     </div>
 
                     <div className="glass-card" style={{ overflowX: 'auto' }}>
@@ -506,6 +554,12 @@ const ClientMovements = () => {
                                     <span style={{ fontWeight: 'bold', color: '#f87171' }}>Desconexión (Mora)</span>
                                     <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Corte por falta de pago</span>
                                 </button>
+
+                                <button onClick={() => setSelectedAction('REPAIR')} className="btn-dark-glow" style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                    <span style={{ fontSize: '2rem' }}>🔧</span>
+                                    <span style={{ fontWeight: 'bold', color: '#fbbf24' }}>Reportar Avería</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Crear orden de reparación</span>
+                                </button>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmitMovement} className="animate-fade-in">
@@ -518,6 +572,7 @@ const ClientMovements = () => {
                                     {selectedAction === 'CHANGE_ADDRESS' && 'Cambio de Dirección / Traslado'}
                                     {selectedAction === 'DISCONNECT_REQ' && 'Solicitud de Baja'}
                                     {selectedAction === 'DISCONNECT_MORA' && 'Corte por Mora'}
+                                    {selectedAction === 'REPAIR' && 'Reporte de Avería'}
                                 </h3>
 
                                 <div style={{ display: 'grid', gap: '1.5rem' }}>
@@ -538,15 +593,23 @@ const ClientMovements = () => {
 
                                     {/* Common Reason Field */}
                                     <div>
-                                        <label className="label-dark">Motivo / Observaciones (Requerido)</label>
-                                        <textarea className="input-dark" value={formReason} onChange={e => setFormReason(e.target.value)} required rows="3" placeholder="Explique brevemente el motivo del trámite..." />
+                                        <label className="label-dark">
+                                            {selectedAction === 'REPAIR' ? 'Detalles de la Avería (Requerido)' : 'Motivo / Observaciones (Requerido)'}
+                                        </label>
+                                        <textarea className="input-dark" value={formReason} onChange={e => setFormReason(e.target.value)} required rows="3" placeholder={selectedAction === 'REPAIR' ? "Describa el problema reportado..." : "Explique brevemente el motivo del trámite..."} />
                                     </div>
 
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                                         <button type="button" onClick={() => setSelectedAction('')} className="btn-secondary">Cancelar</button>
-                                        <button type="submit" disabled={actionLoading} className="btn-primary-glow" style={{ minWidth: '150px' }}>
-                                            {actionLoading ? 'Guardando...' : 'Confirmar Cambios'}
-                                        </button>
+                                        {selectedAction === 'REPAIR' ? (
+                                            <button type="button" onClick={handleCreateRepair} disabled={actionLoading} className="btn-primary-glow" style={{ minWidth: '150px' }}>
+                                                {actionLoading ? 'Guardando...' : 'Crear Reporte'}
+                                            </button>
+                                        ) : (
+                                            <button type="submit" disabled={actionLoading} className="btn-primary-glow" style={{ minWidth: '150px' }}>
+                                                {actionLoading ? 'Guardando...' : 'Confirmar Cambios'}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </form>

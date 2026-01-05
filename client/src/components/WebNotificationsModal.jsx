@@ -8,22 +8,26 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    // Filters
+    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+    const [filterStatus, setFilterStatus] = useState('Pendiente'); // 'Pendiente' | 'all' | 'Atendido'
+
     // Delete Confirmation State
     const [confirm, setConfirm] = useState({ show: false, title: '', message: '', id: null, type: null });
 
     useEffect(() => {
         fetchData();
         fetchUsers();
-    }, [activeTab]);
+    }, [activeTab, filterDate, filterStatus]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             if (activeTab === 'averias') {
-                const res = await fetch('/api/notifications/averias?status=Pendiente');
+                const res = await fetch(`/api/notifications/averias?status=${filterStatus}&startDate=${filterDate}&endDate=${filterDate}`);
                 setAverias(await res.json());
             } else {
-                const res = await fetch('/api/notifications/contactos?status=all');
+                const res = await fetch(`/api/notifications/contactos?status=all`); // Contactos logic kept simple or update if needed
                 setContactos(await res.json());
             }
         } catch (e) { console.error(e); }
@@ -92,7 +96,31 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
             <div className="modal-content glass-card" style={{ maxWidth: '1000px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h2 style={{ color: 'white', margin: 0 }}>🔔 Notificaciones Web</h2>
-                    <button onClick={onClose} className="btn-icon">✖</button>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        {activeTab === 'averias' && (
+                            <>
+                                <select
+                                    className="input-dark"
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                                >
+                                    <option value="Pendiente">Pendientes</option>
+                                    <option value="Atendido">Atendidos</option>
+                                    <option value="all">Todos</option>
+                                </select>
+                                <input
+                                    type="date"
+                                    className="input-dark"
+                                    value={filterDate}
+                                    onChange={(e) => setFilterDate(e.target.value)}
+                                    style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                                />
+                            </>
+                        )}
+                        <button onClick={onClose} className="btn-icon">✖</button>
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>

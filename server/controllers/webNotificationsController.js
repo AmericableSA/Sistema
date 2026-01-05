@@ -4,13 +4,23 @@ const db = require('../config/db');
 
 exports.getAverias = async (req, res) => {
     try {
-        const { status } = req.query;
+        const { status, startDate, endDate } = req.query;
         let query = 'SELECT * FROM averias';
         let params = [];
+        let conditions = [];
 
         if (status && status !== 'all') {
-            query += ' WHERE estado = ?';
+            conditions.push('estado = ?');
             params.push(status);
+        }
+
+        if (startDate && endDate) {
+            conditions.push('DATE(fecha_reporte) BETWEEN ? AND ?');
+            params.push(startDate, endDate);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
         }
 
         query += ' ORDER BY fecha_reporte DESC';

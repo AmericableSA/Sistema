@@ -22,5 +22,6 @@ router.get('/daily-details/export', reportController.exportDailyDetailsXLS);
 // Operational Reports (Movements & Orders)
 router.get('/movements', reportController.getMovementsReport);
 router.get('/orders', reportController.getServiceOrdersReport);
+router.get('/orders/export', reportController.exportServiceOrdersXLS);
 
 module.exports = router;

@@ -494,3 +494,68 @@ exports.getServiceOrdersReport = async (req, res) => {
         res.status(500).json({ error: 'Orders Error' });
     }
 };
+
+exports.exportServiceOrdersXLS = async (req, res) => {
+    try {
+        const { startDate, endDate, status } = req.query;
+        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const eDate = endDate || sDate;
+
+        const db = require('../config/db');
+        const pool = await db.getConnection();
+
+        let query = `
+            SELECT so.id, so.created_at, so.type, so.status, so.technician_notes as description,
+                   c.full_name as client_name, c.contract_number, c.address_street
+            FROM service_orders so
+            LEFT JOIN clients c ON so.client_id = c.id
+        `;
+        let params = [];
+
+        if (status === 'PENDING') {
+            query += ` WHERE so.status = 'PENDING'`;
+        } else {
+            query += ` WHERE DATE(so.created_at) BETWEEN ? AND ?`;
+            params.push(sDate, eDate);
+        }
+
+        query += ` ORDER BY so.created_at DESC`;
+
+        const [rows] = await pool.query(query, params);
+        pool.release();
+
+        const ExcelJS = require('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Trámites');
+
+        worksheet.columns = [
+            { header: 'ID', key: 'id', width: 10 },
+            { header: 'Fecha', key: 'created_at', width: 20 },
+            { header: 'Tipo', key: 'type', width: 20 },
+            { header: 'Cliente', key: 'client_name', width: 30 },
+            { header: 'Contrato', key: 'contract_number', width: 15 },
+            { header: 'Dirección', key: 'address_street', width: 30 },
+            { header: 'Estado', key: 'status', width: 15 },
+            { header: 'Detalles / Notas', key: 'description', width: 40 }
+        ];
+
+        worksheet.getRow(1).font = { bold: true };
+
+        rows.forEach(r => {
+            worksheet.addRow({
+                ...r,
+                created_at: new Date(r.created_at).toLocaleString()
+            });
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Tramites_${sDate}.xlsx"`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error exportando excel');
+    }
+};
