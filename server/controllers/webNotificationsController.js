@@ -118,8 +118,9 @@ exports.assignContact = async (req, res) => {
     const { user_id } = req.body;
 
     try {
-        await db.query('UPDATE contactos SET assigned_user_id = ? WHERE id = ?', [user_id, id]);
-        res.json({ msg: 'Usuario asignado' });
+        // Also mark as attended when assigned
+        await db.query('UPDATE contactos SET assigned_user_id = ?, atendido = 1 WHERE id = ?', [user_id, id]);
+        res.json({ msg: 'Usuario asignado y marcado como atendido' });
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
@@ -136,6 +137,51 @@ exports.toggleContactStatus = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
+    }
+};
+
+exports.assignAveriaToClient = async (req, res) => {
+    const averiaId = req.params.id;
+    const { client_id } = req.body;
+
+    if (!client_id) return res.status(400).json({ error: 'Client ID required' });
+
+    let connection;
+    try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        // 1. Get Averia Details
+        const [averias] = await connection.query("SELECT * FROM averias WHERE id = ?", [averiaId]);
+        if (averias.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ error: 'Averia not found' });
+        }
+        const averia = averias[0];
+
+        // 2. Create Service Order (REPAIR)
+        const notes = `[REPORTE WEB] ${averia.detalles_averia} (Reportado por: ${averia.nombre_completo}, Tel: ${averia.telefono_contacto})`;
+
+        await connection.query(`
+            INSERT INTO service_orders (client_id, type, status, technician_notes, created_at)
+            VALUES (?, 'REPAIR', 'PENDING', ?, NOW())
+        `, [client_id, notes]);
+
+        // 3. Update Averia status to 'Atendido'
+        await connection.query("UPDATE averias SET estado = 'Atendido' WHERE id = ?", [averiaId]);
+
+        // 4. Log in client_logs (Optional, for history tracking if table exists)
+        // await connection.query("INSERT INTO client_logs (client_id, action, details, timestamp) VALUES (?, 'SERVICE_ORDER_CREATED', ?, NOW())", [client_id, 'Orden de Reparación creada desde Reporte Web']);
+
+        await connection.commit();
+        res.json({ msg: 'Averia asignada y orden creada correctamente' });
+
+    } catch (err) {
+        if (connection) await connection.rollback();
+        console.error(err);
+        res.status(500).send('Server Error');
+    } finally {
+        if (connection) connection.release();
     }
 };
 

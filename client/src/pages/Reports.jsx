@@ -284,7 +284,20 @@ const Reports = () => {
                 <Card>
                     <Label style={{ color: '#f59e0b' }}>⚠️ Averías Pendientes</Label>
                     <Value style={{ color: 'white' }}>{cableStats.averias_pendientes || 0}</Value>
-                    <button onClick={() => window.open('/api/notifications/averias/export', '_blank')}
+                    <button
+                        onClick={() => {
+                            fetch('/api/notifications/averias/export')
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Averias_Web.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
                         style={{ marginTop: '0.5rem', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
                         📥 Exportar Excel
                     </button>
@@ -292,7 +305,20 @@ const Reports = () => {
                 <Card>
                     <Label style={{ color: '#3b82f6' }}>📞 Contactos Pendientes</Label>
                     <Value style={{ color: 'white' }}>{cableStats.contactos_pendientes || 0}</Value>
-                    <button onClick={() => window.open('/api/notifications/contactos/export', '_blank')}
+                    <button
+                        onClick={() => {
+                            fetch('/api/notifications/contactos/export')
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Contactos_Web.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
                         style={{ marginTop: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
                         📥 Exportar Excel
                     </button>

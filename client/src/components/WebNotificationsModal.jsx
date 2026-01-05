@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import ConfirmModal from './ConfirmModal';
+import ClientSearchModal from './ClientSearchModal';
 
 const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     const [activeTab, setActiveTab] = useState('averias');
@@ -15,6 +16,9 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
 
     // Delete Confirmation State
     const [confirm, setConfirm] = useState({ show: false, title: '', message: '', id: null, type: null });
+
+    // Client Search for Averia Assignment
+    const [searchModal, setSearchModal] = useState({ show: false, averia: null });
 
     useEffect(() => {
         fetchData();
@@ -43,13 +47,69 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
         } catch (e) { }
     };
 
+    const downloadFile = async (url, filename) => {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Download failed');
+            const blob = await res.blob();
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            alert('Error al descargar el archivo.');
+        }
+    };
+
     const handleAssignContact = async (id, userId) => {
-        await fetch(`/api/notifications/contactos/${id}/assign`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        fetchData();
+        // Optimistic UI Update
+        const updatedContactos = contactos.map(c =>
+            c.id === id ? { ...c, assigned_user_id: userId, atendido: 1 } : c
+        );
+        setContactos(updatedContactos);
+
+        try {
+            await fetch(`/api/notifications/contactos/${id}/assign`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId })
+            });
+            // No strict need to re-fetch if optimistic update works, but can do silently
+        } catch (error) {
+            console.error(error);
+            fetchData(); // Revert on error
+        }
+    };
+
+    const handleAssignAveria = (averia) => {
+        // Step 1: Open Client Search with pre-filled name
+        setSearchModal({ show: true, averia });
+    };
+
+    const handleClientSelect = async (client) => {
+        const { averia } = searchModal;
+        if (!averia || !client) return;
+
+        try {
+            const res = await fetch(`/api/notifications/averias/${averia.id}/assign`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: client.id })
+            });
+
+            if (!res.ok) throw new Error('Error assigning averia');
+
+            // Close modals and refresh
+            setSearchModal({ show: false, averia: null });
+            fetchData();
+            alert(`Avería asignada a ${client.full_name} correctamente. Se ha creado una Orden de Reparación.`);
+        } catch (error) {
+            console.error(error);
+            alert('Error al asignar la avería.');
+        }
     };
 
     const handleToggleStatus = async (id, newStatus) => {
@@ -59,14 +119,6 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
             body: JSON.stringify({ atendido: newStatus })
         });
         fetchData();
-    };
-
-    const handleExpertAverias = async () => {
-        window.open('/api/notifications/averias/export', '_blank');
-    };
-
-    const handleExpertContacts = async () => {
-        window.open('/api/notifications/contactos/export', '_blank');
     };
 
     const handleDeleteClick = (id, type) => {
@@ -80,7 +132,6 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     };
 
     const handleConfirmDelete = async (confirmationInput) => {
-        // Optional: Check confirmationInput if prompted, but for now standard confirm
         const { id, type } = confirm;
         const endpoint = type === 'averia'
             ? `/api/notifications/averias/${id}`
@@ -149,7 +200,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                 {activeTab === 'averias' && (
                     <div className="animate-fade-in">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                            <button onClick={handleExpertAverias} className="btn-secondary">📥 Exportar Excel</button>
+                            <button onClick={() => downloadFile('/api/notifications/averias/export', 'Averias_Web.xlsx')} className="btn-secondary">📥 Exportar Excel</button>
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
                             <thead>
@@ -172,16 +223,18 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                                             <td style={{ padding: '1rem' }}>{a.zona_barrio}</td>
                                             <td style={{ padding: '1rem', maxWidth: '300px' }}>{a.detalles_averia}</td>
                                             <td style={{ padding: '1rem', display: 'flex', gap: '0.5rem' }}>
-                                                <button
-                                                    onClick={() => onAssignClient(a)}
-                                                    className="btn-primary-glow"
-                                                    style={{ fontSize: '0.8rem', padding: '0.5rem' }}
-                                                >
-                                                    ➡️ Asignar
-                                                </button>
+                                                {a.estado === 'Pendiente' && (
+                                                    <button
+                                                        onClick={() => handleAssignAveria(a)}
+                                                        className="btn-primary-glow"
+                                                        style={{ fontSize: '0.8rem', padding: '0.5rem' }}
+                                                    >
+                                                        ➡️ Asignar
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => handleDeleteClick(a.id, 'averia')}
-                                                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                                                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', marginLeft: 'auto' }}
                                                     title="Eliminar"
                                                 >
                                                     🗑️
@@ -197,7 +250,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                 {activeTab === 'contactos' && (
                     <div className="animate-fade-in">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                            <button onClick={handleExpertContacts} className="btn-secondary">📥 Exportar Excel</button>
+                            <button onClick={() => downloadFile('/api/notifications/contactos/export', 'Contactos_Web.xlsx')} className="btn-secondary">📥 Exportar Excel</button>
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
                             <thead>
@@ -260,6 +313,13 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
             <style>{`
                 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; align-items: center; justifyContent: center; z-index: 99999; backdrop-filter: blur(5px); }
             `}</style>
+
+            <ClientSearchModal
+                isOpen={searchModal.show}
+                initialQuery={searchModal.averia?.nombre_completo || ''}
+                onClose={() => setSearchModal({ ...searchModal, show: false })}
+                onSelect={handleClientSelect}
+            />
 
             <ConfirmModal
                 isOpen={confirm.show}

@@ -4,6 +4,7 @@ const controller = require('../controllers/webNotificationsController');
 
 // AVERIAS
 router.get('/averias', controller.getAverias);
+router.post('/averias/:id/assign', controller.assignAveriaToClient); // NEW
 router.put('/averias/:id/resolve', controller.resolveAveria);
 router.delete('/averias/:id', controller.deleteAveria);
 router.get('/averias/export', controller.exportAveriasXLS);
