@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 
 const StockAdjustmentModal = ({ product, onClose, onSave }) => {
     const [type, setType] = useState('IN'); // IN or OUT
@@ -66,7 +67,7 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
     const qtyVal = parseInt(quantity || 0);
     const finalStock = type === 'IN' ? currentStock + qtyVal : currentStock - qtyVal;
 
-    return (
+    return ReactDOM.createPortal(
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(0,0,0,0.7)',
@@ -225,7 +226,8 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

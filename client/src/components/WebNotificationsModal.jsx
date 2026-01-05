@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import ConfirmModal from './ConfirmModal';
 
 const WebNotificationsModal = ({ onClose, onAssignClient }) => {
@@ -91,7 +92,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
         } catch (e) { console.error(e); }
     };
 
-    return (
+    return ReactDOM.createPortal(
         <div className="modal-overlay">
             <div className="modal-content glass-card" style={{ maxWidth: '1000px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -256,7 +257,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                 )}
             </div>
             <style>{`
-                .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justifyContent: center; z-index: 1000; backdrop-filter: blur(5px); }
+                .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; align-items: center; justifyContent: center; z-index: 99999; backdrop-filter: blur(5px); }
             `}</style>
 
             <ConfirmModal
@@ -266,7 +267,8 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setConfirm({ ...confirm, show: false })}
             />
-        </div>
+        </div>,
+        document.body
     );
 };
 
