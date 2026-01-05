@@ -27,6 +27,8 @@ router.get('/contactos', async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
+// Contact routes
+router.put('/contactos/:id/assign', controller.assignContact); // Missing route added
 router.put('/contactos/:id/status', controller.toggleContactStatus);
 router.delete('/contactos/:id', controller.deleteContacto);
 router.get('/contactos/export', controller.exportContactosXLS);
