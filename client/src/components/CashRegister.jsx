@@ -313,6 +313,7 @@ const CashRegister = (props) => {
                                     <thead>
                                         <tr>
                                             <th>Hora</th>
+                                            <th>No. Factura</th>
                                             <th>Tipo</th>
                                             <th>Descripción / Cliente</th>
                                             <th className="text-right">Monto</th>
@@ -321,10 +322,10 @@ const CashRegister = (props) => {
                                     </thead>
                                     <tbody>
                                         {loading ? (
-                                            <tr><td colSpan="5" className="text-center" style={{ padding: '4rem' }}><div className="spinner"></div></td></tr>
+                                            <tr><td colSpan="6" className="text-center" style={{ padding: '4rem' }}><div className="spinner"></div></td></tr>
                                         ) : history.length === 0 ? (
                                             <tr>
-                                                <td colSpan="5" className="text-center" style={{ padding: '4rem' }}>
+                                                <td colSpan="6" className="text-center" style={{ padding: '4rem' }}>
                                                     <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>📭</div>
                                                     <p className="text-muted">No se encontraron registros para esta búsqueda.</p>
                                                 </td>
@@ -340,6 +341,9 @@ const CashRegister = (props) => {
                                                         <td style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
                                                             <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                                             <div style={{ fontSize: '0.75rem' }}>{dateObj.toLocaleDateString()}</div>
+                                                        </td>
+                                                        <td style={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                                                            {tx.reference_id || 'S/N'}
                                                         </td>
                                                         <td>
                                                             {tx.status === 'CANCELLED' ? (
