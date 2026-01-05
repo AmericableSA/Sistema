@@ -335,19 +335,23 @@ const CashRegister = (props) => {
                                                 const isSale = tx.type === 'SALE' || tx.type === 'VENTA';
                                                 const isIncome = isSale || tx.type === 'INGRESO' || tx.type === 'IN';
                                                 const dateObj = new Date(tx.created_at);
+                                                const isCancelled = tx.status === 'CANCELLED';
 
                                                 return (
-                                                    <tr key={tx.id || i} className="row-hover">
-                                                        <td style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-                                                            <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                                            <div style={{ fontSize: '0.75rem' }}>{dateObj.toLocaleDateString()}</div>
+                                                    <tr key={tx.id || i} className="row-hover" style={{
+                                                        opacity: isCancelled ? 0.6 : 1,
+                                                        background: isCancelled ? 'rgba(15, 23, 42, 0.6)' : undefined
+                                                    }}>
+                                                        <td style={{ color: isCancelled ? '#94a3b8' : '#94a3b8', fontSize: '0.9rem' }}>
+                                                            <div style={{ fontWeight: 'bold', color: isCancelled ? '#cbd5e1' : '#e2e8f0', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                            <div style={{ fontSize: '0.75rem', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleDateString()}</div>
                                                         </td>
-                                                        <td style={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                                                        <td style={{ color: isCancelled ? '#ef4444' : '#f59e0b', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>
                                                             {tx.reference_id || 'S/N'}
                                                         </td>
                                                         <td>
-                                                            {tx.status === 'CANCELLED' ? (
-                                                                <span className="badge" style={{ background: '#64748b', color: 'white' }}>ANULADO</span>
+                                                            {isCancelled ? (
+                                                                <span className="badge" style={{ background: '#ef4444', color: 'white', textDecoration: 'none' }}>ANULADO</span>
                                                             ) : (
                                                                 <span className={`badge ${isIncome ? 'badge-success' : 'badge-danger'}`}>
                                                                     {tx.type === 'SALE' ? 'VENTA' : tx.type}
@@ -355,23 +359,28 @@ const CashRegister = (props) => {
                                                             )}
                                                         </td>
                                                         <td>
-                                                            <div style={{ color: '#f1f5f9', fontWeight: '500' }}>{tx.client_name || tx.description}</div>
+                                                            <div style={{ color: isCancelled ? '#ef4444' : '#f1f5f9', fontWeight: '500', textDecoration: isCancelled ? 'line-through' : 'none' }}>{tx.client_name || tx.description}</div>
                                                             {tx.client_name && tx.description && tx.description !== tx.client_name && (
-                                                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{tx.description}</div>
+                                                                <div style={{ fontSize: '0.8rem', color: isCancelled ? '#fca5a5' : '#64748b', textDecoration: isCancelled ? 'line-through' : 'none' }}>{tx.description}</div>
+                                                            )}
+                                                            {isCancelled && tx.cancellation_reason && (
+                                                                <div style={{ fontSize: '0.75rem', color: '#ef4444', fontStyle: 'italic', marginTop: '2px' }}>
+                                                                    Motivo: {tx.cancellation_reason}
+                                                                </div>
                                                             )}
                                                         </td>
                                                         <td className="text-right">
-                                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: isIncome ? '#34d399' : '#f87171' }}>
+                                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: isCancelled ? '#ef4444' : (isIncome ? '#34d399' : '#f87171'), textDecoration: isCancelled ? 'line-through' : 'none' }}>
                                                                 {isIncome ? '+' : '-'} C$ {Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                             </span>
                                                         </td>
                                                         <td className="text-center" style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                                                            {isSale && (
+                                                            {isSale && !isCancelled && (
                                                                 <button onClick={() => handleReprint(tx.id)} className="btn-icon-soft" title="Reimprimir Recibo">
                                                                     🖨️
                                                                 </button>
                                                             )}
-                                                            {tx.status !== 'CANCELLED' && isSale && (
+                                                            {!isCancelled && isSale && (
                                                                 <button
                                                                     onClick={() => setCancelTxId(tx.id)}
                                                                     className="btn-icon-soft"
@@ -381,8 +390,8 @@ const CashRegister = (props) => {
                                                                     ❌
                                                                 </button>
                                                             )}
-                                                            {tx.status === 'CANCELLED' && (
-                                                                <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: 'bold', border: '1px solid #f87171', padding: '2px 4px', borderRadius: '4px' }}>CANCELADO</span>
+                                                            {isCancelled && (
+                                                                <span style={{ fontSize: '1.2rem', cursor: 'help' }} title="Factura Cancelada">🚫</span>
                                                             )}
                                                         </td>
                                                     </tr>
