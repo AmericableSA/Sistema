@@ -272,7 +272,7 @@ exports.getDailyTransactions = async (req, res) => {
 
         // Base Query
         let querySales = `
-            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type, c.full_name as client_name, t.status, t.cancellation_reason, COALESCE(t.reference_id, 'S/N_DB') as reference_id
+            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type, c.full_name as client_name, t.status, t.cancellation_reason, COALESCE(NULLIF(t.reference_id, ''), '⚠️ SIN NUMERO ⚠️') as reference_id
             FROM transactions t 
             LEFT JOIN clients c ON t.client_id = c.id
             WHERE 1=1
