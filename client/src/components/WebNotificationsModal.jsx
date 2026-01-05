@@ -21,6 +21,10 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     const [searchModal, setSearchModal] = useState({ show: false, averia: null });
 
     useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    useEffect(() => {
         // Initial fetch with loader
         fetchData(false);
 

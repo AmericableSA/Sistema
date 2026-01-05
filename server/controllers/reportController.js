@@ -487,8 +487,75 @@ exports.getServiceOrdersReport = async (req, res) => {
                 }));
             }
 
-            // 3. Combine and Sort
-            const combined = [...soRows, ...averiaRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            // 3. Fetch Client Logs (Trámites: Changes, Disconnects, etc.)
+            let logRows = [];
+            // Only fetch logs if not filtering by PENDING status specifically (logs are usually history)
+            if (status !== 'PENDING') {
+                const [lRows] = await pool.query(`
+                    SELECT l.id, l.timestamp as created_at, l.action, l.details,
+                           c.full_name as client_name, c.id as client_id,
+                           c.address_street, c.contract_number, c.status as client_status
+                    FROM client_logs l
+                    LEFT JOIN clients c ON l.client_id = c.id
+                    WHERE DATE(l.timestamp) BETWEEN ? AND ?
+                    ORDER BY l.timestamp DESC
+                `, [sDate, eDate]);
+
+                logRows = lRows.map(l => {
+                    // Map Action to readable Type
+                    let type = l.action;
+                    if (type === 'CHANGE_NAME') type = 'CAMBIO DE NOMBRE';
+                    if (type === 'CHANGE_ADDRESS') type = 'TRASLADO';
+                    if (type === 'DISCONNECT_REQ') type = 'SOLICITUD BAJA';
+                    if (type === 'DISCONNECT_MORA') type = 'CORTE MORA';
+                    if (type === 'UPDATE') type = 'ACTUALIZACION DATOS';
+                    if (type === 'CREATE') type = 'NUEVO CLIENTE';
+                    if (type === 'SERVICE_COMPLETED') return null; // Skip, already covered by Service Orders
+
+                    return {
+                        id: `LOG-${l.id}`,
+                        created_at: l.created_at,
+                        type: type,
+                        status: 'FINALIZADO',
+                        description: typeof l.details === 'string' ? l.details : JSON.stringify(l.details),
+                        client_name: l.client_name,
+                        client_id: l.client_id,
+                        address_street: l.address_street,
+                        contract_number: l.contract_number,
+                        client_status: l.client_status
+                    };
+                }).filter(Boolean); // Remove nulls
+            }
+
+            // 4. Fetch Web Contacts (Atendidos)
+            let contactRows = [];
+            if (status !== 'PENDING') {
+                const [cRows] = await pool.query(`
+                    SELECT c.id, c.fecha_contacto as created_at, c.mensaje, c.nombre_completo, c.barrio_direccion,
+                           u.username as assigned_user
+                    FROM contactos c
+                    LEFT JOIN users u ON c.assigned_user_id = u.id
+                    WHERE c.atendido = 1
+                    AND DATE(c.fecha_contacto) BETWEEN ? AND ?
+                    ORDER BY c.fecha_contacto DESC
+                `, [sDate, eDate]);
+
+                contactRows = cRows.map(c => ({
+                    id: `CONT-${c.id}`,
+                    created_at: c.created_at,
+                    type: 'CONTACTO WEB',
+                    status: 'ATENDIDO',
+                    description: c.mensaje + (c.assigned_user ? ` (Atendido por: ${c.assigned_user})` : ''),
+                    client_name: c.nombre_completo,
+                    client_id: null,
+                    address_street: c.barrio_direccion,
+                    contract_number: null,
+                    client_status: 'N/A'
+                }));
+            }
+
+            // 5. Combine and Sort
+            const combined = [...soRows, ...averiaRows, ...logRows, ...contactRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             pool.release();
             return res.json(combined);
