@@ -377,22 +377,90 @@ const Reports = () => {
                 <Card>
                     <Label style={{ color: '#10b981' }}><FaUserCheck /> Clientes al Día</Label>
                     <Value style={{ color: '#10b981' }}>{cableStats.al_dia || 0}</Value>
-                    <div style={{ color: '#94a3b8' }}>Sin pagos pendientes</div>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Sin pagos pendientes</div>
+                    <button
+                        onClick={() => {
+                            fetch('/api/clients/export-xls?status=up_to_date')
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Clientes_Al_Dia.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
+                        style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        📥 Exportar Excel
+                    </button>
                 </Card>
                 <Card>
                     <Label style={{ color: '#ef4444' }}><FaUserTimes /> Cortados por Mora</Label>
                     <Value style={{ color: '#ef4444' }}>{cableStats.morosos.count}</Value>
-                    <div style={{ color: '#94a3b8' }}>Deuda: <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(cableStats.morosos.deuda)}</span></div>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Deuda: <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(cableStats.morosos.deuda)}</span></div>
+                    <button
+                        onClick={() => {
+                            fetch('/api/clients/export-xls?status=in_arrears')
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Clientes_Mora.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        📥 Exportar Excel
+                    </button>
                 </Card>
                 <Card>
                     <Label style={{ color: '#f59e0b' }}><FaUserTimes /> Cortado a solicitud del cliente</Label>
                     <Value style={{ color: '#f59e0b' }}>{cableStats.suspendidos}</Value>
-                    <div style={{ color: '#94a3b8' }}>Servicio suspendido</div>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Servicio suspendido</div>
+                    <button
+                        onClick={() => {
+                            fetch('/api/clients/export-xls?status=suspended')
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Clientes_Suspendidos.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
+                        style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        📥 Exportar Excel
+                    </button>
                 </Card>
                 <Card>
                     <Label style={{ color: '#64748b' }}><FaUserCheck /> Total Clientes</Label>
                     <Value style={{ color: 'white' }}>{cableStats.total_clientes}</Value>
-                    <div style={{ color: '#94a3b8' }}>Base instalada total</div>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Base instalada total</div>
+                    <button
+                        onClick={() => {
+                            fetch('/api/clients/export-xls?status=all')
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Total_Clientes.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}
+                        style={{ background: 'rgba(148, 163, 184, 0.1)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        📥 Exportar Excel
+                    </button>
                 </Card>
             </Grid>
             {showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} />}
