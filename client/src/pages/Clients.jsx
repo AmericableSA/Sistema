@@ -8,6 +8,7 @@ import HistoryModal from '../components/HistoryModal';
 // @ts-ignore
 import ZoneModal from '../components/ZoneModal'; // @ts-ignore
 import BulkUploadModal from '../components/BulkUploadModal';
+import CityManagerModal from '../components/CityManagerModal';
 import { useAuth } from '../context/AuthContext';
 
 const Clients = () => {
@@ -21,6 +22,7 @@ const Clients = () => {
     const [initialHistoryTab, setInitialHistoryTab] = useState('logs'); // 'logs' or 'invoices'
     const [showZoneModal, setShowZoneModal] = useState(false);
     const [showUploadModal, setShowUploadModal] = useState(false);
+    const [showCityModal, setShowCityModal] = useState(false);
     const [selectedClient, setSelectedClient] = useState(null);
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
     const [confirmDelete, setConfirmDelete] = useState({ show: false, id: null });
@@ -170,6 +172,14 @@ const Clients = () => {
                         Exportar Excel
                     </button>
 
+                    <button
+                        className="btn-dark-glow"
+                        onClick={() => setShowCityModal(true)}
+                        style={{ background: 'rgba(236, 72, 153, 0.1)', border: '1px solid rgba(236, 72, 153, 0.3)', color: '#f472b6' }}
+                    >
+                        Gestionar Ciudades
+                    </button>
+
                     {user?.role === 'admin' && (
                         <button className="btn-dark-glow" onClick={() => setShowUploadModal(true)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}>
                             Carga Masiva
@@ -189,6 +199,7 @@ const Clients = () => {
             </div>
 
             {/* Modals & Alerts */}
+            {showCityModal && <CityManagerModal onClose={() => setShowCityModal(false)} />}
             {showZoneModal && <ZoneModal onClose={() => setShowZoneModal(false)} />}
             {showModal && (
                 <ClientModal
