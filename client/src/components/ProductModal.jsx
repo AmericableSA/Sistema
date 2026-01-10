@@ -10,7 +10,8 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         min_stock_alert: 5,
         selling_price: 0,
         unit_cost: 0,
-        type: 'product' // default
+        type: 'product', // default
+        unit_of_measure: 'Unidad'
     });
 
     // Bundle Logic
@@ -38,6 +39,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                 sku: '', name: '', description: '',
                 current_stock: 0, min_stock_alert: 5,
                 selling_price: 0, unit_cost: 0, type: 'product',
+                unit_of_measure: 'Unidad',
                 ...(product || {}) // Merge initial values if any
             });
             setBundleItems([]);
@@ -175,10 +177,21 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
 
                     {/* DYNAMIC FIELDS BASED ON TYPE */}
                     {formData.type === 'product' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                             <div>
                                 <label className="label-dark">Stock Actual</label>
                                 <input type="number" className="input-dark" name="current_stock" value={formData.current_stock} onChange={handleChange} required />
+                            </div>
+                            <div>
+                                <label className="label-dark">Unidad Medida</label>
+                                <select className="input-dark" name="unit_of_measure" value={formData.unit_of_measure} onChange={handleChange}>
+                                    <option value="Unidad">Unidad</option>
+                                    <option value="Metros">Metros</option>
+                                    <option value="Pies">Pies</option>
+                                    <option value="Cajas">Cajas</option>
+                                    <option value="Libras">Libras</option>
+                                    <option value="Rollos">Rollos</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="label-dark">Costo Unitario (C$)</label>

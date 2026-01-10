@@ -6,6 +6,7 @@ import CustomAlert from '../components/CustomAlert';
 import HistoryModal from '../components/HistoryModal';
 import WebNotificationsModal from '../components/WebNotificationsModal';
 import FullPageLoader from '../components/FullPageLoader';
+import MaterialsModal from '../components/MaterialsModal';
 
 const ClientMovements = () => {
     // Data State
@@ -43,6 +44,10 @@ const ClientMovements = () => {
     const [showHistory, setShowHistory] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const [notificationCount, setNotificationCount] = useState(0);
+
+    // Materials Modal
+    const [showMaterialsModal, setShowMaterialsModal] = useState(false);
+    const [selectedOrderForMaterials, setSelectedOrderForMaterials] = useState(null);
 
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
 
@@ -646,6 +651,31 @@ const ClientMovements = () => {
                                         </div>
                                     </div>
 
+                                    {/* MATERIALS PREVIEW */}
+                                    {order.materials_summary && order.materials_summary.length > 0 && (
+                                        <div style={{ marginBottom: '1rem', background: 'rgba(0,0,0,0.3)', padding: '0.8rem', borderRadius: '8px' }}>
+                                            <p style={{ margin: '0 0 0.5rem 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 'bold' }}>Materiales Registrados:</p>
+                                            <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
+                                                {order.materials_summary.map((m, idx) => (
+                                                    <li key={idx}>
+                                                        {m.product_name} <span style={{ color: '#94a3b8' }}>({parseFloat(m.quantity)} {m.unit || 'Unidad'})</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {/* MATERIALS BUTTON */}
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <button
+                                            onClick={() => { setSelectedOrderForMaterials(order); setShowMaterialsModal(true); }}
+                                            className="btn-secondary"
+                                            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', border: '1px dashed #475569' }}
+                                        >
+                                            📦 {order.materials_summary && order.materials_summary.length > 0 ? 'Editar Materiales' : 'Gestionar Materiales Utilizados'}
+                                        </button>
+                                    </div>
+
                                     {/* UPDATED: EDITABLE NOTES */}
                                     <div style={{ marginBottom: '1rem' }}>
                                         <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.25rem' }}>Detalles / Notas del Técnico</label>
@@ -715,6 +745,14 @@ const ClientMovements = () => {
                         setViewMode('SEARCH');
                         setAlert({ show: true, type: 'info', title: 'Buscando Cliente', message: `Buscando coincidencias para: ${averia.nombre_completo}` });
                     }}
+                />
+            )}
+
+            {/* MATERIALS MODAL */}
+            {showMaterialsModal && selectedOrderForMaterials && (
+                <MaterialsModal
+                    order={selectedOrderForMaterials}
+                    onClose={() => { setShowMaterialsModal(false); setSelectedOrderForMaterials(null); }}
                 />
             )}
 

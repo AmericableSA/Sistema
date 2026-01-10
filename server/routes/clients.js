@@ -13,11 +13,18 @@ router.put('/:id', clientController.updateClient);
 router.delete('/:id', clientController.deleteClient);
 router.post('/movements', clientController.registerMovement);
 
+const materialController = require('../controllers/materialController');
+
 // Service Orders
 router.get('/:id/orders', clientController.getServiceOrders);
 router.put('/orders/:orderId', clientController.updateServiceOrder);
 router.post('/:id/manual-order', clientController.createManualServiceOrder);
 router.get('/technicians/list', clientController.getTechnicians);
+
+// Materials for Orders
+router.get('/orders/:orderId/materials', materialController.getMaterials);
+router.post('/orders/:orderId/materials', materialController.addMaterial);
+router.delete('/orders/materials/:id', materialController.removeMaterial);
 
 // Client Notes
 router.get('/:id/notes', clientController.getClientNotes);

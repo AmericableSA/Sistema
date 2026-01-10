@@ -176,7 +176,7 @@ const Inventory = () => {
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>SKU</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>Producto</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>Tipo</th>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Cantidad</th>
+                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Stock / Unidad</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Precio</th>
                                 <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'center' }}>Acciones</th>
                             </tr>
@@ -223,21 +223,24 @@ const Inventory = () => {
                                         {product.type === 'bundle' || product.type === 'service' ? (
                                             <span style={{ color: '#64748b' }}>-</span>
                                         ) : (
-                                            <button onClick={() => { setStockProduct(product); setShowStockModal(true); }}
-                                                style={{
-                                                    background: 'transparent', border: 'none', cursor: 'pointer',
-                                                    display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end'
-                                                }}
-                                            >
-                                                <span style={{
-                                                    fontSize: '1.1rem', fontWeight: 700,
-                                                    color: product.current_stock <= product.min_stock_alert ? '#ef4444' : '#22c55e',
-                                                    textShadow: product.current_stock <= product.min_stock_alert ? '0 0 10px rgba(239,68,68,0.4)' : '0 0 10px rgba(34,197,94,0.4)'
-                                                }}>
-                                                    {product.current_stock}
-                                                </span>
-                                                {product.current_stock <= product.min_stock_alert && <span style={{ fontSize: '0.65rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '1px' }}>Crítico</span>}
-                                            </button>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                <button onClick={() => { setStockProduct(product); setShowStockModal(true); }}
+                                                    style={{
+                                                        background: 'transparent', border: 'none', cursor: 'pointer',
+                                                        display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end'
+                                                    }}
+                                                >
+                                                    <span style={{
+                                                        fontSize: '1.1rem', fontWeight: 700,
+                                                        color: product.current_stock <= product.min_stock_alert ? '#ef4444' : '#22c55e',
+                                                        textShadow: product.current_stock <= product.min_stock_alert ? '0 0 10px rgba(239,68,68,0.4)' : '0 0 10px rgba(34,197,94,0.4)'
+                                                    }}>
+                                                        {product.current_stock}
+                                                    </span>
+                                                </button>
+                                                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{product.unit_of_measure || 'Unidad'}</span>
+                                                {product.current_stock <= product.min_stock_alert && <span style={{ fontSize: '0.65rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>Crítico</span>}
+                                            </div>
                                         )}
                                     </td>
                                     <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right', fontWeight: 700, color: 'white', fontSize: '1rem' }}>

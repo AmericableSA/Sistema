@@ -344,10 +344,21 @@ exports.deleteClient = async (req, res) => {
 // --- SERVICE ORDERS ---
 
 // --- Service Orders (Existing) ---
+// --- Service Orders (Existing) ---
 exports.getServiceOrders = async (req, res) => {
     try {
         const [orders] = await db.query(`
-            SELECT so.*, u.username as tech_name, u.full_name as tech_full_name
+            SELECT so.*, u.username as tech_name, u.full_name as tech_full_name,
+            (
+                SELECT JSON_ARRAYAGG(JSON_OBJECT(
+                    'product_name', p.name, 
+                    'quantity', som.quantity, 
+                    'unit', p.unit_of_measure
+                ))
+                FROM service_order_materials som
+                JOIN products p ON som.product_id = p.id
+                WHERE som.service_order_id = so.id
+            ) as materials_summary
             FROM service_orders so
             LEFT JOIN users u ON so.assigned_tech_id = u.id
             WHERE so.client_id = ?

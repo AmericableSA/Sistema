@@ -27,7 +27,7 @@ exports.getBundleDetails = async (req, res) => {
 
 // Create a new product
 exports.createProduct = async (req, res) => {
-    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, bundle_items } = req.body;
+    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, bundle_items, unit_of_measure } = req.body;
 
     // Default to 'product' if not specified
     const prodType = type || 'product';
@@ -38,8 +38,8 @@ exports.createProduct = async (req, res) => {
         await connection.beginTransaction();
 
         const [result] = await connection.query(
-            'INSERT INTO products (sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [sku, name, description, category_id, provider_id || null, initialStock, min_stock_alert || 5, unit_cost || 0, selling_price, prodType]
+            'INSERT INTO products (sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, unit_of_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [sku, name, description, category_id, provider_id || null, initialStock, min_stock_alert || 5, unit_cost || 0, selling_price, prodType, unit_of_measure || 'Unidad']
         );
         const newId = result.insertId;
 
@@ -75,7 +75,7 @@ exports.createProduct = async (req, res) => {
 // Update a product
 exports.updateProduct = async (req, res) => {
     const { id } = req.params;
-    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, user_id, reason, type, bundle_items } = req.body;
+    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, user_id, reason, type, bundle_items, unit_of_measure } = req.body;
 
     const connection = await db.getConnection();
     try {
@@ -95,6 +95,7 @@ exports.updateProduct = async (req, res) => {
         if (Number(oldProduct.selling_price) !== Number(selling_price)) changes.push(`Precio: C$ ${oldProduct.selling_price} -> C$ ${selling_price}`);
         if (oldProduct.sku !== sku) changes.push(`SKU: ${oldProduct.sku} -> ${sku}`);
         if (String(oldProduct.description || '') !== String(description || '')) changes.push('Descripción modificada');
+        if (String(oldProduct.unit_of_measure || 'Unidad') !== String(unit_of_measure || 'Unidad')) changes.push(`Unidad: ${oldProduct.unit_of_measure} -> ${unit_of_measure}`);
 
         // Critical: Detect Stock Change
         const oldStock = Number(oldProduct.current_stock);
@@ -109,8 +110,8 @@ exports.updateProduct = async (req, res) => {
 
         // 3. Update Product Main Data
         await connection.query(
-            'UPDATE products SET sku=?, name=?, description=?, category_id=?, provider_id=?, current_stock=?, min_stock_alert=?, unit_cost=?, selling_price=?, type=? WHERE id=?',
-            [sku, name, description, category_id, provider_id || null, current_stock, min_stock_alert, unit_cost, selling_price, type || oldProduct.type, id]
+            'UPDATE products SET sku=?, name=?, description=?, category_id=?, provider_id=?, current_stock=?, min_stock_alert=?, unit_cost=?, selling_price=?, type=?, unit_of_measure=? WHERE id=?',
+            [sku, name, description, category_id, provider_id || null, current_stock, min_stock_alert, unit_cost, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', id]
         );
 
         // 4. Handle Bundle Items Update (Delete All + Re-insert)
@@ -224,6 +225,7 @@ exports.exportProductsXLS = async (req, res) => {
             { header: 'Descripción', key: 'description', width: 40 },
             { header: 'Tipo', key: 'type', width: 15 },
             { header: 'Stock', key: 'stock', width: 10 },
+            { header: 'Unidad', key: 'unit', width: 10 },
             { header: 'Precio', key: 'price', width: 15 },
             { header: 'Costo', key: 'cost', width: 15 }
         ];
@@ -243,6 +245,7 @@ exports.exportProductsXLS = async (req, res) => {
                 description: p.description || '',
                 type: typeMap[p.type] || p.type,
                 stock: p.current_stock,
+                unit: p.unit_of_measure || 'Unidad',
                 price: parseFloat(p.selling_price),
                 cost: parseFloat(p.unit_cost)
             });
