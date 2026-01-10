@@ -53,6 +53,17 @@ exports.addMaterial = async (req, res) => {
             [product_id, 'OUT', qty, 0, `Usado en Trámite #${orderId}`, user_id || 1]
         );
 
+        // 5. Log Client History (so it appears in timeline)
+        // Need to get client_id from service_order
+        const [orderInfo] = await connection.query('SELECT client_id FROM service_orders WHERE id = ?', [orderId]);
+        if (orderInfo.length > 0) {
+            const clientId = orderInfo[0].client_id;
+            await connection.query(
+                'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
+                [clientId, user_id || 1, 'MATERIAL_USED', `Material agregado a Orden #${orderId}: ${prod[0].name} (x${qty})`]
+            );
+        }
+
         await connection.commit();
 
         // Return created item with details
@@ -101,6 +112,20 @@ exports.removeMaterial = async (req, res) => {
             'INSERT INTO inventory_transactions (product_id, transaction_type, quantity, unit_price, reason, user_id) VALUES (?, ?, ?, ?, ?, ?)',
             [product_id, 'IN', quantity, 0, `Restaurado de Trámite #${service_order_id}`, user_id || 1]
         );
+
+        // 5. Log Client History
+        const [orderInfo] = await connection.query('SELECT client_id FROM service_orders WHERE id = ?', [service_order_id]);
+        if (orderInfo.length > 0) {
+            const clientId = orderInfo[0].client_id;
+            // Get product name for better log
+            const [pInfo] = await connection.query('SELECT name FROM products WHERE id = ?', [product_id]);
+            const pName = pInfo.length > 0 ? pInfo[0].name : 'Producto';
+
+            await connection.query(
+                'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
+                [clientId, user_id || 1, 'MATERIAL_REMOVED', `Material eliminado de Orden #${service_order_id}: ${pName} (x${quantity})`]
+            );
+        }
 
         await connection.commit();
         res.json({ message: 'Material removed and stock restored' });
