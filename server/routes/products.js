@@ -12,11 +12,22 @@ router.get('/export-xls', productController.exportProductsXLS);
 
 // @route   GET /api/products
 // @desc    Get all products
-// @desc    Get all// Routes
-router.get('/', productController.getProducts);
+router.get('/', productController.getAllProducts);
+
+// @route   GET /api/products/:id
+// @desc    Get product by ID
 router.get('/:id', productController.getProductById);
+
+// @route   POST /api/products
+// @desc    Create a new product
 router.post('/', productController.createProduct);
+
+// @route   PUT /api/products/:id
+// @desc    Update a product
 router.put('/:id', productController.updateProduct);
+
+// @route   DELETE /api/products/:id
+// @desc    Delete a product
 router.delete('/:id', productController.deleteProduct);
 
 // Dynamic Units
@@ -26,13 +37,5 @@ router.delete('/units/:id', productController.deleteUnit);
 
 router.get('/export/excel', productController.exportProductsXLS);
 router.get('/bundles/:id', productController.getBundleDetails);
-
-// @route   PUT /api/products/:id
-// @desc    Update a product
-router.put('/:id', productController.updateProduct);
-
-// @route   DELETE /api/products/:id
-// @desc    Delete a product
-router.delete('/:id', productController.deleteProduct);
 
 module.exports = router;

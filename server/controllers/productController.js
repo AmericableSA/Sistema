@@ -11,6 +11,19 @@ exports.getAllProducts = async (req, res) => {
     }
 };
 
+// Get product by ID
+exports.getProductById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ msg: 'Product not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
 // Get Bundle Items
 exports.getBundleDetails = async (req, res) => {
     const { id } = req.params;
