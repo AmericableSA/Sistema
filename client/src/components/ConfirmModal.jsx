@@ -12,9 +12,12 @@ const ConfirmModal = ({ isOpen, title, message, type = 'confirm', onConfirm, onC
 
     return ReactDOM.createPortal(
         <div style={{
-            position: 'fixed', inset: 0, zIndex: 10000,
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            position: 'fixed',
+            top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            zIndex: 100000, // Highest priority
+            backdropFilter: 'blur(4px)'
         }}>
             <div className="animate-entry" style={{
                 background: '#1e293b', border: '1px solid #334155',

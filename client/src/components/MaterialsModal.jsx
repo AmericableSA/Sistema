@@ -8,6 +8,7 @@ const MaterialsModal = ({ order, onClose }) => {
 
     // Form State
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [searchTerm, setSearchTerm] = useState(''); // New Search State
     const [quantity, setQuantity] = useState(1);
     const [adding, setAdding] = useState(false);
 
@@ -106,21 +107,47 @@ const MaterialsModal = ({ order, onClose }) => {
 
                 {/* ADD SECTION */}
                 <form onSubmit={handleAdd} style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'end' }}>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label className="label-dark">Seleccionar Material / Producto</label>
-                        <select
+                    <div style={{ flex: 1, minWidth: '300px', position: 'relative' }}>
+                        <label className="label-dark">Buscar Material / Producto</label>
+                        <input
+                            type="text"
                             className="input-dark"
-                            value={selectedProductId}
-                            onChange={e => setSelectedProductId(e.target.value)}
-                            required
-                        >
-                            <option value="">-- Buscar en Inventario --</option>
-                            {inventory.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name} (Stock: {p.current_stock} {p.unit_of_measure})
-                                </option>
-                            ))}
-                        </select>
+                            placeholder="Escribe para buscar..."
+                            value={selectedProductId ? (inventory.find(p => p.id == selectedProductId)?.name || selectedProductId) : searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setSelectedProductId(''); // Reset selection on type
+                            }}
+                            onFocus={() => setSelectedProductId('')} // Clear selection to allow new search
+                        />
+                        {/* Custom Dropdown Results */}
+                        {searchTerm && !selectedProductId && (
+                            <div style={{
+                                position: 'absolute', top: '100%', left: 0, right: 0,
+                                maxHeight: '200px', overflowY: 'auto',
+                                background: '#1e293b', border: '1px solid #475569',
+                                borderRadius: '0 0 8px 8px', zIndex: 10
+                            }}>
+                                {inventory.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
+                                    <div
+                                        key={p.id}
+                                        onClick={() => {
+                                            setSelectedProductId(p.id);
+                                            setSearchTerm(''); // Clear search term as we have a selection (rendered by value prop logic)
+                                        }}
+                                        style={{ padding: '0.5rem', cursor: 'pointer', borderBottom: '1px solid #334155', color: '#cbd5e1' }}
+                                        onMouseEnter={(e) => e.target.style.background = '#334155'}
+                                        onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                                    >
+                                        <div style={{ fontWeight: 'bold' }}>{p.name}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>SKU: {p.sku} | Stock: {p.current_stock} {p.unit_of_measure}</div>
+                                    </div>
+                                ))}
+                                {inventory.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                                    <div style={{ padding: '0.5rem', color: '#64748b' }}>No se encontraron productos.</div>
+                                )}
+                            </div>
+                        )}
                     </div>
                     <div style={{ width: '100px' }}>
                         <label className="label-dark">Cantidad</label>
@@ -134,7 +161,7 @@ const MaterialsModal = ({ order, onClose }) => {
                             required
                         />
                     </div>
-                    <button type="submit" disabled={adding} className="btn-primary-glow" style={{ padding: '0.7rem 1.5rem' }}>
+                    <button type="submit" disabled={adding || !selectedProductId} className="btn-primary-glow" style={{ padding: '0.7rem 1.5rem' }}>
                         {adding ? 'Agregando...' : '➕ Agregar'}
                     </button>
                 </form>

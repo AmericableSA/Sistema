@@ -22,29 +22,30 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
 
 
     useEffect(() => {
-        // If product has an ID, it's an EDIT.
-        if (product && product.id) {
-            setFormData(product);
-            if (product.type === 'bundle') {
-                fetch(`/api/products/${product.id}/bundle`)
-                    .then(r => r.json())
-                    .then(items => setBundleItems(items))
-                    .catch(e => console.error(e));
+        if (isOpen) {
+            fetchUnits(); // Fetch units when modal opens
+
+            // If product has an ID, it's an EDIT.
+            if (product && product.id) {
+                setFormData(product);
+                if (product.type === 'bundle') {
+                    fetchBundleItems(product.id);
+                } else {
+                    setBundleItems([]);
+                }
             } else {
+                // Reset for new (or partial initial data provided like {type: 'bundle'})
+                setFormData({
+                    sku: '', name: '', description: '',
+                    current_stock: 0, min_stock_alert: 5,
+                    selling_price: 0, unit_cost: 0, type: 'product',
+                    unit_of_measure: 'Unidad', // Default
+                    ...(product || {}) // Merge initial values if any
+                });
                 setBundleItems([]);
             }
-        } else {
-            // Reset for new (or partial initial data provided like {type: 'bundle'})
-            setFormData({
-                sku: '', name: '', description: '',
-                current_stock: 0, min_stock_alert: 5,
-                selling_price: 0, unit_cost: 0, type: 'product',
-                unit_of_measure: 'Unidad',
-                ...(product || {}) // Merge initial values if any
-            });
-            setBundleItems([]);
         }
-    }, [product]);
+    }, [isOpen, product]);
 
 
 
@@ -184,14 +185,48 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                             </div>
                             <div>
                                 <label className="label-dark">Unidad Medida</label>
-                                <select className="input-dark" name="unit_of_measure" value={formData.unit_of_measure} onChange={handleChange}>
-                                    <option value="Unidad">Unidad</option>
-                                    <option value="Metros">Metros</option>
-                                    <option value="Pies">Pies</option>
-                                    <option value="Cajas">Cajas</option>
-                                    <option value="Libras">Libras</option>
-                                    <option value="Rollos">Rollos</option>
-                                </select>
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                    <select
+                                        className="input-dark"
+                                        name="unit_of_measure"
+                                        value={formData.unit_of_measure}
+                                        onChange={handleChange}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <option value="Unidad">Unidad (Default)</option>
+                                        {availableUnits.map(u => (
+                                            <option key={u.id} value={u.name}>{u.name}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            const newUnit = prompt('Nombre de la nueva unidad (ej: Litros, Metros, etc):');
+                                            if (newUnit && newUnit.trim()) {
+                                                try {
+                                                    const res = await fetch('/api/products/units', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ name: newUnit.trim() })
+                                                    });
+                                                    if (res.ok) {
+                                                        const created = await res.json();
+                                                        await fetchUnits(); // Refresh list
+                                                        setFormData(prev => ({ ...prev, unit_of_measure: created.name })); // Auto select
+                                                    } else {
+                                                        const err = await res.json();
+                                                        alert(err.msg || 'Error creando unidad');
+                                                    }
+                                                } catch (e) { alert('Error de conexión'); }
+                                            }
+                                        }}
+                                        className="btn-secondary"
+                                        style={{ padding: '0 10px', fontSize: '1.2rem', fontWeight: 'bold' }}
+                                        title="Crear Nueva Unidad"
+                                    >
+                                        +
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label className="label-dark">Costo Unitario (C$)</label>

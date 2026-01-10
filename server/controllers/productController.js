@@ -197,6 +197,39 @@ exports.getAllInventoryHistory = async (req, res) => {
     }
 };
 
+// --- DYNAMIC UNITS ---
+exports.getUnits = async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT * FROM product_units ORDER BY name ASC');
+        res.json(rows);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.createUnit = async (req, res) => {
+    const { name } = req.body;
+    try {
+        await db.query('INSERT INTO product_units (name) VALUES (?)', [name]);
+        const [newUnit] = await db.query('SELECT * FROM product_units WHERE name = ?', [name]);
+        res.json(newUnit[0]);
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ msg: 'Esta unidad ya existe' });
+        res.status(500).send('Server Error');
+    }
+};
+
+exports.deleteUnit = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM product_units WHERE id = ?', [id]);
+        res.json({ msg: 'Unidad eliminada' });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+};
+
+// --- Export Products XLS (Using ExcelJS) ---
 // Export Products to Excel
 exports.exportProductsXLS = async (req, res) => {
     try {
