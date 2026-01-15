@@ -623,7 +623,8 @@ exports.exportClientsXLS = async (req, res) => {
                 'active': 'Activo',
                 'suspended': 'Cortado',
                 'disconnected': 'Retirado',
-                'pending_install': 'Pendiente'
+                'pending_install': 'Pendiente',
+                'disconnected_by_request': 'Desc. Solicitud'
             };
 
             worksheet.addRow({

@@ -281,6 +281,7 @@ const Clients = () => {
                             <option value="suspended">🔒 Cortados</option>
                             <option value="disconnected">⛔ Retirados</option>
                             <option value="pending_install">⏳ Pendientes</option>
+                            <option value="disconnected_by_request">🔌 Desconexión a Solicitud</option>
                         </select>
                     </div>
 
