@@ -139,10 +139,8 @@ exports.createClient = async (req, res) => {
                 return res.status(400).json({ msg: 'Número de contrato ya existe (Intenta de nuevo)' });
             }
         }
-        if (identity_document) {
-            const [existingID] = await db.query('SELECT id FROM clients WHERE identity_document = ?', [identity_document]);
-            if (existingID.length > 0) return res.status(400).json({ msg: 'Cédula ya registrada' });
-        }
+        // Duplicate check for identity_document removed as per request
+
 
         const [result] = await db.query(
             `INSERT INTO clients (
@@ -218,7 +216,8 @@ exports.updateClient = async (req, res) => {
             'active': 'Activo',
             'suspended': 'Cortado',
             'disconnected': 'Retirado',
-            'pending_install': 'Pendiente'
+            'pending_install': 'Pendiente',
+            'disconnected_by_request': 'Desconexión a Solicitud'
         };
 
         const normalizeDate = (d) => {

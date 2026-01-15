@@ -93,6 +93,31 @@ const ClientModal = ({ client, onClose, onSave }) => {
         setFormData({ ...formData, [name]: val });
     };
 
+    // CEDULA MASKING LOGIC (000-000000-0000X)
+    const handleCedulaChange = (e) => {
+        let { value } = e.target;
+        // Limit to reasonable max length (14 chars + 2 dashes = 16)
+        let val = value.toUpperCase();
+
+        // Remove existing dashes to re-calculate
+        const clean = val.replace(/-/g, '');
+
+        // Rebuild with dashes
+        // xxx-xxxxxx-xxxx
+        let formatted = clean;
+        if (clean.length > 3) {
+            formatted = clean.slice(0, 3) + '-' + clean.slice(3);
+        }
+        if (clean.length > 9) { // 3 + 6 = 9
+            formatted = formatted.slice(0, 10) + '-' + formatted.slice(10);
+        }
+
+        // Limit total length just in case
+        if (formatted.length > 16) formatted = formatted.slice(0, 16);
+
+        setFormData({ ...formData, identity_document: formatted });
+    };
+
     // NOTES Logic
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState('');
@@ -223,7 +248,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
                                     <label className="label-dark">Cédula (Opcional)</label>
-                                    <input className="input-dark" name="identity_document" value={formData.identity_document} onChange={handleChange} />
+                                    <input className="input-dark" name="identity_document" value={formData.identity_document} onChange={handleCedulaChange} placeholder="xxx-xxxxxx-xxxx" />
                                 </div>
                                 <div>
                                     <label className="label-dark">Teléfono * (0000-0000)</label>
@@ -295,8 +320,8 @@ const ClientModal = ({ client, onClose, onSave }) => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label className="label-dark">Contrato / Item *</label>
-                                    <input className="input-dark" name="contract_number" value={formData.contract_number} onChange={handleChange} required />
+                                    <label className="label-dark">Contrato / Item (Auto)</label>
+                                    <input className="input-dark" name="contract_number" value={formData.contract_number} onChange={handleChange} placeholder="Dejar vacío para auto-generar" />
                                 </div>
                                 <div>
                                     <label className="label-dark">Estado</label>
@@ -304,6 +329,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                         <option value="active">Activo</option>
                                         <option value="suspended">Cortado / Suspendido</option>
                                         <option value="disconnected">Retirado</option>
+                                        <option value="disconnected_by_request">Desconexión a Solicitud</option>
                                     </select>
                                 </div>
                             </div>
