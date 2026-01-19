@@ -11,8 +11,8 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
     const [loading, setLoading] = useState(false);
 
     // Filters
-    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
-    const [filterStatus, setFilterStatus] = useState('all'); // 'Pendiente' | 'all' | 'Atendido'
+    const [filterDate, setFilterDate] = useState('');
+    const [filterStatus, setFilterStatus] = useState('Pendiente'); // 'Pendiente' | 'all' | 'Atendido'
 
     // Delete Confirmation State
     const [confirm, setConfirm] = useState({ show: false, title: '', message: '', id: null, type: null });
@@ -41,9 +41,13 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
             if (filterStatus === 'Pendiente') contactStatusParam = 'pending';
             if (filterStatus === 'Atendido') contactStatusParam = 'attended';
 
+            // Build Averia URL
+            let averiaUrl = `/api/notifications/averias?status=${filterStatus}`;
+            if (filterDate) averiaUrl += `&startDate=${filterDate}&endDate=${filterDate}`;
+
             // Fetch BOTH to ensure tab counts are accurate immediately
             const [averiasRes, contactosRes] = await Promise.all([
-                fetch(`/api/notifications/averias?status=${filterStatus}&startDate=${filterDate}&endDate=${filterDate}`),
+                fetch(averiaUrl),
                 fetch(`/api/notifications/contactos?status=${contactStatusParam}`)
             ]);
 

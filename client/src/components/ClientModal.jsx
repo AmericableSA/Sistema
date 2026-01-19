@@ -327,8 +327,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                     <label className="label-dark">Estado</label>
                                     <select className="input-dark" name="status" value={formData.status} onChange={handleChange}>
                                         <option value="active">Activo</option>
-                                        <option value="suspended">Cortado / Suspendido</option>
-                                        <option value="disconnected">Retirado</option>
+                                        <option value="suspended">Cortado por mora</option>
                                         <option value="disconnected_by_request">Desconexión a Solicitud</option>
                                     </select>
                                 </div>
