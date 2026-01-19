@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) => {

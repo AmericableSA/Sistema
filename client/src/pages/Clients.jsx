@@ -278,9 +278,7 @@ const Clients = () => {
                             <option value="up_to_date">✅ Al Día</option>
                             <option value="in_arrears">⚠️ En Mora</option>
                             <option value="active">🟢 Activos (Todos)</option>
-                            <option value="suspended">🔒 Cortados</option>
-                            <option value="disconnected">⛔ Retirados</option>
-                            <option value="pending_install">⏳ Pendientes</option>
+                            <option value="suspended">🔒 Cortado por mora</option>
                             <option value="disconnected_by_request">🔌 Desconexión a Solicitud</option>
                         </select>
                     </div>
