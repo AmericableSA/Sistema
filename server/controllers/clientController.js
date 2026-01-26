@@ -666,7 +666,7 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
         const [rows] = await db.query(`
             SELECT 
                 c.contract_number, c.full_name, c.address_street, c.phone_primary,
-                c.last_paid_month,
+                c.last_paid_month, c.last_payment_date,
                 z.tariff,
                 COALESCE(u.username, 'Sin Asignar') as collector_name,
                 n.name as neighborhood_name
@@ -689,6 +689,9 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
         // Create Workbook
         const workbook = new ExcelJS.Workbook();
 
+        // Helper for Month Names
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
         // Iterate Groups and Create Sheets
         for (const [collector, clients] of Object.entries(grouped)) {
             // Sanitize sheet name
@@ -696,7 +699,7 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
             if (sheetName.length > 30) sheetName = sheetName.substring(0, 30);
             if (!sheetName) sheetName = 'Sin Nombre';
 
-            // Check if sheet exists (unlikely given keys are unique, but good practice)
+            // Check if sheet exists
             let sheet = workbook.getWorksheet(sheetName);
             if (sheet) {
                 sheetName = sheetName.substring(0, 27) + Math.floor(Math.random() * 99);
@@ -710,7 +713,10 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                 { header: 'Dirección', key: 'address', width: 45 },
                 { header: 'Barrio', key: 'neighborhood', width: 25 },
                 { header: 'Teléfono', key: 'phone', width: 15 },
-                { header: 'Meses Mora', key: 'months_mora', width: 12 },
+                { header: 'Ultimo Mes Pagado', key: 'last_paid_str', width: 18 },
+                { header: 'Ultima Fecha Pag', key: 'last_payment_date_str', width: 18 },
+                { header: 'Meses Pendientes', key: 'months_owed_list', width: 30 },
+                { header: 'Cant. Mora', key: 'months_mora', width: 12 },
                 { header: 'Deuda Aprox', key: 'debt', width: 15 },
             ];
 
@@ -720,30 +726,62 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
             let totalDebt = 0;
 
             clients.forEach(c => {
-                // Calculate Debt
+                // Calculate Debt & Months List
                 let monthsMora = 0;
                 let debt = 0;
+                let monthsList = '';
+                let lastPaidStr = 'N/A';
+                let lastPaymentDateStr = 'N/A';
 
+                // Format Last Paid Month
                 if (c.last_paid_month) {
-                    const lastPaid = new Date(c.last_paid_month);
-                    const now = new Date();
+                    const lp = new Date(c.last_paid_month);
+                    if (!isNaN(lp.getTime())) {
+                        lastPaidStr = `${monthNames[lp.getMonth()]} ${lp.getFullYear()}`;
 
-                    if (!isNaN(lastPaid.getTime())) {
-                        monthsMora = (now.getFullYear() - lastPaid.getFullYear()) * 12 + (now.getMonth() - lastPaid.getMonth());
-                        // Adjust if paid current month? Usually last_paid_month is the month covered.
-                        // If last_paid_month is Dec 2023, and now is Jan 2024, mora is 1?
-                        // Let's assume standard logic: diff in months.
+                        // Calculate Pending Months
+                        // Logic: Start from Next Month until Current Month
+                        // Note: DATE_FORMAT in SQL usually gave us YYYY-MM-DD.
+
+                        const now = new Date();
+                        // Normalize 'now' to start of month
+                        const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+
+                        // Next due month is month after last_paid
+                        let iterator = new Date(lp.getFullYear(), lp.getMonth() + 1, 1);
+                        // We iterate until iterator matches currentMonthDate (inclusive, so if now is Jan and last paid Nov, we want Dec, Jan)
+
+                        let pendingArr = [];
+                        let safety = 0;
+
+                        // Calculate up to current month. 
+                        // If they paid Jan, lp is Jan. iterator is Feb. Feb > Jan (Current). Loop doesn't run. Correct.
+                        // If they paid Dec, lp is Dec. iterator is Jan. Jan <= Jan. Loop runs. Pushes Jan. Correct.
+
+                        while (iterator <= currentMonthDate && safety < 60) {
+                            const mStr = `${monthNames[iterator.getMonth()]} '${String(iterator.getFullYear()).slice(2)}`;
+                            pendingArr.push(mStr);
+                            iterator.setMonth(iterator.getMonth() + 1);
+                            safety++;
+                        }
+
+                        if (pendingArr.length > 0) {
+                            monthsList = pendingArr.join(', ');
+                            monthsMora = pendingArr.length;
+                        }
                     }
-                } else {
-                    // Never paid? Maybe big debt or new. 
-                    // Let's assume 1 month if undefined but active? Or 0?
-                    // Safe to say 0 if unknown to avoid scary numbers, or mark as CHECK
+                }
+
+                // Format Last Payment Date (Lagi?)
+                if (c.last_payment_date) {
+                    const lpd = new Date(c.last_payment_date);
+                    if (!isNaN(lpd.getTime())) {
+                        lastPaymentDateStr = lpd.toLocaleDateString('es-NI');
+                    }
                 }
 
                 if (monthsMora > 0) {
-                    debt = monthsMora * (c.tariff || 0) * 1.05;
-                } else {
-                    monthsMora = 0;
+                    debt = monthsMora * (c.tariff || 0) * 1.05; // Assuming 5% mora fee
                 }
 
                 totalDebt += debt;
@@ -754,6 +792,9 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                     address: c.address_street,
                     neighborhood: c.neighborhood_name || '',
                     phone: c.phone_primary,
+                    last_paid_str: lastPaidStr,
+                    last_payment_date_str: lastPaymentDateStr,
+                    months_owed_list: monthsList,
                     months_mora: monthsMora,
                     debt: debt
                 });
