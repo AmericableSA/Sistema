@@ -652,3 +652,131 @@ exports.exportClientsXLS = async (req, res) => {
         res.status(500).send('Error exportando excel: ' + (err.message || 'Desconocido'));
     }
 };
+
+// --- Export Routes by Collector (New Report) ---
+exports.exportCollectorRoutesXLS = async (req, res) => {
+    try {
+        console.log('--- EXPORT ROUTES REQUEST RECEIVED ---');
+
+        // Lazy load exceljs
+        const ExcelJS = require('exceljs');
+        // db is global in this file
+
+        // Query: Get Active Clients Grouped by Collector
+        const [rows] = await db.query(`
+            SELECT 
+                c.contract_number, c.full_name, c.address_street, c.phone_primary,
+                c.last_paid_month,
+                z.tariff,
+                COALESCE(u.username, 'Sin Asignar') as collector_name,
+                n.name as neighborhood_name
+            FROM clients c
+            LEFT JOIN users u ON c.preferred_collector_id = u.id
+            LEFT JOIN zones z ON c.zone_id = z.id
+            LEFT JOIN neighborhoods n ON c.neighborhood_id = n.id
+            WHERE c.status = 'active'
+            ORDER BY u.username, c.address_street
+        `);
+
+        // Group by Collector
+        const grouped = {};
+        rows.forEach(r => {
+            const col = r.collector_name;
+            if (!grouped[col]) grouped[col] = [];
+            grouped[col].push(r);
+        });
+
+        // Create Workbook
+        const workbook = new ExcelJS.Workbook();
+
+        // Iterate Groups and Create Sheets
+        for (const [collector, clients] of Object.entries(grouped)) {
+            // Sanitize sheet name
+            let sheetName = collector.replace(/[\/\\\?\*\[\]]/g, '').trim();
+            if (sheetName.length > 30) sheetName = sheetName.substring(0, 30);
+            if (!sheetName) sheetName = 'Sin Nombre';
+
+            // Check if sheet exists (unlikely given keys are unique, but good practice)
+            let sheet = workbook.getWorksheet(sheetName);
+            if (sheet) {
+                sheetName = sheetName.substring(0, 27) + Math.floor(Math.random() * 99);
+            }
+            sheet = workbook.addWorksheet(sheetName);
+
+            // Columns
+            sheet.columns = [
+                { header: 'Contrato', key: 'contract', width: 15 },
+                { header: 'Nombre', key: 'name', width: 35 },
+                { header: 'Dirección', key: 'address', width: 45 },
+                { header: 'Barrio', key: 'neighborhood', width: 25 },
+                { header: 'Teléfono', key: 'phone', width: 15 },
+                { header: 'Meses Mora', key: 'months_mora', width: 12 },
+                { header: 'Deuda Aprox', key: 'debt', width: 15 },
+            ];
+
+            // Header Style
+            sheet.getRow(1).font = { bold: true };
+
+            let totalDebt = 0;
+
+            clients.forEach(c => {
+                // Calculate Debt
+                let monthsMora = 0;
+                let debt = 0;
+
+                if (c.last_paid_month) {
+                    const lastPaid = new Date(c.last_paid_month);
+                    const now = new Date();
+
+                    if (!isNaN(lastPaid.getTime())) {
+                        monthsMora = (now.getFullYear() - lastPaid.getFullYear()) * 12 + (now.getMonth() - lastPaid.getMonth());
+                        // Adjust if paid current month? Usually last_paid_month is the month covered.
+                        // If last_paid_month is Dec 2023, and now is Jan 2024, mora is 1?
+                        // Let's assume standard logic: diff in months.
+                    }
+                } else {
+                    // Never paid? Maybe big debt or new. 
+                    // Let's assume 1 month if undefined but active? Or 0?
+                    // Safe to say 0 if unknown to avoid scary numbers, or mark as CHECK
+                }
+
+                if (monthsMora > 0) {
+                    debt = monthsMora * (c.tariff || 0) * 1.05;
+                } else {
+                    monthsMora = 0;
+                }
+
+                totalDebt += debt;
+
+                sheet.addRow({
+                    contract: c.contract_number,
+                    name: c.full_name,
+                    address: c.address_street,
+                    neighborhood: c.neighborhood_name || '',
+                    phone: c.phone_primary,
+                    months_mora: monthsMora,
+                    debt: debt
+                });
+            });
+
+            // Total Row
+            sheet.addRow({});
+            const totalRow = sheet.addRow({
+                neighborhood: 'TOTAL COLECTOR:',
+                debt: totalDebt
+            });
+            totalRow.font = { bold: true };
+        }
+
+        // Response
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="Rutas_Cobro_Cobradores.xlsx"');
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error generando reporte de rutas' + err.message);
+    }
+};

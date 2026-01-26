@@ -160,6 +160,27 @@ const Reports = () => {
                     <button onClick={() => setShowDailyReport(true)} style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', padding: '0.8rem 1.5rem', borderRadius: '12px', color: '#60a5fa', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <FaChartBar /> Detalle Diario
                     </button>
+                    <button
+                        onClick={() => {
+                            fetch('/api/clients/export-routes-xls')
+                                .then(res => {
+                                    if (!res.ok) throw new Error('Error en descarga');
+                                    return res.blob();
+                                })
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'Reporte_Rutas_Cobradores.xlsx';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                })
+                                .catch(err => alert('Error descargando reporte: ' + err.message));
+                        }}
+                        style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', padding: '0.8rem 1.5rem', borderRadius: '12px', color: '#34d399', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <FaMoneyBillWave /> Rutas Cobradores
+                    </button>
                     <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <FaSync /> Actualizar
                     </button>
