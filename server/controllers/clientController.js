@@ -526,6 +526,7 @@ exports.deleteClientNote = async (req, res) => {
 };
 
 // --- Export Clients XLS (Use ExcelJS for true XLSX) ---
+// --- Export Clients XLS (Use ExcelJS for true XLSX) ---
 exports.exportClientsXLS = async (req, res) => {
     try {
         console.log('--- EXPORT REQUEST RECEIVED ---');
@@ -574,9 +575,10 @@ exports.exportClientsXLS = async (req, res) => {
         // Safely Query Data (Explicit Columns)
         const [rows] = await db.query(`
             SELECT c.contract_number, c.full_name, c.identity_document, c.phone_primary, c.address_street, c.last_paid_month, c.status,
-                   z.name as zone_name
+                   z.name as zone_name, n.name as neighborhood_name
             FROM clients c
             LEFT JOIN zones z ON c.zone_id = z.id
+            LEFT JOIN neighborhoods n ON c.neighborhood_id = n.id
             ${whereSql}
             ORDER BY c.full_name ASC
         `, params);
@@ -594,6 +596,7 @@ exports.exportClientsXLS = async (req, res) => {
             { header: 'Cédula', key: 'identity', width: 20 },
             { header: 'Teléfono', key: 'phone', width: 15 },
             { header: 'Dirección', key: 'address', width: 40 },
+            { header: 'Barrio', key: 'neighborhood', width: 25 },
             { header: 'Zona', key: 'zone', width: 20 },
             { header: 'Estado', key: 'status', width: 15 },
             { header: 'Último Mes Pagado', key: 'last_paid', width: 20 }
@@ -633,6 +636,7 @@ exports.exportClientsXLS = async (req, res) => {
                 identity: c.identity_document || '',
                 phone: c.phone_primary || '',
                 address: c.address_street || '',
+                neighborhood: c.neighborhood_name || '',
                 zone: c.zone_name || '',
                 status: statusMap[c.status] || c.status,
                 last_paid: lastPaid
