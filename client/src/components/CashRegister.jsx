@@ -132,19 +132,31 @@ const CashRegister = (props) => {
 
     const handleMovement = async () => {
         if (!moveAmount || !moveDesc) return alert('Datos incompletos');
-        await fetch('/api/billing/movement', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                type: movementType,
-                amount: moveAmount,
-                description: moveDesc,
-                current_user_id: user?.id
-            })
-        });
-        setShowMovementModal(false);
-        setMoveAmount(''); setMoveDesc('');
-        setAlertInfo({ show: true, type: 'success', title: 'Registrado', message: 'Movimiento guardado.' });
-        fetchHistory();
+        try {
+            const res = await fetch('/api/billing/movement', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: movementType,
+                    amount: moveAmount,
+                    description: moveDesc,
+                    current_user_id: user?.id
+                })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                setMoveAmount('');
+                setMoveDesc('');
+                setAlertInfo({ show: true, type: 'success', title: 'Registrado', message: 'Movimiento guardado.' });
+                if (props.setViewMode) props.setViewMode('HISTORY');
+                fetchHistory(); // Refresh to show the new item
+            } else {
+                setAlertInfo({ show: true, type: 'error', title: 'Error', message: data.msg || 'Error al guardar movimiento.' });
+            }
+        } catch (e) {
+            console.error(e);
+            setAlertInfo({ show: true, type: 'error', title: 'Error', message: 'Fallo de conexión al registrar movimiento.' });
+        }
     };
 
     const handleCancel = async (reason) => {

@@ -116,6 +116,9 @@ exports.addMovement = async (req, res) => {
     const userId = await getValidUser(req.user?.id);
 
     try {
+        // 1. Check for personal open session
+        let [sessions] = await db.query('SELECT id FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
+
         // Fallback: If no personal session, allow adding movement to GLOBAL session
         if (sessions.length === 0) {
             [sessions] = await db.query('SELECT id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
