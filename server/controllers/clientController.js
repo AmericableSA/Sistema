@@ -93,14 +93,30 @@ exports.getClientHistory = async (req, res) => {
 // --- Get Global History ---
 exports.getGlobalHistory = async (req, res) => {
     try {
-        const [rows] = await db.query(`
+        const { search } = req.query;
+        let query = `
             SELECT l.*, u.username, c.full_name as client_name
             FROM client_logs l
             LEFT JOIN users u ON l.user_id = u.id
             LEFT JOIN clients c ON l.client_id = c.id
-            ORDER BY l.timestamp DESC
-            LIMIT 100
-        `);
+        `;
+
+        const params = [];
+        const whereClauses = [];
+
+        if (search) {
+            whereClauses.push('(c.full_name LIKE ? OR l.details LIKE ? OR l.action LIKE ?)');
+            const term = `%${search}%`;
+            params.push(term, term, term);
+        }
+
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
+        }
+
+        query += ' ORDER BY l.timestamp DESC LIMIT 100';
+
+        const [rows] = await db.query(query, params);
         res.json(rows);
     } catch (err) {
         console.error(err);
@@ -372,16 +388,40 @@ exports.getServiceOrders = async (req, res) => {
 // --- NEW: Client Transactions (Invoices) ---
 exports.getClientTransactions = async (req, res) => {
     try {
-        // Use collector_id to show who is responsible/credited for the payment
-        const [txs] = await db.query(`
+        const { startDate, endDate, search } = req.query;
+        const clientId = req.params.id;
+
+        let query = `
             SELECT t.id, t.amount, t.details_json, t.created_at, t.reference_id, t.description, t.type,
                    t.status, t.cancellation_reason,
                    u.username as collector_username, u.full_name as collector_name
             FROM transactions t
             LEFT JOIN users u ON t.collector_id = u.id
             WHERE t.client_id = ?
-            ORDER BY t.created_at DESC
-        `, [req.params.id]);
+        `;
+
+        const params = [clientId];
+
+        if (startDate) {
+            query += ' AND t.created_at >= ?';
+            params.push(`${startDate} 00:00:00`);
+        }
+
+        if (endDate) {
+            query += ' AND t.created_at <= ?';
+            params.push(`${endDate} 23:59:59`);
+        }
+
+        if (search) {
+            query += ' AND (t.reference_id LIKE ? OR t.description LIKE ? OR t.status LIKE ?)';
+            const term = `%${search}%`;
+            params.push(term, term, term);
+        }
+
+        query += ' ORDER BY t.created_at DESC';
+
+        // Use collector_id to show who is responsible/credited for the payment
+        const [txs] = await db.query(query, params);
         res.json(txs);
     } catch (err) {
         console.error(err);

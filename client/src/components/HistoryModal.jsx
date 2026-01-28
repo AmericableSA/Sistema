@@ -12,6 +12,11 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
     const [cancelReason, setCancelReason] = useState('');
     const [processing, setProcessing] = useState(false);
 
+    // Filter State
+    const [search, setSearch] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
     // Fetch Data based on active tab
     const fetchData = useCallback(() => {
         setLoading(true);
@@ -24,8 +29,23 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
         }
 
         if (url) {
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (activeTab === 'invoices') { // Logs don't strictly need date filters yet based on requirement but backend supports it? Backend logs don't have date support in my recent edit, only search. Wait, I should double check. 
+                // Checks backend: getGlobalHistory only supports search. getClientTransactions supports all 3.
+                // Let's pass them dynamically.
+                if (startDate) params.append('startDate', startDate);
+                if (endDate) params.append('endDate', endDate);
+            } else if (global) {
+                // Global logs also don't support date range in my recent edit? 
+                // My edit to getGlobalHistory ONLY added SEARCH, not DATE.
+                // So for logs, we only send search.
+            }
+
+            const fullUrl = `${url}?${params.toString()}`;
+
             // Add Auth Header just in case (though existing code didn't use it, better safe)
-            fetch(url, {
+            fetch(fullUrl, {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             })
                 .then(res => res.json())
@@ -44,7 +64,7 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                     setLoading(false);
                 });
         }
-    }, [client, global, activeTab, token]);
+    }, [client, global, activeTab, token, search, startDate, endDate]);
 
     useEffect(() => {
         fetchData();
@@ -126,6 +146,42 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                         </button>
                     </div>
                 )}
+
+                {/* Filters Bar */}
+                <div style={{ padding: '1rem 1.5rem', background: '#1e293b', display: 'flex', gap: '1rem', borderBottom: '1px solid #334155' }}>
+                    <input
+                        type="text"
+                        placeholder="🔍 Buscar..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{
+                            flex: 1, padding: '0.6rem', borderRadius: '6px',
+                            background: '#0f172a', border: '1px solid #475569', color: 'white'
+                        }}
+                    />
+                    {activeTab === 'invoices' && (
+                        <>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                style={{
+                                    padding: '0.6rem', borderRadius: '6px',
+                                    background: '#0f172a', border: '1px solid #475569', color: 'white'
+                                }}
+                            />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                style={{
+                                    padding: '0.6rem', borderRadius: '6px',
+                                    background: '#0f172a', border: '1px solid #475569', color: 'white'
+                                }}
+                            />
+                        </>
+                    )}
+                </div>
 
                 {/* Content */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>

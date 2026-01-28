@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 exports.getHistory = async (req, res) => {
     try {
-        const { startDate, endDate, search, page = 1, limit = 10 } = req.query;
+        const { startDate, endDate, search, collector, page = 1, limit = 10 } = req.query;
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
         const pageSize = parseInt(limit);
@@ -42,9 +42,16 @@ exports.getHistory = async (req, res) => {
         if (search) {
             const term = `%${search}%`;
             tWhere += ' AND (t.description LIKE ? OR c.full_name LIKE ?)';
-            mWhere += ' AND description LIKE ?';
+            mWhere += ' AND cm.description LIKE ?';
             tParams.push(term, term);
             mParams.push(term);
+        }
+
+        if (collector) {
+            tWhere += ' AND t.collector_id = ?';
+            mWhere += ' AND cs.user_id = ?'; // Filter movements by the session owner
+            tParams.push(collector);
+            mParams.push(collector);
         }
 
         // --- DATA QUERY ---
@@ -67,16 +74,17 @@ exports.getHistory = async (req, res) => {
                 UNION ALL
                 
                 SELECT 
-                    id,
-            amount,
-            description,
-            created_at,
-            IF(type = 'IN', 'INGRESO', 'GASTO') as type,
+                    cm.id,
+            cm.amount,
+            cm.description,
+            cm.created_at,
+            IF(cm.type = 'IN', 'INGRESO', 'GASTO') as type,
             NULL as client_name,
             'COMPLETED' as status,
             NULL as cancellation_reason,
             NULL as reference_id
-                FROM cash_movements
+                FROM cash_movements cm
+                LEFT JOIN cash_sessions cs ON cm.session_id = cs.id
                 WHERE ${mWhere}
         ) as combined_history
             ORDER BY created_at DESC
@@ -92,7 +100,7 @@ exports.getHistory = async (req, res) => {
             SELECT COUNT(*) as total FROM(
                 SELECT t.id FROM transactions t LEFT JOIN clients c ON t.client_id = c.id WHERE ${tWhere}
                 UNION ALL
-                SELECT id FROM cash_movements WHERE ${mWhere}
+                SELECT cm.id FROM cash_movements cm LEFT JOIN cash_sessions cs ON cm.session_id = cs.id WHERE ${mWhere}
             ) as total_tbl
         `;
 

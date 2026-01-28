@@ -41,7 +41,11 @@ const CashRegister = (props) => {
     const [receiptTransaction, setReceiptTransaction] = useState(null);
     const [cancelTxId, setCancelTxId] = useState(null);
 
-    useEffect(() => { fetchStatus(); fetchHistory(); }, []);
+    // Users for Filter
+    const [users, setUsers] = useState([]);
+    const [filterCollector, setFilterCollector] = useState('');
+
+    useEffect(() => { fetchStatus(); fetchHistory(); fetchUsers(); }, []);
 
     const handleSearchHistory = () => {
         fetchHistory(true);
@@ -51,10 +55,11 @@ const CashRegister = (props) => {
         try {
             setLoading(true);
             let url = `/api/history?limit=7&page=${page}`; // Reduced limit for better card fit
-            if (useFilters || filterStart || filterEnd || searchTerm) {
+            if (useFilters || filterStart || filterEnd || searchTerm || filterCollector) {
                 if (filterStart) url += `&startDate=${filterStart}`;
                 if (filterEnd) url += `&endDate=${filterEnd}`;
                 if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+                if (filterCollector) url += `&collector=${filterCollector}`;
             }
 
             const res = await fetch(url);
@@ -92,6 +97,16 @@ const CashRegister = (props) => {
             setLoading(false);
             if (props.onSessionChange) props.onSessionChange(!!data);
         } catch (e) { console.error(e); setLoading(false); }
+    };
+
+    const fetchUsers = async () => {
+        try {
+            const res = await fetch('/api/users');
+            if (res.ok) {
+                const data = await res.json();
+                setUsers(data);
+            }
+        } catch (e) { console.error("Error loading users", e); }
     };
 
     const handleOpen = async () => {
@@ -303,6 +318,18 @@ const CashRegister = (props) => {
                                     <input type="date" className="input-dark" value={filterEnd} onChange={e => setFilterEnd(e.target.value)} style={{ padding: '0.4rem', fontSize: '0.9rem' }} />
                                 </div>
 
+                                <select
+                                    className="input-dark"
+                                    value={filterCollector}
+                                    onChange={e => setFilterCollector(e.target.value)}
+                                    style={{ padding: '0.4rem', fontSize: '0.9rem', maxWidth: '150px' }}
+                                >
+                                    <option value="">👤 Todos</option>
+                                    {users.map(u => (
+                                        <option key={u.id} value={u.id}>{u.username}</option>
+                                    ))}
+                                </select>
+
                                 <div style={{ display: 'flex', gap: '0.5rem', flex: 1, minWidth: '250px' }}>
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <input
@@ -430,32 +457,35 @@ const CashRegister = (props) => {
                             </div>
                         </div>
                     </div>
-                )}
+                )
+                }
 
-                {showJustifyPrompt && (
-                    <div className="modal-overlay">
-                        <div className="modal-content" style={{ border: '1px solid #eab308' }}>
-                            <div className="text-center" style={{ marginBottom: '1.5rem' }}>
-                                <div style={{ fontSize: '3rem' }}>⚠️</div>
-                                <h3 style={{ color: '#fbbf24' }}>Diferencia Detectada</h3>
-                                <p className="text-muted">
-                                    Sistema: <strong>C$ {closingData.system?.toFixed(2)}</strong> <br />
-                                    Físico: <strong>C$ {Number(closingData.physical).toFixed(2)}</strong> <br />
-                                    Diferencia: <strong style={{ color: closingData.diff > 0 ? '#34d399' : '#ef4444' }}>{closingData.diff?.toFixed(2)}</strong>
-                                </p>
-                                <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Es obligatorio justificar este descuadre.</p>
-                            </div>
-                            <textarea className="input-dark" rows="3" placeholder="Explique la razón..." value={closingNote} onChange={e => setClosingNote(e.target.value)} autoFocus></textarea>
-                            <div className="flex-between" style={{ marginTop: '1.5rem', justifyContent: 'flex-end', gap: '1rem' }}>
-                                <button onClick={() => setShowJustifyPrompt(false)} className="btn-secondary">Cancelar</button>
-                                <button onClick={() => attemptClose(closingData.physical, closingNote)} className="btn-dark-glow" style={{ background: '#eab308', color: 'black' }}>Confirmar</button>
+                {
+                    showJustifyPrompt && (
+                        <div className="modal-overlay">
+                            <div className="modal-content" style={{ border: '1px solid #eab308' }}>
+                                <div className="text-center" style={{ marginBottom: '1.5rem' }}>
+                                    <div style={{ fontSize: '3rem' }}>⚠️</div>
+                                    <h3 style={{ color: '#fbbf24' }}>Diferencia Detectada</h3>
+                                    <p className="text-muted">
+                                        Sistema: <strong>C$ {closingData.system?.toFixed(2)}</strong> <br />
+                                        Físico: <strong>C$ {Number(closingData.physical).toFixed(2)}</strong> <br />
+                                        Diferencia: <strong style={{ color: closingData.diff > 0 ? '#34d399' : '#ef4444' }}>{closingData.diff?.toFixed(2)}</strong>
+                                    </p>
+                                    <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Es obligatorio justificar este descuadre.</p>
+                                </div>
+                                <textarea className="input-dark" rows="3" placeholder="Explique la razón..." value={closingNote} onChange={e => setClosingNote(e.target.value)} autoFocus></textarea>
+                                <div className="flex-between" style={{ marginTop: '1.5rem', justifyContent: 'flex-end', gap: '1rem' }}>
+                                    <button onClick={() => setShowJustifyPrompt(false)} className="btn-secondary">Cancelar</button>
+                                    <button onClick={() => attemptClose(closingData.physical, closingNote)} className="btn-dark-glow" style={{ background: '#eab308', color: 'black' }}>Confirmar</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {receiptTransaction && <ReceiptModal transaction={receiptTransaction} onClose={() => setReceiptTransaction(null)} />}
-            </div>
+            </div >
         );
     }
 
