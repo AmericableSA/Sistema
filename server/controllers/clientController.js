@@ -233,7 +233,11 @@ exports.updateClient = async (req, res) => {
             'suspended': 'Cortado',
             'disconnected': 'Retirado',
             'pending_install': 'Pendiente',
-            'disconnected_by_request': 'Desconexión a Solicitud'
+            'disconnected_by_request': 'Desconexión a Solicitud',
+            'promotions': 'Promociones',
+            'courtesy': 'Cortesía',
+            'provider': 'Proveedor',
+            'office': 'Oficina'
         };
 
         const normalizeDate = (d) => {

@@ -329,6 +329,10 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                         <option value="active">Activo</option>
                                         <option value="suspended">Cortado por mora</option>
                                         <option value="disconnected_by_request">Desconexión a Solicitud</option>
+                                        <option value="promotions">Promociones</option>
+                                        <option value="courtesy">Cortesía</option>
+                                        <option value="provider">Proveedor</option>
+                                        <option value="office">Oficina</option>
                                     </select>
                                 </div>
                             </div>

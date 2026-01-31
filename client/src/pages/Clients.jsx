@@ -280,6 +280,10 @@ const Clients = () => {
                             <option value="active">🟢 Activos (Todos)</option>
                             <option value="suspended">🔒 Cortado por mora</option>
                             <option value="disconnected_by_request">🔌 Desconexión a Solicitud</option>
+                            <option value="promotions">🎁 Promociones</option>
+                            <option value="courtesy">🤝 Cortesía</option>
+                            <option value="provider">🏢 Proveedor</option>
+                            <option value="office">🏢 Oficina</option>
                         </select>
                     </div>
 
@@ -335,11 +339,32 @@ const Clients = () => {
                                             <span style={{
                                                 padding: '0.25rem 0.75rem', borderRadius: '50px',
                                                 fontSize: '0.75rem', fontWeight: 700,
-                                                background: c.status === 'active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                                                color: c.status === 'active' ? '#4ade80' : '#f87171',
-                                                border: c.status === 'active' ? '1px solid #166534' : '1px solid #991b1b'
+                                                background: c.status === 'active' ? 'rgba(34, 197, 94, 0.2)' :
+                                                    c.status === 'suspended' ? 'rgba(239, 68, 68, 0.2)' :
+                                                        c.status === 'promotions' ? 'rgba(168, 85, 247, 0.2)' : // Purple
+                                                            c.status === 'courtesy' ? 'rgba(59, 130, 246, 0.2)' : // Blue
+                                                                c.status === 'provider' ? 'rgba(249, 115, 22, 0.2)' : // Orange
+                                                                    c.status === 'office' ? 'rgba(14, 165, 233, 0.2)' : // Sky
+                                                                        'rgba(148, 163, 184, 0.2)', // Default
+                                                color: c.status === 'active' ? '#4ade80' :
+                                                    c.status === 'suspended' ? '#f87171' :
+                                                        c.status === 'promotions' ? '#c084fc' :
+                                                            c.status === 'courtesy' ? '#60a5fa' :
+                                                                c.status === 'provider' ? '#fb923c' :
+                                                                    c.status === 'office' ? '#38bdf8' :
+                                                                        '#cbd5e1',
+                                                border: c.status === 'active' ? '1px solid #166534' :
+                                                    c.status === 'suspended' ? '1px solid #991b1b' :
+                                                        '1px solid rgba(255,255,255,0.1)'
                                             }}>
-                                                {c.status === 'active' ? 'ACTIVO' : 'CORTADO'}
+                                                {c.status === 'active' ? 'ACTIVO' :
+                                                    c.status === 'suspended' ? 'CORTADO' :
+                                                        c.status === 'promotions' ? 'PROMOCIÓN' :
+                                                            c.status === 'courtesy' ? 'CORTESÍA' :
+                                                                c.status === 'provider' ? 'PROVEEDOR' :
+                                                                    c.status === 'office' ? 'OFICINA' :
+                                                                        c.status === 'disconnected_by_request' ? 'DESCONEXIÓN SOL.' :
+                                                                            'OTRO'}
                                             </span>
                                         </div>
 
