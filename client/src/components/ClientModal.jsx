@@ -291,7 +291,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                 <div>
                                     <label className="label-dark">Colector Asignado</label>
                                     <select className="input-dark" name="preferred_collector_id" value={formData.preferred_collector_id} onChange={handleChange}>
-                                        <option value="">Ninguno / Oficina</option>
+                                        <option value="">Sin asignar</option>
                                         {collectors.map(u => <option key={u.id} value={u.id}>{u.full_name || u.username}</option>)}
                                     </select>
                                 </div>
