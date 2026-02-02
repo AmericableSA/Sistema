@@ -32,6 +32,8 @@ const Clients = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [letterFilter, setLetterFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [collectorFilter, setCollectorFilter] = useState('');
+    const [collectors, setCollectors] = useState([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -50,6 +52,14 @@ const Clients = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
+    // Fetch Collectors for Filter
+    useEffect(() => {
+        fetch('/api/users')
+            .then(res => res.json())
+            .then(data => setCollectors(data))
+            .catch(err => console.error('Error fetching collectors:', err));
+    }, []);
+
     // Active View Logic (Hides the main grid to save performance/focus)
     const isViewActive = showModal || showHistory || showZoneModal || showUploadModal;
 
@@ -63,7 +73,8 @@ const Clients = () => {
                 limit: itemsPerPage,
                 search: debouncedSearch,
                 start_letter: letterFilter,
-                status: statusFilter
+                status: statusFilter,
+                collector_id: collectorFilter
             });
 
             // Added cache: 'no-store' to prevent browser caching issues
@@ -93,7 +104,7 @@ const Clients = () => {
     // Refetch when params change
     useEffect(() => {
         fetchClients(currentPage);
-    }, [currentPage, itemsPerPage, debouncedSearch, letterFilter, statusFilter]);
+    }, [currentPage, itemsPerPage, debouncedSearch, letterFilter, statusFilter, collectorFilter]);
 
     // Handle Delete
     const handleDelete = (id) => {
@@ -264,6 +275,22 @@ const Clients = () => {
                             />
                         </div>
 
+                        {/* Collector Filter */}
+                        <select
+                            className="input-dark"
+                            style={{ maxWidth: '250px', height: '50px' }}
+                            value={collectorFilter}
+                            onChange={(e) => {
+                                setCollectorFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <option value="">👤 Todos los Colectores</option>
+                            {collectors.map(c => (
+                                <option key={c.id} value={c.id}>👤 {c.username}</option>
+                            ))}
+                        </select>
+
                         {/* Status Filter (Backend) */}
                         <select
                             className="input-dark"
@@ -283,7 +310,6 @@ const Clients = () => {
                             <option value="promotions">🎁 Promociones</option>
                             <option value="courtesy">🤝 Cortesía</option>
                             <option value="provider">🏢 Proveedor</option>
-                            <option value="office">🏢 Oficina</option>
                         </select>
                     </div>
 

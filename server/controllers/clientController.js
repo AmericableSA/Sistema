@@ -38,6 +38,11 @@ exports.getClients = async (req, res) => {
             }
         }
 
+        if (req.query.collector_id) {
+            whereClauses.push('c.preferred_collector_id = ?');
+            params.push(req.query.collector_id);
+        }
+
         const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
 
         // 1. Get Total Count (Filtered)
@@ -619,10 +624,12 @@ exports.exportClientsXLS = async (req, res) => {
         // Safely Query Data (Explicit Columns)
         const [rows] = await db.query(`
             SELECT c.contract_number, c.full_name, c.identity_document, c.phone_primary, c.address_street, c.last_paid_month, c.status,
-                   z.name as zone_name, n.name as neighborhood_name
+                   z.name as zone_name, n.name as neighborhood_name,
+                   u.username as collector_name
             FROM clients c
             LEFT JOIN zones z ON c.zone_id = z.id
             LEFT JOIN neighborhoods n ON c.neighborhood_id = n.id
+            LEFT JOIN users u ON c.preferred_collector_id = u.id
             ${whereSql}
             ORDER BY c.full_name ASC
         `, params);
@@ -642,6 +649,7 @@ exports.exportClientsXLS = async (req, res) => {
             { header: 'Dirección', key: 'address', width: 40 },
             { header: 'Barrio', key: 'neighborhood', width: 25 },
             { header: 'Zona', key: 'zone', width: 20 },
+            { header: 'Colector', key: 'collector', width: 20 },
             { header: 'Estado', key: 'status', width: 15 },
             { header: 'Último Mes Pagado', key: 'last_paid', width: 20 }
         ];
@@ -671,7 +679,11 @@ exports.exportClientsXLS = async (req, res) => {
                 'suspended': 'Cortado',
                 'disconnected': 'Retirado',
                 'pending_install': 'Pendiente',
-                'disconnected_by_request': 'Desc. Solicitud'
+                'disconnected_by_request': 'Desc. Solicitud',
+                'promotions': 'Promociones',
+                'courtesy': 'Cortesía',
+                'provider': 'Proveedor',
+                'office': 'Oficina'
             };
 
             worksheet.addRow({
@@ -682,6 +694,7 @@ exports.exportClientsXLS = async (req, res) => {
                 address: c.address_street || '',
                 neighborhood: c.neighborhood_name || '',
                 zone: c.zone_name || '',
+                collector: c.collector_name || 'Sin Asignar',
                 status: statusMap[c.status] || c.status,
                 last_paid: lastPaid
             });
