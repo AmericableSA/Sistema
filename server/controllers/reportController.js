@@ -242,7 +242,7 @@ exports.getDashboardStats = async (req, res) => {
     res.json({}); // Placeholder if rarely used
 };
 
-// 6. Detailed Daily Report (Bitacora)
+// 6. Detailed Daily Report (Bitacora) - SPLIT VIEW
 exports.getDailyDetails = async (req, res) => {
     let pool;
     try {
@@ -252,6 +252,17 @@ exports.getDailyDetails = async (req, res) => {
         const eDate = endDate || sDate;
 
         pool = await db.getConnection();
+
+        // 0. Fetch Sessions (To see who opened/closed)
+        const [sessionRows] = await pool.query(`
+            SELECT 
+                s.id, s.start_time, s.end_time, s.status, s.start_amount, s.end_amount_physical, s.closing_note,
+                u.username, u.role, u.full_name
+            FROM cash_sessions s
+            JOIN users u ON s.user_id = u.id
+            WHERE DATE(s.start_time) BETWEEN ? AND ?
+            ORDER BY s.start_time DESC
+        `, [sDate, eDate]);
 
         // 1. Transactions (Income/Sales)
         const [txRows] = await pool.query(`
@@ -263,9 +274,11 @@ exports.getDailyDetails = async (req, res) => {
                 t.payment_method, 
                 t.description,
                 t.reference_id,
+                t.details_json,
                 c.full_name as client_name,
                 c.contract_number,
-                COALESCE(u.username, 'Sistema') as collector
+                COALESCE(u.username, 'Sistema') as collector,
+                u.role as collector_role
             FROM transactions t
             LEFT JOIN clients c ON t.client_id = c.id
             LEFT JOIN users u ON t.collector_id = u.id
@@ -286,7 +299,8 @@ exports.getDailyDetails = async (req, res) => {
                 'N/A' as reference_id,
                 'Movimiento Manual' as client_name,
                 '' as contract_number,
-                COALESCE(u.username, 'Cajero') as collector
+                COALESCE(u.username, 'Cajero') as collector,
+                u.role as collector_role
             FROM cash_movements m
             LEFT JOIN cash_sessions s ON m.session_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
@@ -294,35 +308,66 @@ exports.getDailyDetails = async (req, res) => {
             ORDER BY m.created_at DESC
         `, [sDate, eDate]);
 
-        // Combine and Sort
+        // Combine
         const combined = [
             ...txRows.map(r => ({ ...r, category: 'TRANSACTION' })),
             ...moveRows.map(r => ({ ...r, category: 'MOVEMENT' }))
         ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        // Calculate Totals
-        let totalSales = 0;
-        let totalManualIn = 0;
-        let totalManualOut = 0;
+        // Grouping Logic
+        // "Colectores" = role 'collector'
+        // "Oficina" = role 'admin', 'office', 'cashier' (or null)
+
+        const office = [];
+        const collectors = [];
 
         combined.forEach(item => {
-            const val = parseFloat(item.amount);
-            if (item.category === 'TRANSACTION') {
-                totalSales += val;
+            if (item.collector_role === 'collector') {
+                collectors.push(item);
             } else {
-                if (item.type === 'IN') totalManualIn += val;
-                if (item.type === 'OUT') totalManualOut += val;
+                office.push(item);
             }
         });
 
+        // Filter Sessions
+        const officeSessions = sessionRows.filter(s => s.role !== 'collector');
+        const collectorSessions = sessionRows.filter(s => s.role === 'collector');
+
+        // Helper to sum
+        const calcSum = (list) => {
+            let sales = 0, manualIn = 0, manualOut = 0;
+            list.forEach(item => {
+                const val = parseFloat(item.amount);
+                if (item.category === 'TRANSACTION') sales += val;
+                else if (item.type === 'IN') manualIn += val;
+                else if (item.type === 'OUT') manualOut += val;
+            });
+            return { totalSales: sales, totalManualIn: manualIn, totalManualOut: manualOut, net: (sales + manualIn) - manualOut };
+        };
+
+        const officeSummary = calcSum(office);
+        const collectorsSummary = calcSum(collectors);
+
+        // Grand Total
+        const grandTotal = {
+            net: officeSummary.net + collectorsSummary.net,
+            entries: officeSummary.totalManualIn + collectorsSummary.totalManualIn,
+            exits: officeSummary.totalManualOut + collectorsSummary.totalManualOut,
+            sales: officeSummary.totalSales + collectorsSummary.totalSales
+        };
+
         res.json({
-            details: combined,
-            summary: {
-                totalSales,
-                totalManualIn,
-                totalManualOut,
-                netBalance: (totalSales + totalManualIn) - totalManualOut
-            }
+            office: {
+                data: office,
+                sessions: officeSessions,
+                summary: officeSummary
+            },
+            collectors: {
+                data: collectors,
+                sessions: collectorSessions,
+                summary: collectorsSummary
+            },
+            grandTotal
         });
 
     } catch (err) {
@@ -346,7 +391,8 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         const [txRows] = await pool.query(`
             SELECT 
                 t.created_at, t.amount, t.type, t.payment_method, t.description, t.status, t.cancellation_reason,
-                c.full_name as client_name, c.contract_number, COALESCE(u.username, 'Sistema') as collector
+                c.full_name as client_name, c.contract_number, COALESCE(u.username, 'Sistema') as collector,
+                u.role as collector_role
             FROM transactions t
             LEFT JOIN clients c ON t.client_id = c.id
             LEFT JOIN users u ON t.collector_id = u.id
@@ -356,7 +402,8 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         const [moveRows] = await pool.query(`
             SELECT 
                 m.created_at, m.amount, m.type, 'cash' as payment_method, m.description, 'COMPLETED' as status, NULL as cancellation_reason,
-                'Movimiento Manual' as client_name, '' as contract_number, COALESCE(u.username, 'Cajero') as collector
+                'Movimiento Manual' as client_name, '' as contract_number, COALESCE(u.username, 'Cajero') as collector,
+                u.role as collector_role
             FROM cash_movements m
             LEFT JOIN cash_sessions s ON m.session_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
@@ -374,9 +421,10 @@ exports.exportDailyDetailsXLS = async (req, res) => {
 
         sheet.columns = [
             { header: 'Fecha/Hora', key: 'time', width: 20 },
+            { header: 'Caja (Origen)', key: 'box', width: 15 },
             { header: 'Tipo', key: 'type', width: 15 },
             { header: 'Cliente / Descripción', key: 'desc', width: 40 },
-            { header: 'Cajero', key: 'collector', width: 15 },
+            { header: 'Responsable', key: 'collector', width: 15 },
             { header: 'Método', key: 'method', width: 10 },
             { header: 'Monto', key: 'amount', width: 15 },
             { header: 'Estado', key: 'status', width: 15 },
@@ -386,9 +434,11 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         combined.forEach(row => {
             const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
             const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA');
+            const boxLabel = row.collector_role === 'collector' ? 'COLECTORES' : 'OFICINA';
 
             sheet.addRow({
                 time: new Date(row.created_at).toLocaleString('es-NI'),
+                box: boxLabel,
                 type: typeLabel,
                 desc: (row.client_name || row.description) + (row.contract_number ? ` (#${row.contract_number})` : ''),
                 collector: row.collector,

@@ -64,7 +64,12 @@ const InputGroup = styled.div`
 const DailyReportModal = ({ onClose }) => {
     // Default to today
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [data, setData] = useState({ details: [], summary: {} });
+    // Initialize structure for new split
+    const [data, setData] = useState({
+        office: { data: [], sessions: [], summary: {} },
+        collectors: { data: [], sessions: [], summary: {} },
+        grandTotal: {}
+    });
     const [loading, setLoading] = useState(true);
 
     const fetchReport = async () => {
@@ -72,7 +77,17 @@ const DailyReportModal = ({ onClose }) => {
         try {
             const res = await fetch(`/api/reports/daily-details?startDate=${date}&endDate=${date}`);
             const json = await res.json();
-            setData(json);
+            // Handle both legacy (array) and new (object) structures gracefully during potential transition
+            if (json.office) {
+                setData(json);
+            } else {
+                // Fallback for old API response style (should not happen after deploy)
+                setData({
+                    office: { data: json.details || [], sessions: [], summary: json.summary || {} },
+                    collectors: { data: [], sessions: [], summary: {} },
+                    grandTotal: json.summary || {}
+                });
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -82,7 +97,7 @@ const DailyReportModal = ({ onClose }) => {
 
     useEffect(() => { fetchReport(); }, [date]);
 
-    const formatMoney = (amount) => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO' }).format(amount);
+    const formatMoney = (amount) => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO' }).format(amount || 0);
 
     const handleExport = async () => {
         const btn = document.getElementById('btn-export-daily');
@@ -90,9 +105,7 @@ const DailyReportModal = ({ onClose }) => {
 
         try {
             const res = await fetch(`/api/reports/daily-details/export?startDate=${date}&endDate=${date}`);
-
             if (!res.ok) throw new Error('Error generando reporte');
-
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -102,7 +115,6 @@ const DailyReportModal = ({ onClose }) => {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-
         } catch (error) {
             console.error('Export Failed:', error);
             alert('Error al exportar el archivo');
@@ -111,13 +123,120 @@ const DailyReportModal = ({ onClose }) => {
         }
     };
 
+    // Helper: Render Section
+    const renderSection = (title, icon, groupData, colorTheme) => {
+        const { data: rows, sessions, summary } = groupData;
+        const hasData = rows.length > 0;
+
+        // Find latest session for display
+        const mainSession = sessions.length > 0 ? sessions[0] : null;
+
+        return (
+            <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: `1px solid ${colorTheme}30` }}>
+                {/* Section Header */}
+                <div style={{ padding: '1rem', borderBottom: `1px solid ${colorTheme}20`, background: `${colorTheme}10`, borderTopLeftRadius: '16px', borderTopRightRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, color: colorTheme, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {icon} {title}
+                    </h3>
+                    {/* Session Info Badge */}
+                    {mainSession ? (
+                        <div style={{ fontSize: '0.85rem', color: '#cbd5e1', textAlign: 'right' }}>
+                            <div>
+                                <span style={{ opacity: 0.6 }}>Iniciada por:</span> <strong style={{ color: 'white' }}>{mainSession.username}</strong>
+                                <span style={{ marginLeft: '10px', fontSize: '0.8rem', opacity: 0.5 }}>({new Date(mainSession.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+                            </div>
+                            {mainSession.status === 'closed' && (
+                                <div style={{ color: '#f87171' }}>
+                                    <span style={{ opacity: 0.6 }}>Cerrada con:</span> <strong>{formatMoney(mainSession.end_amount_physical)}</strong>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>Sin sesión formal iniciada</div>
+                    )}
+                </div>
+
+                {/* Data Content */}
+                <div style={{ padding: '1rem' }}>
+                    {!hasData ? (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontStyle: 'italic' }}>
+                            No hay movimientos registrados en {title}
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem' }}>
+                                <Table>
+                                    <thead>
+                                        <tr>
+                                            <th>Hora</th>
+                                            <th>Tipo</th>
+                                            <th>Cliente / Razón</th>
+                                            <th>Responsable</th>
+                                            <th>Método</th>
+                                            <th style={{ textAlign: 'right' }}>Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rows.map((row, i) => {
+                                            const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
+                                            return (
+                                                <tr key={i}>
+                                                    <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
+                                                        {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </td>
+                                                    <td>
+                                                        <Badge type={row.category === 'TRANSACTION' ? 'SALE' : row.type}>
+                                                            {row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA')}
+                                                        </Badge>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontWeight: '500', color: 'white' }}>{row.client_name || row.description}</div>
+                                                        {row.client_name && row.description && row.client_name !== row.description && (
+                                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{row.description}</div>
+                                                        )}
+                                                        {row.contract_number && <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>#{row.contract_number}</div>}
+                                                    </td>
+                                                    <td>{row.collector}</td>
+                                                    <td style={{ textTransform: 'capitalize' }}>{row.payment_method}</td>
+                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', color: isIncome ? '#34d399' : '#f87171' }}>
+                                                        {isIncome ? '+' : '-'} {Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </Table>
+                            </div>
+
+                            {/* Section Summary */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '2rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>Ingresos</div>
+                                    <div style={{ color: '#34d399', fontWeight: 'bold' }}>{formatMoney(summary.totalSales + summary.totalManualIn)}</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>Salidas</div>
+                                    <div style={{ color: '#f87171', fontWeight: 'bold' }}>{formatMoney(summary.totalManualOut)}</div>
+                                </div>
+                                <div style={{ textAlign: 'right', borderLeft: '1px solid #334155', paddingLeft: '1rem' }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>Total {title}</div>
+                                    <div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>{formatMoney(summary.net)}</div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <ModalOverlay onClick={e => e.target === e.currentTarget && onClose()}>
             <ModalContent className="animate-slide-up">
                 <Header>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <h2 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '1.5rem' }}>📜</span> Bitácora Diaria
+                            <span style={{ fontSize: '1.5rem' }}>📜</span> Bitácora Diaria (2 Cajas)
                         </h2>
                         <InputGroup>
                             <FaCalendarAlt color="#94a3b8" />
@@ -144,75 +263,42 @@ const DailyReportModal = ({ onClose }) => {
 
                 <Content>
                     {loading ? (
-                        <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>Cargando movimientos...</div>
-                    ) : data.details.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
-                            <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>📭</div>
-                            No hay movimientos registrados en esta fecha.
-                        </div>
+                        <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>Cargando cajas...</div>
                     ) : (
-                        <Table>
-                            <thead>
-                                <tr>
-                                    <th>Hora</th>
-                                    <th>Tipo</th>
-                                    <th>Cliente / Descripción</th>
-                                    <th>Cajero</th>
-                                    <th>Método</th>
-                                    <th style={{ textAlign: 'right' }}>Monto</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.details.map((row, i) => {
-                                    const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
-                                    return (
-                                        <tr key={i}>
-                                            <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
-                                                {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </td>
-                                            <td>
-                                                <Badge type={row.category === 'TRANSACTION' ? 'SALE' : row.type}>
-                                                    {row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA')}
-                                                </Badge>
-                                            </td>
-                                            <td>
-                                                <div style={{ fontWeight: '500', color: 'white' }}>{row.client_name || row.description}</div>
-                                                {row.client_name && row.description && row.client_name !== row.description && (
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{row.description}</div>
-                                                )}
-                                                {row.contract_number && <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>#{row.contract_number}</div>}
-                                            </td>
-                                            <td>{row.collector}</td>
-                                            <td style={{ textTransform: 'capitalize' }}>{row.payment_method}</td>
-                                            <td style={{ textAlign: 'right', fontWeight: 'bold', color: isIncome ? '#34d399' : '#f87171' }}>
-                                                {isIncome ? '+' : '-'} {Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </Table>
+                        <>
+                            {/* CAJA OFICINA */}
+                            {renderSection('Caja Oficina', '🏢', data.office, '#3b82f6')}
+
+                            {/* CAJA COLECTORES */}
+                            {renderSection('Caja Colectores', '🏍️', data.collectors, '#f59e0b')}
+                        </>
                     )}
                 </Content>
 
                 <Footer>
-                    <div style={{ display: 'flex', gap: '2rem' }}>
-                        <div>
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Total Cobrado</div>
-                            <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalSales)}</div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Ingresos Manuales</div>
-                            <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalManualIn)}</div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Salidas</div>
-                            <div style={{ fontSize: '1.2rem', color: '#f87171', fontWeight: 'bold' }}>{formatMoney(data.summary?.totalManualOut)}</div>
+                    <div style={{ display: 'flex', gap: '2rem', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '2rem' }}>💰</span>
+                            <div style={{ lineHeight: '1.2' }}>
+                                <div style={{ fontWeight: 'bold', color: 'white' }}>Llevar Todo</div>
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Suma de ambas cajas</div>
+                            </div>
                         </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Balance Neto</div>
-                        <div style={{ fontSize: '2rem', color: 'white', fontWeight: 'bold' }}>{formatMoney(data.summary?.netBalance)}</div>
+
+                    <div style={{ display: 'flex', gap: '3rem' }}>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Total Global Ingresos</div>
+                            <div style={{ fontSize: '1.1rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.grandTotal?.sales + data.grandTotal?.entries)}</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Total Global Salidas</div>
+                            <div style={{ fontSize: '1.1rem', color: '#f87171', fontWeight: 'bold' }}>{formatMoney(data.grandTotal?.exits)}</div>
+                        </div>
+                        <div style={{ borderLeft: '1px solid #475569', paddingLeft: '1.5rem' }}>
+                            <div style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 'bold', textTransform: 'uppercase' }}>Gran Total Efectivo</div>
+                            <div style={{ fontSize: '2rem', color: '#fbbf24', fontWeight: 'bold' }}>{formatMoney(data.grandTotal?.net)}</div>
+                        </div>
                     </div>
                 </Footer>
             </ModalContent>
