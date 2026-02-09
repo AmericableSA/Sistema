@@ -32,6 +32,7 @@ const Billing = () => {
     const limit = 12; // User requested 12
 
     const [isSessionOpen, setIsSessionOpen] = useState(false);
+    const [activeSessionType, setActiveSessionType] = useState('OFICINA');
     // View Mode: 'SEARCH' | 'HISTORY' | 'MOVEMENT_IN' | 'MOVEMENT_OUT'
     const [viewMode, setViewMode] = useState('SEARCH');
 
@@ -130,6 +131,7 @@ const Billing = () => {
             <div style={{ marginBottom: '2rem' }}>
                 <CashRegister
                     onSessionChange={(isOpen) => setIsSessionOpen(isOpen)}
+                    onTypeChange={(type) => setActiveSessionType(type)}
                     viewMode={viewMode}
                     setViewMode={setViewMode}
                 />
@@ -268,6 +270,7 @@ const Billing = () => {
             {showBilling && (
                 <BillingModal
                     client={selectedClient}
+                    defaultTargetBox={activeSessionType}
                     onClose={() => setShowBilling(false)}
                     onPaymentSuccess={() => {
                         setShowBilling(false);

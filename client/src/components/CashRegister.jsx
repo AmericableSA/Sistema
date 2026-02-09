@@ -46,7 +46,12 @@ const CashRegister = (props) => {
     const [users, setUsers] = useState([]);
     const [sessionType, setSessionType] = useState('OFICINA'); // 'OFICINA' or 'COBRADOR'
 
-    useEffect(() => { fetchStatus(); fetchHistory(); fetchUsers(); }, [sessionType]);
+    useEffect(() => {
+        fetchStatus();
+        fetchHistory();
+        fetchUsers();
+        if (props.onTypeChange) props.onTypeChange(sessionType);
+    }, [sessionType]);
 
     const handleSearchHistory = () => {
         fetchHistory(true);

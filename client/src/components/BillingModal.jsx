@@ -4,7 +4,7 @@ import ReceiptModal from './ReceiptModal';
 
 import { useAuth } from '../context/AuthContext';
 
-const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
+const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) => {
     const { user } = useAuth();
     // Data
     const [products, setProducts] = useState([]);
@@ -20,6 +20,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
     // Collector Logic
     const [collectors, setCollectors] = useState([]);
     const [selectedCollector, setSelectedCollector] = useState('');
+    const [targetBox, setTargetBox] = useState(defaultTargetBox || 'OFICINA'); // New: Target Box selection (OFICINA/COBRADOR)
 
     // Billing Period Logic
     const [monthsToPay, setMonthsToPay] = useState(1); // Default to 1 month
@@ -259,6 +260,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
             items: cart.map(i => ({ product_id: i.id, quantity: i.quantity, price: i.price, name: i.name })),
             details_json: details,
             collector_id: selectedCollector || user?.id, // Default to current user if none selected
+            cash_session_type: targetBox, // NEW: Explicitly target a box
             current_user_id: user?.id // WHO is actually processing the payment (The Logged In User)
         };
 
@@ -426,9 +428,42 @@ const BillingModal = ({ client, onClose, onPaymentSuccess }) => {
                             </div>
                         )}
 
+                        {/* Target Box Selection (For Admins/Cajeros) */}
+                        <div style={{ marginTop: '1rem', background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                            <label className="text-white" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>🛒 Caja de Destino</label>
+                            <div className="flex-center" style={{ gap: '0.5rem' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setTargetBox('OFICINA')}
+                                    className={`btn-tab-premium ${targetBox === 'OFICINA' ? 'active' : ''}`}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.5rem',
+                                        fontSize: '0.85rem',
+                                        background: targetBox === 'OFICINA' ? '#3b82f6' : 'rgba(30, 41, 59, 0.6)',
+                                        border: 'none',
+                                        borderRadius: '8px'
+                                    }}
+                                >🏢 Oficina</button>
+                                <button
+                                    type="button"
+                                    onClick={() => setTargetBox('COBRADOR')}
+                                    className={`btn-tab-premium ${targetBox === 'COBRADOR' ? 'active' : ''}`}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.5rem',
+                                        fontSize: '0.85rem',
+                                        background: targetBox === 'COBRADOR' ? '#8b5cf6' : 'rgba(30, 41, 59, 0.6)',
+                                        border: 'none',
+                                        borderRadius: '8px'
+                                    }}
+                                >🛵 Cobrador</button>
+                            </div>
+                        </div>
+
                         {/* Collector Selection */}
                         <div style={{ marginTop: '1rem' }}>
-                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem' }}>Cobrador / Vendedor</label>
+                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem' }}>Cobrador / Vendedor (Atribución)</label>
                             <select className="input-dark" value={selectedCollector} onChange={e => setSelectedCollector(e.target.value)}>
                                 <option value="">-- Cajero Actual (Por Defecto) --</option>
                                 {collectors.map(u => (

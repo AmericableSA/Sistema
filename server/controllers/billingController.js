@@ -114,10 +114,20 @@ exports.createTransaction = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Determine Correct Cash Session based on User Role
-        const [userData] = await conn.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
-        const userRole = userData[0]?.role || 'cobrador';
-        const targetType = (userRole === 'cobrador') ? 'COBRADOR' : 'OFICINA';
+        // 1. Determine Correct Cash Session
+        // Priority: 1. Explicit cash_session_type from body, 2. Role-based fallback
+        const { cash_session_type } = req.body;
+
+        let targetType;
+        if (cash_session_type) {
+            targetType = cash_session_type;
+        } else {
+            const [userData] = await conn.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
+            const userRole = userData[0]?.role || 'cobrador';
+            targetType = (userRole === 'cobrador') ? 'COBRADOR' : 'OFICINA';
+        }
+
+        console.log(`Routing transaction to session type: ${targetType} (Requested: ${cash_session_type || 'None'})`);
 
         // Find globally open session of the appropriate type
         let [sessions] = await conn.query(
@@ -125,14 +135,15 @@ exports.createTransaction = async (req, res) => {
             [targetType]
         );
 
-        // Fallback: If target type isn't open, try the other one
+        // FALLBACK: If requested type isn't open, try to find ANY open session as last resort
         if (sessions.length === 0) {
-            [sessions] = await conn.query('SELECT id, exchange_rate FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
+            console.log(`Target session ${targetType} NOT OPEN. Falling back to any open session...`);
+            [sessions] = await conn.query('SELECT id, exchange_rate, session_type FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
         }
 
         if (sessions.length === 0) {
             await conn.rollback();
-            return res.status(403).json({ msg: 'No hay ninguna caja abierta. Pide a un administrador que abra caja.' });
+            return res.status(403).json({ msg: `No hay caja de tipo ${targetType} abierta. Por favor abre caja primero.` });
         }
 
         const session = sessions[0];
