@@ -7,6 +7,7 @@ router.get('/sales-summary', reportController.getSalesSummary);
 router.get('/inventory-value', reportController.getInventoryValue);
 router.get('/sales-by-user', reportController.getSalesByUser); // Uses collector_id
 router.get('/collector-performance', reportController.getCollectorPerformance);
+router.get('/collector-performance/export', reportController.exportCollectorPerformanceXLS);
 router.get('/top-products', reportController.getTopProducts); // Placeholder
 router.get('/sales-chart', reportController.getSalesChart);
 

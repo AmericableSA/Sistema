@@ -767,3 +767,59 @@ exports.exportServiceOrdersXLS = async (req, res) => {
         res.status(500).send('Error exportando excel');
     }
 };
+exports.exportCollectorPerformanceXLS = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const eDate = endDate || sDate;
+
+        const pool = await db.getConnection();
+        const [rows] = await pool.query(`
+            SELECT 
+                u.username,
+                u.full_name,
+                COUNT(t.id) as total_recibos,
+                SUM(t.amount) as total_cobrado,
+                AVG(t.amount) as promedio_recibo,
+                MAX(t.created_at) as ultimo_cobro
+            FROM users u
+            JOIN transactions t ON u.id = t.collector_id
+            WHERE t.type != 'void'
+            AND DATE(t.created_at) BETWEEN ? AND ?
+            GROUP BY u.id, u.username, u.full_name
+            ORDER BY total_cobrado DESC
+        `, [sDate, eDate]);
+        pool.release();
+
+        const ExcelJS = require('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Rendimiento Cobradores');
+
+        worksheet.columns = [
+            { header: 'Usuario', key: 'username', width: 15 },
+            { header: 'Nombre Completo', key: 'full_name', width: 30 },
+            { header: 'Cant. Recibos', key: 'total_recibos', width: 15 },
+            { header: 'Total Cobrado', key: 'total_cobrado', width: 20 },
+            { header: 'Promedio', key: 'promedio_recibo', width: 15 },
+            { header: 'Último Cobro', key: 'ultimo_cobro', width: 25 },
+        ];
+
+        worksheet.getRow(1).font = { bold: true };
+
+        rows.forEach(r => {
+            worksheet.addRow({
+                ...r,
+                ultimo_cobro: r.ultimo_cobro ? new Date(r.ultimo_cobro).toLocaleString() : 'N/A'
+            });
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Cierre_Cobradores_${sDate}.xlsx"`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error exportando excel');
+    }
+};

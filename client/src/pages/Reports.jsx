@@ -271,7 +271,26 @@ const Reports = () => {
                 </Card>
             )}
 
-            <SectionTitle>Rendimiento por Cobrador ({startDate} - {endDate})</SectionTitle>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <SectionTitle>Rendimiento por Cobrador ({startDate} - {endDate})</SectionTitle>
+                <button
+                    onClick={() => {
+                        fetch(`/api/reports/collector-performance/export?startDate=${startDate}&endDate=${endDate}`)
+                            .then(res => res.blob())
+                            .then(blob => {
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `Cierre_Cobradores_${startDate}.xlsx`;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            });
+                    }}
+                    style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', padding: '0.5rem 1rem', borderRadius: '10px', color: '#60a5fa', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    📥 Exportar Cierre Cobradores
+                </button>
+            </div>
             <Card style={{ marginBottom: '2rem' }}>
                 <CashClosingTable>
                     <thead>
