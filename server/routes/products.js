@@ -14,6 +14,11 @@ router.get('/export-xls', productController.exportProductsXLS);
 // @desc    Get all products
 router.get('/', productController.getAllProducts);
 
+// Dynamic Units - MUST be before /:id routes
+router.get('/units', productController.getUnits);
+router.post('/units', productController.createUnit);
+router.delete('/units/:id', productController.deleteUnit);
+
 // @route   GET /api/products/:id
 // @desc    Get product by ID
 router.get('/:id', productController.getProductById);
@@ -29,11 +34,6 @@ router.put('/:id', productController.updateProduct);
 // @route   DELETE /api/products/:id
 // @desc    Delete a product
 router.delete('/:id', productController.deleteProduct);
-
-// Dynamic Units
-router.get('/units', productController.getUnits);
-router.post('/units', productController.createUnit);
-router.delete('/units/:id', productController.deleteUnit);
 
 router.get('/export/excel', productController.exportProductsXLS);
 router.get('/bundles/:id', productController.getBundleDetails);

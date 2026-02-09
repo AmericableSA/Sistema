@@ -15,8 +15,8 @@ exports.getStatus = async (req, res) => {
 
         // Check for ANY globally open session of this type
         const [rows] = await db.query(
-            'SELECT s.*, u.username as opener_name FROM cash_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_type = ? AND s.status = "open" ORDER BY s.start_time DESC LIMIT 1',
-            [sessionType]
+            'SELECT s.*, u.username as opener_name FROM cash_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_type = ? AND s.status = ? ORDER BY s.start_time DESC LIMIT 1',
+            [sessionType, 'open']
         );
         res.json(rows.length > 0 ? rows[0] : null);
     } catch (err) { res.status(500).send(err.message); }
@@ -29,7 +29,7 @@ exports.getSessionStats = async (req, res) => {
 
     try {
         // Find globally open session of this type
-        const [sessions] = await db.query('SELECT * FROM cash_sessions WHERE session_type = ? AND status = "open"', [sessionType]);
+        const [sessions] = await db.query('SELECT * FROM cash_sessions WHERE session_type = ? AND status = ?', [sessionType, 'open']);
         if (!sessions.length) return res.json(null);
 
         const sessionId = sessions[0].id;
@@ -89,7 +89,7 @@ exports.openSession = async (req, res) => {
         const userId = await getValidUser(req.user?.id);
 
         // Check if ANYONE has this box type open
-        const [existing] = await db.query('SELECT * FROM cash_sessions WHERE session_type = ? AND status = "open"', [sessionType]);
+        const [existing] = await db.query('SELECT * FROM cash_sessions WHERE session_type = ? AND status = ?', [sessionType, 'open']);
         if (existing.length > 0) return res.status(400).json({ msg: `Ya existe una sesión global abierta para ${sessionType}.` });
 
         await db.query(
@@ -111,7 +111,7 @@ exports.addMovement = async (req, res) => {
 
     try {
         // Find global session of specific type
-        const [sessions] = await db.query('SELECT id FROM cash_sessions WHERE session_type = ? AND status = "open"', [targetType]);
+        const [sessions] = await db.query('SELECT id FROM cash_sessions WHERE session_type = ? AND status = ?', [targetType, 'open']);
         if (sessions.length === 0) return res.status(400).json({ msg: `No hay ninguna caja ${targetType} abierta.` });
 
         const [actors] = await db.query('SELECT username FROM users WHERE id = ?', [userId]);

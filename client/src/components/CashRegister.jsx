@@ -32,6 +32,7 @@ const CashRegister = (props) => {
     const [showHistory, setShowHistory] = useState(false);
     const [filterStart, setFilterStart] = useState('');
     const [filterEnd, setFilterEnd] = useState('');
+    const [filterCollector, setFilterCollector] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
