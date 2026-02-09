@@ -82,11 +82,11 @@ exports.getSessionStats = async (req, res) => {
 
 // Open Session (Global per Type)
 exports.openSession = async (req, res) => {
-    const { start_amount, exchange_rate, type } = req.body;
+    const { start_amount, exchange_rate, type, current_user_id } = req.body;
     const sessionType = type || 'OFICINA';
 
     try {
-        const userId = await getValidUser(req.user?.id);
+        const userId = await getValidUser(current_user_id || req.user?.id);
 
         // Check if ANYONE has this box type open
         const [existing] = await db.query('SELECT * FROM cash_sessions WHERE session_type = ? AND status = ?', [sessionType, 'open']);
@@ -105,9 +105,9 @@ exports.openSession = async (req, res) => {
 
 // Add Manual Movement (Type Aware)
 exports.addMovement = async (req, res) => {
-    const { type, amount, description, session_type } = req.body;
+    const { type, amount, description, session_type, current_user_id } = req.body;
     const targetType = session_type || 'OFICINA';
-    const userId = await getValidUser(req.user?.id);
+    const userId = await getValidUser(current_user_id || req.user?.id);
 
     try {
         // Find global session of specific type
@@ -128,8 +128,8 @@ exports.addMovement = async (req, res) => {
 
 // Close Session (Global)
 exports.closeSession = async (req, res) => {
-    const { session_id, end_amount_physical, closing_note } = req.body;
-    const reqUserId = req.user?.id || 1;
+    const { session_id, end_amount_physical, closing_note, current_user_id } = req.body;
+    const closerId = await getValidUser(current_user_id || req.user?.id);
 
     try {
         const [session] = await db.query('SELECT * FROM cash_sessions WHERE id = ?', [session_id]);
