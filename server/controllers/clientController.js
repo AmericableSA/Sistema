@@ -141,7 +141,7 @@ exports.createClient = async (req, res) => {
         preferred_collector_id
     } = req.body;
 
-    const userId = 1;
+    const userId = req.user?.id || 1;
 
     try {
         let finalContract = contract_number;
@@ -212,7 +212,7 @@ exports.updateClient = async (req, res) => {
         preferred_collector_id
     } = req.body;
 
-    const userId = 1;
+    const userId = req.user?.id || 1;
 
     try {
         // Get old values for comparison
@@ -355,7 +355,7 @@ exports.updateClient = async (req, res) => {
 // --- Delete Client ---
 exports.deleteClient = async (req, res) => {
     const { id } = req.params;
-    const userId = 1;
+    const userId = req.user?.id || 1;
     try {
         await db.query('DELETE FROM clients WHERE id = ?', [id]);
         res.json({ msg: 'Cliente eliminado' });
@@ -480,7 +480,7 @@ exports.updateServiceOrder = async (req, res) => {
 exports.createManualServiceOrder = async (req, res) => {
     const { id } = req.params; // Client ID
     const { type, description } = req.body;
-    const userId = 1; // Default Admin
+    const userId = req.user?.id || 1;
 
     try {
         await db.query(`
@@ -508,7 +508,7 @@ exports.getTechnicians = async (req, res) => {
 
 exports.registerMovement = async (req, res) => {
     const { client_id, type, details } = req.body;
-    const userId = 1; // Default Admin
+    const userId = req.user?.id || 1;
 
     try {
         await db.query(

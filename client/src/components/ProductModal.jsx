@@ -22,30 +22,28 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
 
 
     useEffect(() => {
-        if (isOpen) {
-            fetchUnits(); // Fetch units when modal opens
+        fetchUnits(); // Fetch units when modal opens
 
-            // If product has an ID, it's an EDIT.
-            if (product && product.id) {
-                setFormData(product);
-                if (product.type === 'bundle') {
-                    fetchBundleItems(product.id);
-                } else {
-                    setBundleItems([]);
-                }
+        // If product has an ID, it's an EDIT.
+        if (product && product.id) {
+            setFormData(product);
+            if (product.type === 'bundle') {
+                fetchBundleItems(product.id);
             } else {
-                // Reset for new (or partial initial data provided like {type: 'bundle'})
-                setFormData({
-                    sku: '', name: '', description: '',
-                    current_stock: 0, min_stock_alert: 5,
-                    selling_price: 0, unit_cost: 0, type: 'product',
-                    unit_of_measure: 'Unidad', // Default
-                    ...(product || {}) // Merge initial values if any
-                });
                 setBundleItems([]);
             }
+        } else {
+            // Reset for new (or partial initial data provided like {type: 'bundle'})
+            setFormData({
+                sku: '', name: '', description: '',
+                current_stock: 0, min_stock_alert: 5,
+                selling_price: 0, unit_cost: 0, type: 'product',
+                unit_of_measure: 'Unidad', // Default
+                ...(product || {}) // Merge initial values if any
+            });
+            setBundleItems([]);
         }
-    }, [isOpen, product]);
+    }, [product]);
 
 
 

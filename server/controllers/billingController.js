@@ -1,8 +1,9 @@
 const db = require('../config/db');
 
 // Helper to get a valid user ID (fallback to first user if no auth)
-async function getValidUser(reqUserId) {
+async function getValidUser(reqUserId, reqUser) {
     if (reqUserId) return reqUserId;
+    if (reqUser && reqUser.id) return reqUser.id;
     const [rows] = await db.query("SELECT id FROM users ORDER BY id ASC LIMIT 1");
     // Return found ID or strict 1 if DB is empty (which shouldn't happen)
     return rows.length > 0 ? rows[0].id : 1;
@@ -107,7 +108,7 @@ exports.createTransaction = async (req, res) => {
     console.log("Create Transaction Body:", req.body);
     console.log("Using Reference ID:", reference_id);
 
-    const reqUserId = await getValidUser(current_user_id);
+    const reqUserId = await getValidUser(current_user_id, req.user);
     const conn = await db.getConnection();
 
     try {
@@ -415,7 +416,7 @@ exports.cancelTransaction = async (req, res) => {
     // Check if getValidUser is available in scope (it was defined at top). 
     // Yes, line 4: async function getValidUser(reqUserId) ...
 
-    const validUserId = await getValidUser(reqUserId);
+    const validUserId = await getValidUser(reqUserId, req.user);
     const conn = await db.getConnection();
 
     try {

@@ -70,7 +70,7 @@ exports.createProduct = async (req, res) => {
         if (initialStock > 0 && prodType === 'product') {
             await connection.query(
                 'INSERT INTO inventory_transactions (product_id, transaction_type, quantity, unit_price, reason, user_id) VALUES (?, ?, ?, ?, ?, ?)',
-                [newId, 'IN', initialStock, unit_cost || 0, 'Stock Inicial', req.body.user_id || 1]
+                [newId, 'IN', initialStock, unit_cost || 0, 'Stock Inicial', req.user?.id || 1]
             );
         }
 
@@ -162,7 +162,7 @@ exports.updateProduct = async (req, res) => {
 
             await connection.query(
                 'INSERT INTO inventory_transactions (product_id, transaction_type, quantity, unit_price, reason, user_id) VALUES (?, ?, ?, ?, ?, ?)',
-                [id, transType, transQty, recordedCost, auditReason, user_id || 1]
+                [id, transType, transQty, recordedCost, auditReason, req.user?.id || 1]
             );
         }
 
