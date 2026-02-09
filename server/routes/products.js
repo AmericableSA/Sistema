@@ -31,7 +31,7 @@ router.put('/:id', productController.updateProduct);
 router.delete('/:id', productController.deleteProduct);
 
 // Dynamic Units
-router.get('/units/list', productController.getUnits);
+router.get('/units', productController.getUnits);
 router.post('/units', productController.createUnit);
 router.delete('/units/:id', productController.deleteUnit);
 

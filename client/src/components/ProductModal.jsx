@@ -14,10 +14,24 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         unit_of_measure: 'Unidad'
     });
 
-    // Bundle Logic
     const [bundleItems, setBundleItems] = useState([]);
     const [selectedIngredientId, setSelectedIngredientId] = useState('');
     const [ingredientQty, setIngredientQty] = useState(1);
+    const [availableUnits, setAvailableUnits] = useState([]);
+
+    const fetchUnits = async () => {
+        try {
+            const res = await fetch('/api/products/units');
+            if (res.ok) setAvailableUnits(await res.json());
+        } catch (e) { console.error("Error fetching units:", e); }
+    };
+
+    const fetchBundleItems = async (bundleId) => {
+        try {
+            const res = await fetch(`/api/products/bundles/${bundleId}`);
+            if (res.ok) setBundleItems(await res.json());
+        } catch (e) { console.error("Error fetching bundle items:", e); }
+    };
 
 
 
@@ -209,7 +223,7 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                                                     });
                                                     if (res.ok) {
                                                         const created = await res.json();
-                                                        await fetchUnits(); // Refresh list
+                                                        fetchUnits(); // Refresh list
                                                         setFormData(prev => ({ ...prev, unit_of_measure: created.name })); // Auto select
                                                     } else {
                                                         const err = await res.json();
