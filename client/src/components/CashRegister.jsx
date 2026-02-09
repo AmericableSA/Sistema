@@ -340,9 +340,27 @@ const CashRegister = (props) => {
                                         }}
                                     >⚙️</button>
                                 </div>
-                                <small className="text-muted" style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                                    Abierta por: <span style={{ color: '#60a5fa', fontWeight: '600' }}>{session.opener_name || 'Desconocido'}</span>
-                                </small>
+                                <div style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.6rem',
+                                    background: 'rgba(59, 130, 246, 0.12)',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                                    marginTop: '0.8rem',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                                }}>
+                                    <span style={{ fontSize: '1.2rem' }}>👤</span>
+                                    <span style={{ color: '#cbd5e1', fontSize: '0.9rem', fontWeight: '500' }}>Turno abierto por:</span>
+                                    <span style={{
+                                        color: '#60a5fa',
+                                        fontWeight: '800',
+                                        fontSize: '1rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                    }}>{session.opener_name || 'Desconocido'}</span>
+                                </div>
                             </div>
                             <div className="text-right">
                                 <small className="text-muted" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.6 }}>
