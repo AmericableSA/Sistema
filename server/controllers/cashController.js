@@ -7,29 +7,35 @@ async function getValidUser(reqUserId) {
     return rows.length > 0 ? rows[0].id : 1;
 }
 
-// Check if user has open session
+// Check if CURRENT USER or ANYONE has open session of a specific type
 exports.getStatus = async (req, res) => {
     try {
-        const userId = await getValidUser(req.user?.id);
+        const { type } = req.query; // Capture type from query
+        const sessionType = type || 'OFICINA';
+
+        // Check for ANY globally open session of this type
         const [rows] = await db.query(
-            'SELECT * FROM cash_sessions WHERE user_id = ? AND status = "open" ORDER BY start_time DESC LIMIT 1',
-            [userId]
+            'SELECT s.*, u.username as opener_name FROM cash_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_type = ? AND s.status = "open" ORDER BY s.start_time DESC LIMIT 1',
+            [sessionType]
         );
         res.json(rows.length > 0 ? rows[0] : null);
     } catch (err) { res.status(500).send(err.message); }
 };
 
-// Get Live Statistics for Dashboard
+// Get Live Statistics by Type
 exports.getSessionStats = async (req, res) => {
-    const userId = await getValidUser(req.user?.id);
+    const { type } = req.query;
+    const sessionType = type || 'OFICINA';
+
     try {
-        const [sessions] = await db.query('SELECT id, start_amount FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
+        // Find globally open session of this type
+        const [sessions] = await db.query('SELECT * FROM cash_sessions WHERE session_type = ? AND status = "open"', [sessionType]);
         if (!sessions.length) return res.json(null);
 
         const sessionId = sessions[0].id;
         const startAmount = parseFloat(sessions[0].start_amount);
 
-        // 1. Sales Breakdown
+        // 1. Sales Breakdown (linked to THIS session)
         const [payments] = await db.query(`
             SELECT payment_method, SUM(amount) as total, COUNT(*) as count 
             FROM transactions 
@@ -37,21 +43,13 @@ exports.getSessionStats = async (req, res) => {
             GROUP BY payment_method
         `, [sessionId]);
 
-        // Map to easier object
-        const stats = {
-            sales_cash: 0,
-            sales_card: 0,
-            sales_transfer: 0,
-            sales_dollars: 0,
-            tx_count: 0
-        };
+        const stats = { sales_cash: 0, sales_card: 0, sales_transfer: 0, sales_dollars: 0, tx_count: 0 };
 
         payments.forEach(p => {
             if (p.payment_method === 'cash') stats.sales_cash = parseFloat(p.total);
             else if (p.payment_method === 'card') stats.sales_card = parseFloat(p.total);
             else if (p.payment_method === 'transfer') stats.sales_transfer = parseFloat(p.total);
-            else if (p.payment_method === 'dollars') stats.sales_dollars = parseFloat(p.total); // Dollar face value
-
+            else if (p.payment_method === 'dollars') stats.sales_dollars = parseFloat(p.total);
             stats.tx_count += p.count;
         });
 
@@ -66,14 +64,8 @@ exports.getSessionStats = async (req, res) => {
             else manualOut = parseFloat(m.total);
         });
 
-        // 3. Totals
-        // "Cash in Drawer" = Start + Sales(Cash) + Sales(Dollars * Rate) + ManualIn - ManualOut
-        // Note: Dollars are typically kept as physical bills. If we mix them in the "Total System Value" we might convert them.
-        // For accurate balancing, let's assume the dashboard shows the COMBINED Cordoba Value.
-
         const currentRate = parseFloat(sessions[0].exchange_rate || 37);
         const dollarsInCordobas = stats.sales_dollars * currentRate;
-
         const cashInDrawer = startAmount + stats.sales_cash + dollarsInCordobas + manualIn - manualOut;
 
         res.json({
@@ -81,55 +73,49 @@ exports.getSessionStats = async (req, res) => {
             manual_in: manualIn,
             manual_out: manualOut,
             start_amount: startAmount,
-            cash_in_drawer: cashInDrawer
+            cash_in_drawer: cashInDrawer,
+            session_id: sessionId
         });
 
     } catch (err) { res.status(500).send(err); }
 };
 
-// Open Session
+// Open Session (Global per Type)
 exports.openSession = async (req, res) => {
-    console.log("Opening Session Body:", req.body);
-    const { start_amount, exchange_rate } = req.body;
+    const { start_amount, exchange_rate, type } = req.body;
+    const sessionType = type || 'OFICINA';
 
     try {
         const userId = await getValidUser(req.user?.id);
 
-        // Check existing
-        const [existing] = await db.query('SELECT * FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
-        if (existing.length > 0) return res.status(400).json({ msg: 'Ya tienes una caja abierta.' });
+        // Check if ANYONE has this box type open
+        const [existing] = await db.query('SELECT * FROM cash_sessions WHERE session_type = ? AND status = "open"', [sessionType]);
+        if (existing.length > 0) return res.status(400).json({ msg: `Ya existe una sesión global abierta para ${sessionType}.` });
 
         await db.query(
-            'INSERT INTO cash_sessions (user_id, start_amount, exchange_rate, start_time) VALUES (?, ?, ?, NOW())',
-            [userId, start_amount, exchange_rate || 37.00]
+            'INSERT INTO cash_sessions (user_id, start_amount, exchange_rate, start_time, session_type, status) VALUES (?, ?, ?, NOW(), ?, "open")',
+            [userId, start_amount, exchange_rate || 37.00, sessionType]
         );
-        res.json({ msg: 'Caja abierta correctamente' });
+        res.json({ msg: `Caja ${sessionType} abierta correctamente` });
     } catch (err) {
         console.error("Open Session Error:", err);
         res.status(500).send('Server Error: ' + err.message);
     }
 };
 
-// Add Manual Movement (Ingreso/Egreso)
+// Add Manual Movement (Type Aware)
 exports.addMovement = async (req, res) => {
-    const { type, amount, description } = req.body;
+    const { type, amount, description, session_type } = req.body;
+    const targetType = session_type || 'OFICINA';
     const userId = await getValidUser(req.user?.id);
 
     try {
-        // 1. Check for personal open session
-        let [sessions] = await db.query('SELECT id FROM cash_sessions WHERE user_id = ? AND status = "open"', [userId]);
+        // Find global session of specific type
+        const [sessions] = await db.query('SELECT id FROM cash_sessions WHERE session_type = ? AND status = "open"', [targetType]);
+        if (sessions.length === 0) return res.status(400).json({ msg: `No hay ninguna caja ${targetType} abierta.` });
 
-        // Fallback: If no personal session, allow adding movement to GLOBAL session
-        if (sessions.length === 0) {
-            [sessions] = await db.query('SELECT id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
-        }
-
-        if (sessions.length === 0) return res.status(400).json({ msg: 'No hay ninguna caja abierta en el sistema.' });
-
-        // Get User Name for Attribution in Description (Since we share the session)
         const [actors] = await db.query('SELECT username FROM users WHERE id = ?', [userId]);
         const actorName = actors[0]?.username || 'Usuario';
-
         const finalDesc = `${description} (Por: ${actorName})`;
 
         await db.query(
@@ -140,73 +126,47 @@ exports.addMovement = async (req, res) => {
     } catch (err) { res.status(500).send(err); }
 };
 
-// Close Session & Get Report (STRICT MODE)
+// Close Session (Global)
 exports.closeSession = async (req, res) => {
-    const { session_id, end_amount_physical, closing_note, current_user_id } = req.body;
-    const reqUserId = current_user_id || 1; // Default to 1 if not sent
+    const { session_id, end_amount_physical, closing_note } = req.body;
+    const reqUserId = req.user?.id || 1;
 
     try {
-        // 1. Calculate System Total & Verify Ownership
-        const [session] = await db.query('SELECT start_amount, user_id FROM cash_sessions WHERE id = ?', [session_id]);
+        const [session] = await db.query('SELECT * FROM cash_sessions WHERE id = ?', [session_id]);
         if (!session.length) return res.status(404).json({ msg: 'Sesión no encontrada' });
 
-        const sessionOwner = session[0].user_id;
-
-        // Fetch Requesting User Role
-        const [users] = await db.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
-        const userRole = users.length ? users[0].role : 'cashier';
-
-        // SECURITY CHECK: Only Owner or Admin can close
-        if (sessionOwner !== reqUserId && userRole !== 'admin') {
-            return res.status(403).json({ msg: 'No tienes permiso para cerrar esta caja. Solo el Cajero responsable o un Administrador pueden hacerlo.' });
-        }
+        // Note: Global sessions can be closed by anyone authorized
+        // We might want to restrict to Admin or let the closer be logged.
 
         const [income] = await db.query(
-            'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND type != "void"',
+            'SELECT payment_method, SUM(amount) as total FROM transactions WHERE session_id = ? AND type != "void" GROUP BY payment_method',
             [session_id]
         );
+
+        let cashSales = 0, dollarSales = 0;
+        income.forEach(i => {
+            if (i.payment_method === 'cash') cashSales = Number(i.total);
+            if (i.payment_method === 'dollars') dollarSales = Number(i.total);
+        });
 
         const [movements] = await db.query(
             'SELECT type, SUM(amount) as total FROM cash_movements WHERE session_id = ? GROUP BY type',
             [session_id]
         );
 
-        let manualIn = 0;
-        let manualOut = 0;
+        let manualIn = 0, manualOut = 0;
         movements.forEach(m => {
             if (m.type === 'IN') manualIn = Number(m.total);
             if (m.type === 'OUT') manualOut = Number(m.total);
         });
 
         const startAmount = Number(session[0].start_amount);
-        const salesTotal = Number(income[0].total || 0); // Only Cash transactions typically? Assuming all transactions are cash for now or filtering by payment 'cash' might be needed if cards accepted.
-        // Actually, system total should strictly be CASH ON HAND.
-        // Let's refine valid Income to only payment_method='cash' or 'dollars' converted.
-        // For simplicity, assuming 'transactions' query above needs refinement if user mixes payments.
-        // Let's stick to total for now, but really should filter by 'cash'.
-
-        // RE-QUERY accurate cash total
-        const [cashIncome] = await db.query(
-            'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND payment_method = "cash" AND type != "void"',
-            [session_id]
-        );
-        const [dollarIncome] = await db.query(
-            'SELECT SUM(amount) as total FROM transactions WHERE session_id = ? AND payment_method = "dollars" AND type != "void"',
-            [session_id]
-        );
-
-        const cashSales = Number(cashIncome[0].total || 0);
-        const dollarSales = Number(dollarIncome[0].total || 0);
-
-        // Convert Dollars to Cordobas for the System Total check
-        // Check if session has exchange_rate, else default
         const sessionRate = parseFloat(session[0].exchange_rate || 37);
         const dollarValueInCordobas = dollarSales * sessionRate;
 
         const systemTotal = startAmount + cashSales + dollarValueInCordobas + manualIn - manualOut;
         const difference = Number(end_amount_physical) - systemTotal;
 
-        // 2. Strict Check
         if (Math.abs(difference) > 0.5 && !closing_note) {
             return res.status(400).json({
                 error: 'JUSTIFICATION_REQUIRED',

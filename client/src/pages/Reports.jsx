@@ -88,6 +88,7 @@ const Reports = () => {
     const [cableStats, setCableStats] = useState({ morosos: { count: 0, deuda: 0 }, retirados: 0, instalaciones_mes: 0 });
     const [dailyClosing, setDailyClosing] = useState({ ingresos: 0, egresos: 0, balance_dia: 0, por_usuario: [] });
     const [topCollectors, setTopCollectors] = useState([]);
+    const [collectorPerformance, setCollectorPerformance] = useState([]);
     const [movements, setMovements] = useState({});
     const [orders, setOrders] = useState({ byType: [], byStatus: [] });
     const [showDailyReport, setShowDailyReport] = useState(false);
@@ -109,10 +110,11 @@ const Reports = () => {
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
         try {
-            const [statsRes, closingRes, topRes, moveRes, ordersRes] = await Promise.all([
+            const [statsRes, closingRes, topRes, performanceRes, moveRes, ordersRes] = await Promise.all([
                 fetch(`${apiBaseUrl}/cable-stats?startDate=${startDate}&endDate=${endDate}`, { headers }),
                 fetch(`${apiBaseUrl}/daily-closing?startDate=${startDate}&endDate=${endDate}`, { headers }),
-                fetch(`${apiBaseUrl}/sales-by-user?startDate=${startOfMonth}&endDate=${endOfMonth}`, { headers }),
+                fetch(`${apiBaseUrl}/sales-by-user?startDate=${startDate}&endDate=${endDate}`, { headers }),
+                fetch(`${apiBaseUrl}/collector-performance?startDate=${startDate}&endDate=${endDate}`, { headers }),
                 fetch(`${apiBaseUrl}/movements?startDate=${startDate}&endDate=${endDate}`, { headers }),
                 fetch(`${apiBaseUrl}/orders?startDate=${startDate}&endDate=${endDate}`, { headers })
             ]);
@@ -120,6 +122,7 @@ const Reports = () => {
             setCableStats(await statsRes.json());
             setDailyClosing(await closingRes.json());
             setTopCollectors(await topRes.json());
+            setCollectorPerformance(await performanceRes.json());
             setMovements(await moveRes.json());
             setOrders(await ordersRes.json());
         } catch (e) { console.error(e); }
@@ -267,6 +270,43 @@ const Reports = () => {
                     </CashClosingTable>
                 </Card>
             )}
+
+            <SectionTitle>Rendimiento por Cobrador ({startDate} - {endDate})</SectionTitle>
+            <Card style={{ marginBottom: '2rem' }}>
+                <CashClosingTable>
+                    <thead>
+                        <tr>
+                            <th>Cobrador</th>
+                            <th className="text-right">Total Cobrado</th>
+                            <th className="text-center">Recibos</th>
+                            <th className="text-right">Promedio</th>
+                            <th className="text-right">Último Cobro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {collectorPerformance.length === 0 ? (
+                            <tr><td colSpan="5" className="text-center">No hay datos de cobro en este periodo</td></tr>
+                        ) : (
+                            collectorPerformance.map((c, i) => (
+                                <tr key={c.id || i}>
+                                    <td>
+                                        <div style={{ fontWeight: 'bold', color: 'white' }}>{c.full_name}</div>
+                                        <small className="text-muted">@{c.username}</small>
+                                    </td>
+                                    <td className="text-right" style={{ color: '#34d399', fontWeight: 'bold' }}>{formatCurrency(c.total_cobrado)}</td>
+                                    <td className="text-center">{c.total_recibos}</td>
+                                    <td className="text-right">{formatCurrency(c.promedio_recibo)}</td>
+                                    <td className="text-right">
+                                        {c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                        <br />
+                                        <small className="text-muted">{c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleDateString() : ''}</small>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </CashClosingTable>
+            </Card>
 
 
 
@@ -485,7 +525,7 @@ const Reports = () => {
                 </Card>
             </Grid>
             {showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} />}
-        </PageWrapper>
+        </PageWrapper >
     );
 };
 

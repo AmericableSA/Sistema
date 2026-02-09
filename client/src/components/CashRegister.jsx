@@ -43,9 +43,9 @@ const CashRegister = (props) => {
 
     // Users for Filter
     const [users, setUsers] = useState([]);
-    const [filterCollector, setFilterCollector] = useState('');
+    const [sessionType, setSessionType] = useState('OFICINA'); // 'OFICINA' or 'COBRADOR'
 
-    useEffect(() => { fetchStatus(); fetchHistory(); fetchUsers(); }, []);
+    useEffect(() => { fetchStatus(); fetchHistory(); fetchUsers(); }, [sessionType]);
 
     const handleSearchHistory = () => {
         fetchHistory(true);
@@ -54,7 +54,7 @@ const CashRegister = (props) => {
     const fetchHistory = async (useFilters = false) => {
         try {
             setLoading(true);
-            let url = `/api/history?limit=7&page=${page}`; // Reduced limit for better card fit
+            let url = `/api/billing/history?limit=7&page=${page}&session_type=${sessionType}`; // Added session_type
             if (useFilters || filterStart || filterEnd || searchTerm || filterCollector) {
                 if (filterStart) url += `&startDate=${filterStart}`;
                 if (filterEnd) url += `&endDate=${filterEnd}`;
@@ -91,7 +91,7 @@ const CashRegister = (props) => {
 
     const fetchStatus = async () => {
         try {
-            const res = await fetch('/api/billing/status');
+            const res = await fetch(`/api/billing/status?type=${sessionType}`);
             const data = await res.json();
             setSession(data || null);
             setLoading(false);
@@ -113,7 +113,7 @@ const CashRegister = (props) => {
         if (!amount) return setAlertInfo({ show: true, type: 'error', title: 'Error', message: 'Ingrese monto inicial' });
         await fetch('/api/billing/open', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ start_amount: amount, exchange_rate: rate, current_user_id: user?.id })
+            body: JSON.stringify({ start_amount: amount, exchange_rate: rate, current_user_id: user?.id, type: sessionType })
         });
         fetchStatus();
         fetchHistory();
@@ -154,7 +154,8 @@ const CashRegister = (props) => {
                     type: movementType,
                     amount: moveAmount,
                     description: moveDesc,
-                    current_user_id: user?.id
+                    current_user_id: user?.id,
+                    session_type: sessionType
                 })
             });
             const data = await res.json();
@@ -212,15 +213,21 @@ const CashRegister = (props) => {
     if (session) {
         return (
             <div className="animate-slide-up" style={{ marginBottom: '2rem' }}>
+                {/* Global Tab Selector */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <button onClick={() => setSessionType('OFICINA')} className={`btn-tab ${sessionType === 'OFICINA' ? 'active' : ''}`}>🏢 Oficina</button>
+                    <button onClick={() => setSessionType('COBRADOR')} className={`btn-tab ${sessionType === 'COBRADOR' ? 'active' : ''}`}>🛵 Cobradores</button>
+                </div>
+
                 <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                     {/* Header */}
                     <div className="flex-between" style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <div className="flex-center" style={{ gap: '10px' }}>
-                            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Panel de Caja</h2>
+                            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Panel de Caja ({sessionType})</h2>
                             <button onClick={() => setShowSettings(true)} className="btn-icon" title="Configurar Recibos">⚙️</button>
                         </div>
                         <div className="text-right">
-                            <small className="text-muted" style={{ display: 'block' }}>Fondo Inicial</small>
+                            <small className="text-muted" style={{ display: 'block' }}>Fondo Inicial (Por: {session.opener_name || 'Desconocido'})</small>
                             <span style={{ color: '#34d399', fontSize: '1.5rem', fontWeight: 'bold' }}>C$ {parseFloat(session.start_amount).toFixed(2)}</span>
                         </div>
                     </div>
@@ -261,6 +268,8 @@ const CashRegister = (props) => {
                 <style>{`
                     .btn-action { padding: 1.5rem; border-radius: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; text-align: center; } 
                     .btn-action:hover { transform: translateY(-3px); filter: brightness(1.2); }
+                    .btn-tab { padding: 0.6rem 1.2rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30, 41, 59, 0.5); color: #94a3b8; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+                    .btn-tab.active { background: #3b82f6; color: white; border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
                 `}</style>
 
                 {/* INLINE MOVEMENT FORM */}
@@ -491,14 +500,20 @@ const CashRegister = (props) => {
 
     // Closed Session State
     return (
-        <div className="flex-center" style={{ minHeight: '80vh' }}>
-            <div className="modal-content text-center" style={{ border: '1px solid rgba(239, 68, 68, 0.5)', maxWidth: '400px' }}>
+        <div className="flex-center" style={{ flexColumn: 'column', minHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Global Tab Selector */}
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                <button onClick={() => setSessionType('OFICINA')} className={`btn-tab ${sessionType === 'OFICINA' ? 'active' : ''}`}>🏢 Oficina</button>
+                <button onClick={() => setSessionType('COBRADOR')} className={`btn-tab ${sessionType === 'COBRADOR' ? 'active' : ''}`}>🛵 Cobradores</button>
+            </div>
+
+            <div className="modal-content text-center" style={{ border: '1px solid rgba(239, 68, 68, 0.5)', maxWidth: '400px', width: '90%' }}>
                 <div style={{ position: 'absolute', top: '15px', right: '15px' }}>
                     <button onClick={() => setShowSettings(true)} className="btn-icon" style={{ background: 'rgba(255,255,255,0.05)' }} title="Configuración">⚙️</button>
                 </div>
 
                 <div style={{ fontSize: '4rem', marginBottom: '1rem', filter: 'drop-shadow(0 0 15px rgba(239, 68, 68, 0.4))' }}>🔒</div>
-                <h2 style={{ marginBottom: '0.5rem' }}>Caja Cerrada</h2>
+                <h2 style={{ marginBottom: '0.5rem' }}>Caja {sessionType} Cerrada</h2>
                 <p className="text-muted" style={{ marginBottom: '2rem' }}>Debe abrir un turno para comenzar a cobrar.</p>
 
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'left' }}>

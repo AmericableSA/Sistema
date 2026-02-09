@@ -45,13 +45,26 @@ async function updateSchema() {
         console.log("Checking 'session_type' in cash_sessions...");
         const [sessCols] = await conn.query("SHOW COLUMNS FROM cash_sessions LIKE 'session_type'");
         if (sessCols.length === 0) {
-            // we use a string or enum. Let's use VARCHAR for flexibility, default 'office'.
             await conn.query("ALTER TABLE cash_sessions ADD COLUMN session_type VARCHAR(20) DEFAULT 'OFICINA'");
-            // Add index for performance
             await conn.query("CREATE INDEX idx_session_type ON cash_sessions(session_type)");
             console.log("Column 'session_type' added.");
-        } else {
-            console.log("Column 'session_type' already exists.");
+        }
+
+        // 4. Ensure transactions has session_id
+        console.log("Checking 'session_id' in transactions...");
+        const [txCols] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'session_id'");
+        if (txCols.length === 0) {
+            await conn.query("ALTER TABLE transactions ADD COLUMN session_id INT NULL");
+            await conn.query("CREATE INDEX idx_session_id ON transactions(session_id)");
+            console.log("Column 'session_id' added to transactions.");
+        }
+
+        // 5. Ensure cash_movements has session_id (Legacy check)
+        console.log("Checking 'session_id' in cash_movements...");
+        const [cmCols] = await conn.query("SHOW COLUMNS FROM cash_movements LIKE 'session_id'");
+        if (cmCols.length === 0) {
+            await conn.query("ALTER TABLE cash_movements ADD COLUMN session_id INT NOT NULL");
+            console.log("Column 'session_id' added to cash_movements.");
         }
 
         console.log("Schema update completed successfully.");

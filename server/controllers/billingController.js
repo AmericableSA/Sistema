@@ -114,17 +114,20 @@ exports.createTransaction = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Determine Correct Cash Session
-        // PRIORITY 1: Check if the current user has their OWN session open
+        // 1. Determine Correct Cash Session based on User Role
+        const [userData] = await conn.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
+        const userRole = userData[0]?.role || 'cobrador';
+        const targetType = (userRole === 'cobrador') ? 'COBRADOR' : 'OFICINA';
+
+        // Find globally open session of the appropriate type
         let [sessions] = await conn.query(
-            'SELECT id, exchange_rate, user_id FROM cash_sessions WHERE user_id = ? AND status = "open" LIMIT 1',
-            [reqUserId]
+            'SELECT id, exchange_rate FROM cash_sessions WHERE session_type = ? AND status = "open" LIMIT 1',
+            [targetType]
         );
 
-        // PRIORITY 2: Fallback to ANY open session (Shared Drawer Model)
-        // If the current user (e.g., employee) doesn't have a box, use the Admin's box (or whoever opened one).
+        // Fallback: If target type isn't open, try the other one
         if (sessions.length === 0) {
-            [sessions] = await conn.query('SELECT id, exchange_rate, user_id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
+            [sessions] = await conn.query('SELECT id, exchange_rate FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
         }
 
         if (sessions.length === 0) {
@@ -136,14 +139,11 @@ exports.createTransaction = async (req, res) => {
         const sessionId = session.id;
         const currentRate = session.exchange_rate;
 
-        // REMOVED: Ownership restriction. 
-        // We now explicitly allow users to sell into sessions they don't own (Shared Drawer).
-
         const [trxRes] = await conn.query(
             `INSERT INTO transactions 
             (session_id, client_id, amount, type, payment_method, description, justification, service_plan_id, reference_id, exchange_rate, details_json, collector_id) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [sessionId, client_id || null, amount, type, payment_method, description, justification, service_plan_id, reference_id || null, currentRate, JSON.stringify({ ...details_json, items }), collector_id || null]
+            [sessionId, client_id || null, amount, type, payment_method, description, justification, service_plan_id, reference_id || null, currentRate, JSON.stringify({ ...details_json, items }), collector_id || reqUserId]
         );
         const transactionId = trxRes.insertId;
 

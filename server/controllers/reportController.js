@@ -44,8 +44,7 @@ exports.getInventoryValue = async (req, res) => {
     }
 };
 
-// 3. Sales By User
-// 3. Sales By User
+// 3. Sales By User (Extended for Performance Report)
 exports.getSalesByUser = async (req, res) => {
     let pool;
     try {
@@ -54,14 +53,46 @@ exports.getSalesByUser = async (req, res) => {
         const [rows] = await pool.query(`
             SELECT 
                 COALESCE(u.username, 'Sin Asignar') as nombre_usuario, 
-                SUM(t.amount) as total_vendido
+                SUM(t.amount) as total_vendido,
+                COUNT(*) as cant_transacciones,
+                COALESCE(u.full_name, 'Sin Asignar') as nombre_completo
             FROM transactions t
             LEFT JOIN users u ON t.collector_id = u.id
             WHERE t.type != 'void'
             AND DATE(t.created_at) BETWEEN ? AND ?
-            GROUP BY t.collector_id, u.username
+            GROUP BY t.collector_id, u.username, u.full_name
             ORDER BY total_vendido DESC
-            LIMIT 5
+        `, [startDate, endDate]);
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'DB Error' });
+    } finally {
+        if (pool) pool.release();
+    }
+};
+
+// New Collector Performance Detailed
+exports.getCollectorPerformance = async (req, res) => {
+    let pool;
+    try {
+        const { startDate, endDate } = req.query;
+        pool = await db.getConnection();
+        const [rows] = await pool.query(`
+            SELECT 
+                u.id,
+                u.username,
+                u.full_name,
+                COUNT(t.id) as total_recibos,
+                SUM(t.amount) as total_cobrado,
+                AVG(t.amount) as promedio_recibo,
+                MAX(t.created_at) as ultimo_cobro
+            FROM users u
+            JOIN transactions t ON u.id = t.collector_id
+            WHERE t.type != 'void'
+            AND DATE(t.created_at) BETWEEN ? AND ?
+            GROUP BY u.id, u.username, u.full_name
+            ORDER BY total_cobrado DESC
         `, [startDate, endDate]);
         res.json(rows);
     } catch (err) {
