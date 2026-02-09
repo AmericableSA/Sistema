@@ -214,39 +214,203 @@ const CashRegister = (props) => {
     if (session) {
         return (
             <div className="animate-slide-up" style={{ marginBottom: '2rem' }}>
-                {/* Global Tab Selector */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <button onClick={() => setSessionType('OFICINA')} className={`btn-tab ${sessionType === 'OFICINA' ? 'active' : ''}`}>🏢 Oficina</button>
-                    <button onClick={() => setSessionType('COBRADOR')} className={`btn-tab ${sessionType === 'COBRADOR' ? 'active' : ''}`}>🛵 Cobradores</button>
+                {/* Premium Tab Selector */}
+                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', justifyContent: 'center' }}>
+                    <button
+                        onClick={() => setSessionType('OFICINA')}
+                        className={`btn-tab-premium ${sessionType === 'OFICINA' ? 'active' : ''}`}
+                        style={{
+                            background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(30, 41, 59, 0.6)',
+                            border: sessionType === 'OFICINA' ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                            boxShadow: sessionType === 'OFICINA' ? '0 8px 24px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(59, 130, 246, 0.5)' : 'none'
+                        }}
+                    >
+                        <span style={{ fontSize: '1.5rem', marginRight: '0.5rem' }}>🏢</span>
+                        <span style={{ fontWeight: '700', letterSpacing: '0.5px' }}>Oficina</span>
+                    </button>
+                    <button
+                        onClick={() => setSessionType('COBRADOR')}
+                        className={`btn-tab-premium ${sessionType === 'COBRADOR' ? 'active' : ''}`}
+                        style={{
+                            background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 'rgba(30, 41, 59, 0.6)',
+                            border: sessionType === 'COBRADOR' ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                            boxShadow: sessionType === 'COBRADOR' ? '0 8px 24px rgba(139, 92, 246, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.5)' : 'none'
+                        }}
+                    >
+                        <span style={{ fontSize: '1.5rem', marginRight: '0.5rem' }}>🛵</span>
+                        <span style={{ fontWeight: '700', letterSpacing: '0.5px' }}>Cobradores</span>
+                    </button>
                 </div>
 
-                <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-                    {/* Header */}
-                    <div className="flex-between" style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div className="flex-center" style={{ gap: '10px' }}>
-                            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Panel de Caja ({sessionType})</h2>
-                            <button onClick={() => setShowSettings(true)} className="btn-icon" title="Configurar Recibos">⚙️</button>
-                        </div>
-                        <div className="text-right">
-                            <small className="text-muted" style={{ display: 'block' }}>Fondo Inicial (Por: {session.opener_name || 'Desconocido'})</small>
-                            <span style={{ color: '#34d399', fontSize: '1.5rem', fontWeight: 'bold' }}>C$ {parseFloat(session.start_amount).toFixed(2)}</span>
+                {/* Premium Dashboard Card */}
+                <div className="premium-glass-card" style={{
+                    padding: 0,
+                    overflow: 'hidden',
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset'
+                }}>
+                    {/* Gradient Header */}
+                    <div style={{
+                        padding: '2rem',
+                        background: sessionType === 'OFICINA'
+                            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%)'
+                            : 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(124, 58, 237, 0.05) 100%)',
+                        borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
+                        {/* Decorative gradient orb */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '-50%',
+                            right: '-10%',
+                            width: '300px',
+                            height: '300px',
+                            background: sessionType === 'OFICINA'
+                                ? 'radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)'
+                                : 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)',
+                            filter: 'blur(40px)',
+                            pointerEvents: 'none'
+                        }}></div>
+
+                        <div className="flex-between" style={{ position: 'relative', zIndex: 1 }}>
+                            <div>
+                                <div className="flex-center" style={{ gap: '12px', marginBottom: '0.5rem' }}>
+                                    <h2 style={{
+                                        margin: 0,
+                                        fontSize: '1.75rem',
+                                        fontWeight: '800',
+                                        background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        Caja {sessionType}
+                                    </h2>
+                                    <button
+                                        onClick={() => setShowSettings(true)}
+                                        className="btn-icon-modern"
+                                        title="Configurar Recibos"
+                                        style={{
+                                            background: 'rgba(255,255,255,0.08)',
+                                            border: '1px solid rgba(255,255,255,0.12)',
+                                            padding: '0.5rem',
+                                            borderRadius: '10px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >⚙️</button>
+                                </div>
+                                <small className="text-muted" style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                                    Abierta por: <span style={{ color: '#60a5fa', fontWeight: '600' }}>{session.opener_name || 'Desconocido'}</span>
+                                </small>
+                            </div>
+                            <div className="text-right">
+                                <small className="text-muted" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.6 }}>
+                                    Fondo Inicial
+                                </small>
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                }}>
+                                    <span style={{
+                                        color: 'white',
+                                        fontSize: '1.75rem',
+                                        fontWeight: '800',
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                    }}>
+                                        C$ {parseFloat(session.start_amount).toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Actions Grid */}
-                    <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1rem' }}>
-                        <button onClick={() => { setMovementType('IN'); props.setViewMode('MOVEMENT_IN'); }} className="btn-action" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#6ee7b7', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                            <span style={{ fontSize: '1.5rem', display: 'block' }}>📥</span> Entrada
+                    {/* Premium Actions Grid */}
+                    <div style={{ padding: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1.25rem' }}>
+                        <button
+                            onClick={() => { setMovementType('IN'); props.setViewMode('MOVEMENT_IN'); }}
+                            className="btn-action-premium"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%)',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                borderRadius: '16px',
+                                padding: '1.5rem 1rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem', filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.3))' }}>📥</span>
+                                <span style={{ color: '#6ee7b7', fontWeight: '700', fontSize: '0.95rem', letterSpacing: '0.5px' }}>Entrada</span>
+                            </div>
                         </button>
-                        <button onClick={() => { setMovementType('OUT'); props.setViewMode('MOVEMENT_OUT'); }} className="btn-action" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                            <span style={{ fontSize: '1.5rem', display: 'block' }}>📤</span> Salida
+
+                        <button
+                            onClick={() => { setMovementType('OUT'); props.setViewMode('MOVEMENT_OUT'); }}
+                            className="btn-action-premium"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.05) 100%)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '16px',
+                                padding: '1.5rem 1rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem', filter: 'drop-shadow(0 2px 4px rgba(239, 68, 68, 0.3))' }}>📤</span>
+                                <span style={{ color: '#fca5a5', fontWeight: '700', fontSize: '0.95rem', letterSpacing: '0.5px' }}>Salida</span>
+                            </div>
                         </button>
-                        <button onClick={() => props.setViewMode('HISTORY')} className="btn-action" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                            <span style={{ fontSize: '1.5rem', display: 'block' }}>📜</span> Historial
+
+                        <button
+                            onClick={() => props.setViewMode('HISTORY')}
+                            className="btn-action-premium"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%)',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                                borderRadius: '16px',
+                                padding: '1.5rem 1rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem', filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3))' }}>📜</span>
+                                <span style={{ color: '#60a5fa', fontWeight: '700', fontSize: '0.95rem', letterSpacing: '0.5px' }}>Historial</span>
+                            </div>
                         </button>
+
                         {hasRole(['admin', 'cajero']) && (
-                            <button onClick={() => setShowClosePrompt(true)} className="btn-action" style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#fcd34d', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
-                                <span style={{ fontSize: '1.5rem', display: 'block' }}>🛑</span> Cerrar
+                            <button
+                                onClick={() => setShowClosePrompt(true)}
+                                className="btn-action-premium"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(202, 138, 4, 0.05) 100%)',
+                                    border: '1px solid rgba(234, 179, 8, 0.3)',
+                                    borderRadius: '16px',
+                                    padding: '1.5rem 1rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <div style={{ position: 'relative', zIndex: 1 }}>
+                                    <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem', filter: 'drop-shadow(0 2px 4px rgba(234, 179, 8, 0.3))' }}>🛑</span>
+                                    <span style={{ color: '#fcd34d', fontWeight: '700', fontSize: '0.95rem', letterSpacing: '0.5px' }}>Cerrar</span>
+                                </div>
                             </button>
                         )}
                     </div>
@@ -265,12 +429,72 @@ const CashRegister = (props) => {
                     onCancel={() => setCancelTxId(null)}
                 />
 
-                {/* Style for hover effects */}
+                {/* Premium Style for hover effects and animations */}
                 <style>{`
-                    .btn-action { padding: 1.5rem; border-radius: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; text-align: center; } 
-                    .btn-action:hover { transform: translateY(-3px); filter: brightness(1.2); }
-                    .btn-tab { padding: 0.6rem 1.2rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(30, 41, 59, 0.5); color: #94a3b8; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-                    .btn-tab.active { background: #3b82f6; color: white; border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+                    .btn-action-premium {
+                        text-align: center;
+                        font-family: inherit;
+                    }
+                    .btn-action-premium:hover {
+                        transform: translateY(-4px) scale(1.02);
+                        filter: brightness(1.15);
+                        box-shadow: 0 12px 32px rgba(0,0,0,0.3) !important;
+                    }
+                    .btn-action-premium:active {
+                        transform: translateY(-2px) scale(0.98);
+                    }
+                    .btn-action-premium::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+                        opacity: 0;
+                        transition: opacity 0.3s;
+                        border-radius: 16px;
+                    }
+                    .btn-action-premium:hover::before {
+                        opacity: 1;
+                    }
+                    .btn-tab-premium {
+                        padding: 0.85rem 2rem;
+                        border-radius: 14px;
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        color: white;
+                        font-size: 1rem;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .btn-tab-premium:hover {
+                        transform: translateY(-2px);
+                        filter: brightness(1.1);
+                    }
+                    .btn-tab-premium:active {
+                        transform: translateY(0);
+                    }
+                    .btn-icon-modern:hover {
+                        background: rgba(255,255,255,0.15) !important;
+                        transform: rotate(90deg);
+                    }
+                    .premium-glass-card {
+                        border-radius: 24px;
+                        animation: slideInUp 0.4s ease-out;
+                    }
+                    @keyframes slideInUp {
+                        from {
+                            opacity: 0;
+                            transform: translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
                 `}</style>
 
                 {/* INLINE MOVEMENT FORM */}
