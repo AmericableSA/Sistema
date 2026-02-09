@@ -81,6 +81,32 @@ db.getConnection()
                 await conn.query("ALTER TABLE transactions ADD COLUMN cancelled_at DATETIME NULL");
                 log("🔄 Migration: Added 'cancelled_at'");
             }
+            // 6. session_type in cash_sessions
+            const [sessType] = await conn.query("SHOW COLUMNS FROM cash_sessions LIKE 'session_type'");
+            if (sessType.length === 0) {
+                await conn.query("ALTER TABLE cash_sessions ADD COLUMN session_type VARCHAR(20) DEFAULT 'OFICINA'");
+                await conn.query("CREATE INDEX idx_session_type ON cash_sessions(session_type)");
+                log("🔄 Migration: Added 'session_type' to cash_sessions");
+            }
+            // 7. session_id in transactions
+            const [sessId] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'session_id'");
+            if (sessId.length === 0) {
+                await conn.query("ALTER TABLE transactions ADD COLUMN session_id INT NULL");
+                await conn.query("CREATE INDEX idx_session_id ON transactions(session_id)");
+                log("🔄 Migration: Added 'session_id' to transactions");
+            }
+            // 8. session_id in cash_movements
+            const [cmSessId] = await conn.query("SHOW COLUMNS FROM cash_movements LIKE 'session_id'");
+            if (cmSessId.length === 0) {
+                await conn.query("ALTER TABLE cash_movements ADD COLUMN session_id INT NOT NULL");
+                log("🔄 Migration: Added 'session_id' to cash_movements");
+            }
+            // 9. unit_of_measure in products
+            const [prodUnit] = await conn.query("SHOW COLUMNS FROM products LIKE 'unit_of_measure'");
+            if (prodUnit.length === 0) {
+                await conn.query("ALTER TABLE products ADD COLUMN unit_of_measure VARCHAR(50) DEFAULT 'Unidad'");
+                log("🔄 Migration: Added 'unit_of_measure' to products");
+            }
         } catch (migErr) {
             log("⚠️ Migration Error: " + migErr.message);
         }

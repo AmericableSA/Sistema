@@ -725,42 +725,160 @@ const CashRegister = (props) => {
 
     // Closed Session State
     return (
-        <div className="flex-center" style={{ flexColumn: 'column', minHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Global Tab Selector */}
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                <button onClick={() => setSessionType('OFICINA')} className={`btn-tab ${sessionType === 'OFICINA' ? 'active' : ''}`}>🏢 Oficina</button>
-                <button onClick={() => setSessionType('COBRADOR')} className={`btn-tab ${sessionType === 'COBRADOR' ? 'active' : ''}`}>🛵 Cobradores</button>
+        <div className="animate-slide-up" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '2rem', paddingTop: '2rem' }}>
+            {/* Premium Tab Selector - Unified with Dashboard */}
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                <button
+                    onClick={() => setSessionType('OFICINA')}
+                    className={`btn-tab-premium ${sessionType === 'OFICINA' ? 'active' : ''}`}
+                    style={{
+                        background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(30, 41, 59, 0.6)',
+                        border: sessionType === 'OFICINA' ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: sessionType === 'OFICINA' ? '0 8px 24px rgba(59, 130, 246, 0.4)' : 'none'
+                    }}
+                >
+                    <span style={{ fontSize: '1.4rem', marginRight: '0.5rem' }}>🏢</span>
+                    <span style={{ fontWeight: '700' }}>Oficina</span>
+                </button>
+                <button
+                    onClick={() => setSessionType('COBRADOR')}
+                    className={`btn-tab-premium ${sessionType === 'COBRADOR' ? 'active' : ''}`}
+                    style={{
+                        background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 'rgba(30, 41, 59, 0.6)',
+                        border: sessionType === 'COBRADOR' ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: sessionType === 'COBRADOR' ? '0 8px 24px rgba(139, 92, 246, 0.4)' : 'none'
+                    }}
+                >
+                    <span style={{ fontSize: '1.4rem', marginRight: '0.5rem' }}>🛵</span>
+                    <span style={{ fontWeight: '700' }}>Cobradores</span>
+                </button>
             </div>
 
-            <div className="modal-content text-center" style={{ border: '1px solid rgba(239, 68, 68, 0.5)', maxWidth: '400px', width: '90%' }}>
-                <div style={{ position: 'absolute', top: '15px', right: '15px' }}>
-                    <button onClick={() => setShowSettings(true)} className="btn-icon" style={{ background: 'rgba(255,255,255,0.05)' }} title="Configuración">⚙️</button>
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div className="premium-glass-card" style={{
+                    maxWidth: '450px',
+                    width: '90%',
+                    padding: '3rem 2rem',
+                    textAlign: 'center',
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    {/* Decorative Background Elements */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '-10%',
+                        left: '-10%',
+                        width: '200px',
+                        height: '200px',
+                        background: 'radial-gradient(circle, rgba(239, 68, 68, 0.1) 0%, transparent 70%)',
+                        filter: 'blur(30px)',
+                        pointerEvents: 'none'
+                    }}></div>
 
-                <div style={{ fontSize: '4rem', marginBottom: '1rem', filter: 'drop-shadow(0 0 15px rgba(239, 68, 68, 0.4))' }}>🔒</div>
-                <h2 style={{ marginBottom: '0.5rem' }}>Caja {sessionType} Cerrada</h2>
-                <p className="text-muted" style={{ marginBottom: '2rem' }}>Debe abrir un turno para comenzar a cobrar.</p>
-
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'left' }}>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Tasa de Cambio ($1 = C$)</label>
-                        <input type="number" step="0.0001" placeholder="36.6243" className="input-dark text-center" style={{ fontSize: '1.2rem' }} value={rate} onChange={e => setRate(e.target.value)} />
+                    <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+                        <button
+                            onClick={() => setShowSettings(true)}
+                            className="btn-icon-modern"
+                            style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '12px' }}
+                            title="Configuración"
+                        >⚙️</button>
                     </div>
-                    <div>
-                        <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Monto Inicial (C$)</label>
-                        <input type="number" placeholder="0.00" className="input-dark text-center" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#34d399' }} value={amount} autoFocus onChange={e => setAmount(e.target.value)} />
+
+                    <div style={{
+                        fontSize: '5rem',
+                        marginBottom: '1.5rem',
+                        filter: 'drop-shadow(0 0 20px rgba(239, 68, 68, 0.3))',
+                        animation: 'pulse 3s infinite'
+                    }}>🔒</div>
+
+                    <h2 style={{
+                        marginBottom: '0.5rem',
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                    }}>
+                        Caja {sessionType === 'OFICINA' ? 'Oficina' : 'Cobradores'} Cerrada
+                    </h2>
+                    <p className="text-muted" style={{ marginBottom: '2.5rem', fontSize: '1.05rem', opacity: 0.8 }}>
+                        Debe abrir un turno para comenzar a cobrar en este módulo.
+                    </p>
+
+                    <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '2rem', borderRadius: '20px', marginBottom: '2rem', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                Tasa de Cambio ($1 = C$)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.0001"
+                                placeholder="36.6243"
+                                className="input-dark"
+                                style={{ fontSize: '1.25rem', textAlign: 'center', height: '50px', borderRadius: '12px' }}
+                                value={rate}
+                                onChange={e => setRate(e.target.value)}
+                            />
+                        </div>
+                        <div style={{ textAlign: 'left' }}>
+                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                Monto Inicial (C$)
+                            </label>
+                            <input
+                                type="number"
+                                placeholder="0.00"
+                                className="input-dark"
+                                style={{
+                                    fontSize: '1.75rem',
+                                    fontWeight: '800',
+                                    color: '#34d399',
+                                    textAlign: 'center',
+                                    height: '60px',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(52, 211, 153, 0.2)'
+                                }}
+                                value={amount}
+                                autoFocus
+                                onChange={e => setAmount(e.target.value)}
+                            />
+                        </div>
                     </div>
+
+                    {hasRole(['admin', 'cajero']) && (
+                        <button
+                            onClick={handleOpen}
+                            className="btn-action-premium"
+                            style={{
+                                width: '100%',
+                                justifyContent: 'center',
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '1.25rem',
+                                borderRadius: '16px',
+                                fontSize: '1.1rem',
+                                fontWeight: '800',
+                                boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)'
+                            }}
+                        >
+                            🔓 ABRIR TURNO {sessionType}
+                        </button>
+                    )}
                 </div>
-
-
-
-                {hasRole(['admin', 'cajero']) && (
-                    <button onClick={handleOpen} className="btn-dark-glow" style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(to right, #059669, #10b981)', color: 'white', border: 'none' }}>🔓 ABRIR TURNO</button>
-                )}
             </div>
 
             <CustomAlert isOpen={alertInfo.show} title={alertInfo.title} message={alertInfo.message} type={alertInfo.type} onClose={() => setAlertInfo({ ...alertInfo, show: false })} />
             {showSettings && <ReceiptSettingsModal onClose={() => setShowSettings(false)} />}
+
+            <style>{`
+                @keyframes pulse {
+                    0% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.05); opacity: 0.8; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+            `}</style>
         </div >
     );
 };
