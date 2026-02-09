@@ -98,7 +98,7 @@ db.getConnection()
             // 8. session_id in cash_movements
             const [cmSessId] = await conn.query("SHOW COLUMNS FROM cash_movements LIKE 'session_id'");
             if (cmSessId.length === 0) {
-                await conn.query("ALTER TABLE cash_movements ADD COLUMN session_id INT NOT NULL");
+                await conn.query("ALTER TABLE cash_movements ADD COLUMN session_id INT NULL");
                 log("🔄 Migration: Added 'session_id' to cash_movements");
             }
             // 9. unit_of_measure in products

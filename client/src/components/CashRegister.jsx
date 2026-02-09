@@ -219,31 +219,63 @@ const CashRegister = (props) => {
     if (session) {
         return (
             <div className="animate-slide-up" style={{ marginBottom: '2rem' }}>
-                {/* Premium Tab Selector */}
-                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', justifyContent: 'center' }}>
+                {/* High-End Session Selector Tabs */}
+                <div style={{
+                    display: 'flex',
+                    gap: '1rem',
+                    marginBottom: '2rem',
+                    justifyContent: 'center',
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    padding: '0.6rem',
+                    borderRadius: '20px',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    width: 'fit-content',
+                    margin: '0 auto 2rem auto'
+                }}>
                     <button
                         onClick={() => setSessionType('OFICINA')}
-                        className={`btn-tab-premium ${sessionType === 'OFICINA' ? 'active' : ''}`}
+                        className={`btn-session-tab ${sessionType === 'OFICINA' ? 'active office' : ''}`}
                         style={{
-                            background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(30, 41, 59, 0.6)',
-                            border: sessionType === 'OFICINA' ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                            boxShadow: sessionType === 'OFICINA' ? '0 8px 24px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(59, 130, 246, 0.5)' : 'none'
+                            padding: '0.8rem 1.5rem',
+                            borderRadius: '15px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            transition: 'all 0.3s ease',
+                            background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'transparent',
+                            color: sessionType === 'OFICINA' ? '#fff' : '#94a3b8',
+                            boxShadow: sessionType === 'OFICINA' ? '0 4px 15px rgba(59, 130, 246, 0.4)' : 'none'
                         }}
                     >
-                        <span style={{ fontSize: '1.5rem', marginRight: '0.5rem' }}>🏢</span>
-                        <span style={{ fontWeight: '700', letterSpacing: '0.5px' }}>Oficina</span>
+                        <span style={{ fontSize: '1.4rem' }}>🏢</span>
+                        <span>CAJA OFICINA</span>
                     </button>
                     <button
                         onClick={() => setSessionType('COBRADOR')}
-                        className={`btn-tab-premium ${sessionType === 'COBRADOR' ? 'active' : ''}`}
+                        className={`btn-session-tab ${sessionType === 'COBRADOR' ? 'active collectors' : ''}`}
                         style={{
-                            background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 'rgba(30, 41, 59, 0.6)',
-                            border: sessionType === 'COBRADOR' ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                            boxShadow: sessionType === 'COBRADOR' ? '0 8px 24px rgba(139, 92, 246, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.5)' : 'none'
+                            padding: '0.8rem 1.5rem',
+                            borderRadius: '15px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            transition: 'all 0.3s ease',
+                            background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' : 'transparent',
+                            color: sessionType === 'COBRADOR' ? '#fff' : '#94a3b8',
+                            boxShadow: sessionType === 'COBRADOR' ? '0 4px 15px rgba(139, 92, 246, 0.4)' : 'none'
                         }}
                     >
-                        <span style={{ fontSize: '1.5rem', marginRight: '0.5rem' }}>🛵</span>
-                        <span style={{ fontWeight: '700', letterSpacing: '0.5px' }}>Cobradores</span>
+                        <span style={{ fontSize: '1.4rem' }}>🛵</span>
+                        <span>CAJA COBRADORES</span>
                     </button>
                 </div>
 
@@ -490,6 +522,19 @@ const CashRegister = (props) => {
                         border-radius: 24px;
                         animation: slideInUp 0.4s ease-out;
                     }
+                    .btn-session-tab:hover {
+                        transform: translateY(-2px);
+                        filter: brightness(1.1);
+                    }
+                    .btn-session-tab:active {
+                        transform: translateY(0) scale(0.98);
+                    }
+                    .btn-session-tab.active.office {
+                        border: 1px solid rgba(59, 130, 246, 0.5);
+                    }
+                    .btn-session-tab.active.collectors {
+                        border: 1px solid rgba(139, 92, 246, 0.5);
+                    }
                     @keyframes slideInUp {
                         from {
                             opacity: 0;
@@ -731,31 +776,62 @@ const CashRegister = (props) => {
     // Closed Session State
     return (
         <div className="animate-slide-up" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '2rem', paddingTop: '2rem' }}>
-            {/* Premium Tab Selector - Unified with Dashboard */}
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+            {/* High-End Session Selector Tabs */}
+            <div style={{
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'center',
+                background: 'rgba(15, 23, 42, 0.6)',
+                padding: '0.6rem',
+                borderRadius: '20px',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                width: 'fit-content',
+                margin: '0 auto'
+            }}>
                 <button
                     onClick={() => setSessionType('OFICINA')}
-                    className={`btn-tab-premium ${sessionType === 'OFICINA' ? 'active' : ''}`}
+                    className={`btn-session-tab ${sessionType === 'OFICINA' ? 'active office' : ''}`}
                     style={{
-                        background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'rgba(30, 41, 59, 0.6)',
-                        border: sessionType === 'OFICINA' ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                        boxShadow: sessionType === 'OFICINA' ? '0 8px 24px rgba(59, 130, 246, 0.4)' : 'none'
+                        padding: '0.8rem 1.5rem',
+                        borderRadius: '15px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        transition: 'all 0.3s ease',
+                        background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'transparent',
+                        color: sessionType === 'OFICINA' ? '#fff' : '#94a3b8',
+                        boxShadow: sessionType === 'OFICINA' ? '0 4px 15px rgba(59, 130, 246, 0.4)' : 'none'
                     }}
                 >
-                    <span style={{ fontSize: '1.4rem', marginRight: '0.5rem' }}>🏢</span>
-                    <span style={{ fontWeight: '700' }}>Oficina</span>
+                    <span style={{ fontSize: '1.4rem' }}>🏢</span>
+                    <span>CAJA OFICINA</span>
                 </button>
                 <button
                     onClick={() => setSessionType('COBRADOR')}
-                    className={`btn-tab-premium ${sessionType === 'COBRADOR' ? 'active' : ''}`}
+                    className={`btn-session-tab ${sessionType === 'COBRADOR' ? 'active collectors' : ''}`}
                     style={{
-                        background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 'rgba(30, 41, 59, 0.6)',
-                        border: sessionType === 'COBRADOR' ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                        boxShadow: sessionType === 'COBRADOR' ? '0 8px 24px rgba(139, 92, 246, 0.4)' : 'none'
+                        padding: '0.8rem 1.5rem',
+                        borderRadius: '15px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        transition: 'all 0.3s ease',
+                        background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' : 'transparent',
+                        color: sessionType === 'COBRADOR' ? '#fff' : '#94a3b8',
+                        boxShadow: sessionType === 'COBRADOR' ? '0 4px 15px rgba(139, 92, 246, 0.4)' : 'none'
                     }}
                 >
-                    <span style={{ fontSize: '1.4rem', marginRight: '0.5rem' }}>🛵</span>
-                    <span style={{ fontWeight: '700' }}>Cobradores</span>
+                    <span style={{ fontSize: '1.4rem' }}>🛵</span>
+                    <span>CAJA COBRADORES</span>
                 </button>
             </div>
 
