@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../components/CustomAlert';
 import DailyReportModal from '../components/DailyReportModal';
+import * as XLSX from 'xlsx';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
 
@@ -131,6 +132,77 @@ const Reports = () => {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    const exportToExcelBI = () => {
+        try {
+            const wb = XLSX.utils.book_new();
+
+            // 1. Resumen General
+            const wsResumen = XLSX.utils.json_to_sheet([{
+                "Fecha Inicio": startDate,
+                "Fecha Fin": endDate,
+                "Total Clientes (Base)": cableStats?.total_clientes || 0,
+                "Clientes Al Día": cableStats?.al_dia || 0,
+                "Clientes Morosos": cableStats?.morosos?.count || 0,
+                "Deuda Morosos (NIO)": cableStats?.morosos?.deuda || 0,
+                "Clientes Suspendidos": cableStats?.suspendidos || 0,
+                "Ingresos Caja (NIO)": dailyClosing?.ingresos || 0,
+                "Egresos Caja (NIO)": dailyClosing?.egresos || 0,
+                "Balance Caja Neto (NIO)": dailyClosing?.balance_dia || 0,
+                "Averías Pendientes": cableStats?.averias_pendientes || 0,
+                "Averías Atendidas": cableStats?.averias_atendidas || 0,
+                "Contactos Pendientes": cableStats?.contactos_pendientes || 0,
+                "Contactos Atendidos": cableStats?.contactos_atendidos || 0,
+            }]);
+            XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen General");
+
+            // 2. Movimientos Operativos
+            const wsMovimientos = XLSX.utils.json_to_sheet([{
+                "Cambios de Nombre": movements?.CHANGE_NAME || 0,
+                "Traslados": movements?.CHANGE_ADDRESS || 0,
+                "Solicitudes de Baja": movements?.DISCONNECT_REQ || 0,
+                "Cortes por Mora": movements?.DISCONNECT_MORA || 0,
+            }]);
+            XLSX.utils.book_append_sheet(wb, wsMovimientos, "Movimientos Operativos");
+
+            // 3. Órdenes de Servicio
+            const ordersData = (orders?.byType || []).map(o => ({
+                "Tipo de Orden": o.type,
+                "Total Generadas": o.total
+            }));
+            const totalOrders = (orders?.byStatus || []).reduce((acc, curr) => acc + curr.total, 0);
+            ordersData.push({ "Tipo de Orden": "TOTAL ÓRDENES", "Total Generadas": totalOrders });
+            const wsOrders = XLSX.utils.json_to_sheet(ordersData);
+            XLSX.utils.book_append_sheet(wb, wsOrders, "Órdenes de Servicio");
+
+            // 4. Cierre de Caja por Usuario
+            const cashData = (dailyClosing?.por_usuario || []).map(u => ({
+                "Usuario": u.username,
+                "Total Cobrado (NIO)": u.total,
+                "Porcentaje del Ingreso Total": ((u.total / (dailyClosing?.ingresos || 1)) * 100).toFixed(2) + "%"
+            }));
+            const wsCash = XLSX.utils.json_to_sheet(cashData);
+            XLSX.utils.book_append_sheet(wb, wsCash, "Ingresos por Cajero");
+
+            // 5. Rendimiento de Cobradores
+            const collectorData = (collectorPerformance || []).map(c => ({
+                "Nombre Completo": c.full_name,
+                "Usuario": c.username,
+                "Total Cobrado (NIO)": c.total_cobrado,
+                "Total Recibos Emitidos": c.total_recibos,
+                "Promedio por Recibo (NIO)": c.promedio_recibo,
+                "Último Cobro Registrado": c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleString('es-NI') : 'Sin cobros'
+            }));
+            const wsCollectors = XLSX.utils.json_to_sheet(collectorData);
+            XLSX.utils.book_append_sheet(wb, wsCollectors, "Rendimiento Cobradores");
+
+            // Guardar archivo Excel
+            XLSX.writeFile(wb, `Inteligencia_Negocios_Americable_${startDate}_al_${endDate}.xlsx`);
+        } catch (error) {
+            console.error("Error al exportar a Excel:", error);
+            alert("Hubo un error al generar el archivo Excel.");
+        }
+    };
+
     return (
         <PageWrapper>
             <Header>
@@ -186,6 +258,9 @@ const Reports = () => {
                     </button>
                     <button onClick={() => setRefresh(prev => prev + 1)} style={{ background: '#3b82f6', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <FaSync /> Actualizar
+                    </button>
+                    <button onClick={exportToExcelBI} style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)' }}>
+                        <FaChartBar /> Exportar BI (Excel)
                     </button>
                 </div>
             </Header>
