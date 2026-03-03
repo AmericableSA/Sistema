@@ -517,11 +517,45 @@ const Reports = () => {
                     <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos</Label>
                     <Value>{formatCurrency(dailyClosing.ingresos)}</Value>
                     <div style={{ color: '#d1fae5', fontSize: '0.9rem' }}>Cobrado en transacciones</div>
+                    <ActionButton
+                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+                        onClick={() => {
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}`)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `Bitacora_Detallada_${startDate}.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}>
+                        📥 Exportar Detalle
+                    </ActionButton>
                 </Card>
                 <Card $highlight="linear-gradient(135deg, #dc2626 0%, #ef4444 100%)">
                     <Label style={{ color: 'white' }}><FaExchangeAlt /> Gastos</Label>
                     <Value>{formatCurrency(dailyClosing.egresos)}</Value>
                     <div style={{ color: '#fecaca' }}>Pagos y Salidas</div>
+                    <ActionButton
+                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+                        onClick={() => {
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}`)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `Bitacora_Gastos_${startDate}.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}>
+                        📥 Exportar Detalle
+                    </ActionButton>
                 </Card>
                 <Card>
                     <Label><FaMoneyBillWave /> Balance Neto</Label>
@@ -529,6 +563,24 @@ const Reports = () => {
                         {formatCurrency(dailyClosing.balance_dia)}
                     </Value>
                     <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Diferencia (Caja Real)</div>
+                    <ActionButton
+                        $variant="outline-primary"
+                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
+                        onClick={() => {
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}`)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `Bitacora_Balance_${startDate}.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}>
+                        📥 Exportar Detalle
+                    </ActionButton>
                 </Card>
             </Grid>
 
@@ -680,6 +732,24 @@ const Reports = () => {
                     <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>
                     <Value>{orders.byStatus.reduce((acc, curr) => acc + curr.total, 0)}</Value>
                     <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Generadas este mes</div>
+                    <ActionButton
+                        $variant="outline-primary"
+                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
+                        onClick={() => {
+                            fetch(`/api/reports/orders/export?startDate=${startDate}&endDate=${endDate}`)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `Todas_Ordenes_${startDate}.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                });
+                        }}>
+                        📥 Exportar Excel
+                    </ActionButton>
                 </Card>
 
                 {/* Specific Types (Guaranteed Display) */}
@@ -689,16 +759,36 @@ const Reports = () => {
 
                     let label = type;
                     let color = '#94a3b8';
+                    let variant = 'outline-primary';
+                    let fileName = type;
 
-                    if (type === 'INSTALLATION') { label = 'Instalaciones'; color = '#10b981'; }
-                    if (type === 'RECONNECTION') { label = 'Reconexiones'; color = '#f59e0b'; }
-                    if (type === 'REPAIR') { label = 'Reparaciones'; color = '#8b5cf6'; }
-                    if (type === 'DISCONNECTION') { label = 'Desconexiones'; color = '#ef4444'; }
+                    if (type === 'INSTALLATION') { label = 'Instalaciones'; color = '#10b981'; variant = 'outline-success'; fileName = 'Instalaciones'; }
+                    if (type === 'RECONNECTION') { label = 'Reconexiones'; color = '#f59e0b'; variant = 'outline-warning'; fileName = 'Reconexiones'; }
+                    if (type === 'REPAIR') { label = 'Reparaciones'; color = '#8b5cf6'; variant = 'outline-purple'; fileName = 'Reparaciones'; }
+                    if (type === 'DISCONNECTION') { label = 'Desconexiones'; color = '#ef4444'; variant = 'outline-danger'; fileName = 'Desconexiones'; }
 
                     return (
                         <Card key={i}>
                             <Label style={{ color }}>{label}</Label>
                             <Value style={{ fontSize: '1.5rem' }}>{count}</Value>
+                            <ActionButton
+                                $variant={variant}
+                                style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
+                                onClick={() => {
+                                    fetch(`/api/reports/orders/export?startDate=${startDate}&endDate=${endDate}&type=${type}`)
+                                        .then(res => res.blob())
+                                        .then(blob => {
+                                            const url = window.URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = `${fileName}_${startDate}.xlsx`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            a.remove();
+                                        });
+                                }}>
+                                📥 Exportar Excel
+                            </ActionButton>
                         </Card>
                     );
                 })}

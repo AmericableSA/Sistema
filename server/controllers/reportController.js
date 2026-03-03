@@ -705,7 +705,7 @@ exports.getServiceOrdersReport = async (req, res) => {
 
 exports.exportServiceOrdersXLS = async (req, res) => {
     try {
-        const { startDate, endDate, status } = req.query;
+        const { startDate, endDate, status, type } = req.query;
         const sDate = startDate || new Date().toISOString().split('T')[0];
         const eDate = endDate || sDate;
 
@@ -714,19 +714,31 @@ exports.exportServiceOrdersXLS = async (req, res) => {
 
         let query = `
             SELECT so.id, so.created_at, so.type, so.status, so.technician_notes as description,
-                   c.full_name as client_name, c.contract_number, c.address_street
+                   c.full_name as client_name, c.contract_number, c.address_street,
+                   c.phone_primary, n.name as neighborhood_name, z.name as zone_name,
+                   u.full_name as technician_name
             FROM service_orders so
             LEFT JOIN clients c ON so.client_id = c.id
+            LEFT JOIN neighborhoods n ON c.neighborhood_id = n.id
+            LEFT JOIN zones z ON c.zone_id = z.id
+            LEFT JOIN users u ON so.assigned_tech_id = u.id
         `;
+        let conditions = [];
         let params = [];
 
         if (status === 'PENDING') {
-            query += ` WHERE so.status = 'PENDING'`;
+            conditions.push(`so.status = 'PENDING'`);
         } else {
-            query += ` WHERE DATE(so.created_at) BETWEEN ? AND ?`;
+            conditions.push(`DATE(so.created_at) BETWEEN ? AND ?`);
             params.push(sDate, eDate);
         }
 
+        if (type) {
+            conditions.push(`so.type = ?`);
+            params.push(type);
+        }
+
+        query += ` WHERE ` + conditions.join(' AND ');
         query += ` ORDER BY so.created_at DESC`;
 
         const [rows] = await pool.query(query, params);
@@ -734,7 +746,8 @@ exports.exportServiceOrdersXLS = async (req, res) => {
 
         const ExcelJS = require('exceljs');
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Trámites');
+        const sheetName = type ? type : 'Trámites';
+        const worksheet = workbook.addWorksheet(sheetName);
 
         worksheet.columns = [
             { header: 'ID', key: 'id', width: 10 },
@@ -742,7 +755,11 @@ exports.exportServiceOrdersXLS = async (req, res) => {
             { header: 'Tipo', key: 'type', width: 20 },
             { header: 'Cliente', key: 'client_name', width: 30 },
             { header: 'Contrato', key: 'contract_number', width: 15 },
+            { header: 'Teléfono', key: 'phone_primary', width: 15 },
             { header: 'Dirección', key: 'address_street', width: 30 },
+            { header: 'Barrio', key: 'neighborhood_name', width: 20 },
+            { header: 'Zona', key: 'zone_name', width: 15 },
+            { header: 'Técnico', key: 'technician_name', width: 20 },
             { header: 'Estado', key: 'status', width: 15 },
             { header: 'Detalles / Notas', key: 'description', width: 40 }
         ];
@@ -752,12 +769,17 @@ exports.exportServiceOrdersXLS = async (req, res) => {
         rows.forEach(r => {
             worksheet.addRow({
                 ...r,
+                neighborhood_name: r.neighborhood_name || '',
+                zone_name: r.zone_name || '',
+                technician_name: r.technician_name || '',
+                phone_primary: r.phone_primary || '',
                 created_at: new Date(r.created_at).toLocaleString()
             });
         });
 
+        const fileName = type ? `${type}_${sDate}` : `Tramites_${sDate}`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="Tramites_${sDate}.xlsx"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}.xlsx"`);
 
         await workbook.xlsx.write(res);
         res.end();
