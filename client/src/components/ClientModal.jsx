@@ -24,6 +24,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
 
     const [zones, setZones] = useState([]);
     const [cities, setCities] = useState([]);
+    const [neighborhoods, setNeighborhoods] = useState([]);
     const [collectors, setCollectors] = useState([]);
     const [showZoneModal, setShowZoneModal] = useState(false);
 
@@ -74,9 +75,25 @@ const ClientModal = ({ client, onClose, onSave }) => {
         }
     }, [client, zones]);
 
+    // Fetch neighborhoods when city_id changes
+    useEffect(() => {
+        if (formData.city_id) {
+            fetch(`/api/cities/${formData.city_id}/neighborhoods`)
+                .then(res => res.json())
+                .then(data => setNeighborhoods(data))
+                .catch(e => console.error(e));
+        } else {
+            setNeighborhoods([]);
+        }
+    }, [formData.city_id]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        if (name === 'city_id') {
+            setFormData({ ...formData, city_id: value, neighborhood_id: '' });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
     };
 
     // PHONE MASKING LOGIC (0000-0000)
@@ -289,12 +306,19 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="label-dark">Colector Asignado</label>
-                                    <select className="input-dark" name="preferred_collector_id" value={formData.preferred_collector_id} onChange={handleChange}>
-                                        <option value="">Sin asignar</option>
-                                        {collectors.map(u => <option key={u.id} value={u.id}>{u.full_name || u.username}</option>)}
+                                    <label className="label-dark">Barrio</label>
+                                    <select className="input-dark" name="neighborhood_id" value={formData.neighborhood_id || ''} onChange={handleChange}>
+                                        <option value="">Seleccione barrio...</option>
+                                        {neighborhoods.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="label-dark">Colector Asignado</label>
+                                <select className="input-dark" name="preferred_collector_id" value={formData.preferred_collector_id} onChange={handleChange}>
+                                    <option value="">Sin asignar</option>
+                                    {collectors.map(u => <option key={u.id} value={u.id}>{u.full_name || u.username}</option>)}
+                                </select>
                             </div>
 
                             {/* Zone Selector */}

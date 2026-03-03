@@ -487,7 +487,31 @@ const Reports = () => {
             </Grid>
 
             {/* Existing Sections Below */}
-            <SectionTitle>Cierre de Caja ({startDate} - {endDate})</SectionTitle>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <SectionTitle style={{ marginBottom: 0 }}>Cierre de Caja ({startDate} - {endDate})</SectionTitle>
+                <ActionButton
+                    $variant="outline-primary"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                    onClick={() => {
+                        try {
+                            const wsCierre = XLSX.utils.json_to_sheet([{
+                                "Fecha Inicio": startDate,
+                                "Fecha Fin": endDate,
+                                "Ingresos (NIO)": dailyClosing?.ingresos || 0,
+                                "Egresos (NIO)": dailyClosing?.egresos || 0,
+                                "Balance Neto (NIO)": dailyClosing?.balance_dia || 0,
+                            }]);
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, wsCierre, "Cierre de Caja");
+                            XLSX.writeFile(wb, `Cierre_Caja_${startDate}_al_${endDate}.xlsx`);
+                        } catch (error) {
+                            console.error("Error al exportar a Excel:", error);
+                            alert("Hubo un error al generar el archivo Excel.");
+                        }
+                    }}>
+                    📥 Exportar Cierre
+                </ActionButton>
+            </div>
             <Grid>
                 <Card $highlight="linear-gradient(135deg, #059669 0%, #10b981 100%)">
                     <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos</Label>
@@ -619,6 +643,38 @@ const Reports = () => {
 
 
 
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <SectionTitle style={{ marginBottom: 0 }}>Instalaciones y Servicio Técnico ({startDate} - {endDate})</SectionTitle>
+                <ActionButton
+                    $variant="outline-primary"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                    onClick={() => {
+                        try {
+                            const typesData = ['INSTALLATION', 'RECONNECTION', 'REPAIR', 'DISCONNECTION'].map(type => {
+                                const found = orders.byType.find(t => t.type === type);
+                                let label = type;
+                                if (type === 'INSTALLATION') label = 'Instalaciones';
+                                if (type === 'RECONNECTION') label = 'Reconexiones';
+                                if (type === 'REPAIR') label = 'Reparaciones';
+                                if (type === 'DISCONNECTION') label = 'Desconexiones';
+                                return { "Tipo": label, "Total": found ? found.total : 0 };
+                            });
+                            typesData.push({
+                                "Tipo": "TOTAL ÓRDENES",
+                                "Total": orders.byStatus.reduce((acc, curr) => acc + curr.total, 0)
+                            });
+                            const wsTypes = XLSX.utils.json_to_sheet(typesData);
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, wsTypes, "Instalaciones y Servicio");
+                            XLSX.writeFile(wb, `Instalaciones_Servicio_${startDate}_al_${endDate}.xlsx`);
+                        } catch (error) {
+                            console.error("Error al exportar a Excel:", error);
+                            alert("Hubo un error al generar el archivo Excel.");
+                        }
+                    }}>
+                    📥 Exportar Instalaciones
+                </ActionButton>
+            </div>
             <Grid>
                 <Card>
                     <Label style={{ color: '#3b82f6' }}>🛠️ Total Órdenes</Label>

@@ -52,3 +52,15 @@ exports.deleteCity = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// Get neighborhoods by city
+exports.getNeighborhoodsByCity = async (req, res) => {
+    try {
+        const { cityId } = req.params;
+        const [rows] = await db.query('SELECT * FROM neighborhoods WHERE city_id = ? ORDER BY name ASC', [cityId]);
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};

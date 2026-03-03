@@ -177,18 +177,30 @@ exports.updateProduct = async (req, res) => {
     }
 };
 
-// Delete a product
+// Delete a product (with full cleanup of related records)
 exports.deleteProduct = async (req, res) => {
     const { id } = req.params;
+    const conn = await db.getConnection();
     try {
-        await db.query('DELETE FROM products WHERE id = ?', [id]);
-        res.json({ message: 'Product deleted successfully' });
+        await conn.beginTransaction();
+
+        // Clean up all FK references before deleting the product
+        await conn.query('DELETE FROM inventory_moves WHERE product_id = ?', [id]);
+        await conn.query('DELETE FROM inventory_transactions WHERE product_id = ?', [id]);
+        await conn.query('DELETE FROM bundle_items WHERE product_id = ? OR bundle_id = ?', [id, id]);
+        await conn.query('DELETE FROM service_plan_items WHERE product_id = ?', [id]);
+
+        // Now safe to delete the product itself
+        await conn.query('DELETE FROM products WHERE id = ?', [id]);
+
+        await conn.commit();
+        conn.release();
+        res.json({ message: 'Producto eliminado exitosamente' });
     } catch (err) {
+        await conn.rollback();
+        conn.release();
         console.error(err);
-        if (err.code === 'ER_ROW_IS_REFERENCED_2') {
-            return res.status(400).json({ msg: 'No se puede eliminar: El producto tiene movimientos o ventas asociadas.' });
-        }
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Error al eliminar producto.' });
     }
 };
 
