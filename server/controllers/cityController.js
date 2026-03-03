@@ -64,3 +64,47 @@ exports.getNeighborhoodsByCity = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// Create neighborhood
+exports.createNeighborhood = async (req, res) => {
+    try {
+        const { cityId } = req.params;
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ message: 'El nombre es obligatorio' });
+        await db.query('INSERT INTO neighborhoods (name, city_id) VALUES (?, ?)', [name, cityId]);
+        res.json({ message: 'Barrio creado exitosamente' });
+    } catch (err) {
+        console.error(err);
+        if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'Este barrio ya existe en esta ciudad.' });
+        res.status(500).send('Server Error');
+    }
+};
+
+// Update neighborhood
+exports.updateNeighborhood = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ message: 'El nombre es obligatorio' });
+        await db.query('UPDATE neighborhoods SET name = ? WHERE id = ?', [name, id]);
+        res.json({ message: 'Barrio actualizado' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+};
+
+// Delete neighborhood
+exports.deleteNeighborhood = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.query('DELETE FROM neighborhoods WHERE id = ?', [id]);
+        res.json({ message: 'Barrio eliminado' });
+    } catch (err) {
+        console.error(err);
+        if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+            return res.status(400).json({ message: 'No se puede eliminar: Este barrio está en uso por clientes.' });
+        }
+        res.status(500).send('Server Error');
+    }
+};

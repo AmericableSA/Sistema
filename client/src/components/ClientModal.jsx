@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // @ts-ignore
 import ZoneModal from './ZoneModal';
+import NeighborhoodModal from './NeighborhoodModal';
 
 const ClientModal = ({ client, onClose, onSave }) => {
     const [formData, setFormData] = useState({
@@ -27,6 +28,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
     const [neighborhoods, setNeighborhoods] = useState([]);
     const [collectors, setCollectors] = useState([]);
     const [showZoneModal, setShowZoneModal] = useState(false);
+    const [showNeighborhoodModal, setShowNeighborhoodModal] = useState(false);
 
     useEffect(() => {
         fetchCatalogs();
@@ -306,7 +308,12 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="label-dark">Barrio</label>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                        <label className="label-dark" style={{ marginBottom: 0 }}>Barrio</label>
+                                        <button type="button" onClick={() => setShowNeighborhoodModal(true)} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                                            + Gestionar Barrios
+                                        </button>
+                                    </div>
                                     <select className="input-dark" name="neighborhood_id" value={formData.neighborhood_id || ''} onChange={handleChange}>
                                         <option value="">Seleccione barrio...</option>
                                         {neighborhoods.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
@@ -470,6 +477,22 @@ const ClientModal = ({ client, onClose, onSave }) => {
 
             {showZoneModal && (
                 <ZoneModal onClose={() => { setShowZoneModal(false); fetchZones(); }} />
+            )}
+
+            {showNeighborhoodModal && (
+                <NeighborhoodModal
+                    cities={cities}
+                    onClose={() => {
+                        setShowNeighborhoodModal(false);
+                        // Re-fetch neighborhoods for the currently selected city
+                        if (formData.city_id) {
+                            fetch(`/api/cities/${formData.city_id}/neighborhoods`)
+                                .then(res => res.json())
+                                .then(data => setNeighborhoods(data))
+                                .catch(e => console.error(e));
+                        }
+                    }}
+                />
             )}
 
             <style>{`
