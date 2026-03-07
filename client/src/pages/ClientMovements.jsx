@@ -567,6 +567,12 @@ const ClientMovements = () => {
                                     <span style={{ fontWeight: 'bold', color: '#fbbf24' }}>Reportar Avería</span>
                                     <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Crear orden de reparación</span>
                                 </button>
+
+                                <button onClick={() => setSelectedAction('RECONNECT')} className="btn-dark-glow" style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                    <span style={{ fontSize: '2rem' }}>🔌</span>
+                                    <span style={{ fontWeight: 'bold', color: '#34d399' }}>Reconexión</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Restablecer servicio desconectado</span>
+                                </button>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmitMovement} className="animate-fade-in">
@@ -580,6 +586,7 @@ const ClientMovements = () => {
                                     {selectedAction === 'DISCONNECT_REQ' && 'Solicitud de Baja'}
                                     {selectedAction === 'DISCONNECT_MORA' && 'Corte por Mora'}
                                     {selectedAction === 'REPAIR' && 'Reporte de Avería'}
+                                    {selectedAction === 'RECONNECT' && 'Reconexión de Servicio'}
                                 </h3>
 
                                 <div style={{ display: 'grid', gap: '1.5rem' }}>
