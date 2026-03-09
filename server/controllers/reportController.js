@@ -639,6 +639,9 @@ exports.getServiceOrdersReport = async (req, res) => {
                     logParams.push(sDate, eDate);
                 }
 
+                // Only fetch specific Tramite actions
+                logConditions.push(`l.action IN ('CHANGE_NAME', 'CHANGE_ADDRESS', 'DISCONNECT_REQ', 'DISCONNECT_MORA', 'RECONNECT', 'REPAIR')`);
+
                 let queryLog = `
                     SELECT l.id, l.timestamp as created_at, l.action, l.details,
                            c.full_name as client_name, c.id as client_id,
@@ -661,9 +664,8 @@ exports.getServiceOrdersReport = async (req, res) => {
                     if (type === 'CHANGE_ADDRESS') type = 'TRASLADO';
                     if (type === 'DISCONNECT_REQ') type = 'SOLICITUD BAJA';
                     if (type === 'DISCONNECT_MORA') type = 'CORTE MORA';
-                    if (type === 'UPDATE') type = 'ACTUALIZACION DATOS';
-                    if (type === 'CREATE') type = 'NUEVO CLIENTE';
-                    if (type === 'SERVICE_COMPLETED') return null; // Skip, already covered by Service Orders
+                    if (type === 'RECONNECT') type = 'RECONEXIÓN';
+                    if (type === 'REPAIR') type = 'REPORTE AVERÍA';
 
                     return {
                         id: `LOG-${l.id}`,
