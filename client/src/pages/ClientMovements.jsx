@@ -38,7 +38,10 @@ const ClientMovements = () => {
     // Daily Orders State
     const [dailyOrders, setDailyOrders] = useState([]);
     const [loadingDaily, setLoadingDaily] = useState(false);
-    const [dailyDate, setDailyDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Optional Date Filters
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
     // History Modal State
     const [showHistory, setShowHistory] = useState(false);
@@ -231,10 +234,17 @@ const ClientMovements = () => {
         setLoadingDaily(true);
         try {
             let url = `/api/reports/orders?list=true`;
+
             if (viewMode === 'PENDING') {
                 url += '&status=PENDING';
+            } else if (viewMode === 'COMPLETED') {
+                url += '&status=COMPLETED';
             } else {
-                url += `&startDate=${dailyDate}&endDate=${dailyDate}&status=ALL`;
+                url += '&status=ALL';
+            }
+
+            if (startDate && endDate) {
+                url += `&startDate=${startDate}&endDate=${endDate}`;
             }
 
             const res = await fetch(url);
@@ -253,8 +263,21 @@ const ClientMovements = () => {
     };
 
     useEffect(() => {
-        if (viewMode === 'LIST' || viewMode === 'PENDING') fetchDailyOrders();
-    }, [viewMode, dailyDate]);
+        if (viewMode === 'LIST' || viewMode === 'PENDING' || viewMode === 'COMPLETED') fetchDailyOrders();
+    }, [viewMode, startDate, endDate]);
+
+    // Handle Tab Change
+    const handleTabChange = (mode) => {
+        setViewMode(mode);
+        if (mode === 'LIST') {
+            const today = new Date().toISOString().split('T')[0];
+            setStartDate(today);
+            setEndDate(today);
+        } else if (mode === 'PENDING' || mode === 'COMPLETED') {
+            setStartDate('');
+            setEndDate('');
+        }
+    };
     // Create Repair Order
     const handleCreateRepair = async () => {
         if (!selectedClient) return;
@@ -310,41 +333,70 @@ const ClientMovements = () => {
                         )}
                     </button>
                     <button
-                        onClick={() => setViewMode('SEARCH')}
+                        onClick={() => handleTabChange('SEARCH')}
                         style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: viewMode === 'SEARCH' ? '#3b82f6' : 'transparent', color: viewMode === 'SEARCH' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
                     >
                         🔍 Nuevo Trámite
                     </button>
                     <button
-                        onClick={() => setViewMode('LIST')}
+                        onClick={() => handleTabChange('LIST')}
                         style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: viewMode === 'LIST' ? '#3b82f6' : 'transparent', color: viewMode === 'LIST' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
                     >
-                        📋 Trámites del Día
+                        📋 Trámites del Día (Todos)
                     </button>
                     <button
-                        onClick={() => setViewMode('PENDING')}
+                        onClick={() => handleTabChange('PENDING')}
                         style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: viewMode === 'PENDING' ? '#3b82f6' : 'transparent', color: viewMode === 'PENDING' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
                     >
-                        ⏳ Pendientes
+                        ⏳ Pendientes / En Proceso
+                    </button>
+                    <button
+                        onClick={() => handleTabChange('COMPLETED')}
+                        style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', border: 'none', background: viewMode === 'COMPLETED' ? '#3b82f6' : 'transparent', color: viewMode === 'COMPLETED' ? 'white' : '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                        ✅ Finalizados
                     </button>
                 </div>
             </div>
 
-            {/* VIEW: DAILY LIST */}
-            {viewMode === 'LIST' && (
+            {/* UNIFIED LIST VIEW (TODOS, PENDIENTES, FINALIZADOS) */}
+            {(viewMode === 'LIST' || viewMode === 'PENDING' || viewMode === 'COMPLETED') && (
                 <div className="animate-fade-in">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <h3 style={{ color: 'white', margin: 0 }}>Trámites del Día</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                        <h3 style={{ color: 'white', margin: 0 }}>
+                            {viewMode === 'LIST' && 'Trámites del Día (Todos)'}
+                            {viewMode === 'PENDING' && 'Trámites Pendientes y En Proceso'}
+                            {viewMode === 'COMPLETED' && 'Trámites Finalizados'}
+                        </h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <label style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Desde:</label>
                             <input
                                 type="date"
                                 className="input-dark"
-                                value={dailyDate}
-                                onChange={(e) => setDailyDate(e.target.value)}
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
                                 style={{ padding: '0.4rem', fontSize: '0.9rem' }}
                             />
+                            <label style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Hasta:</label>
+                            <input
+                                type="date"
+                                className="input-dark"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                            />
+                            {(startDate || endDate) && (
+                                <button
+                                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                                    className="btn-secondary"
+                                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid #475569' }}
+                                    title="Limpiar Fechas"
+                                >
+                                    ❌ Limpiar
+                                </button>
+                            )}
                             <button
-                                onClick={() => window.open(`/api/reports/orders/export?startDate=${dailyDate}&endDate=${dailyDate}`, '_blank')}
+                                onClick={() => window.open(`/api/reports/orders/export?startDate=${startDate}&endDate=${endDate}&status=${viewMode}`, '_blank')}
                                 className="btn-secondary"
                                 style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
                             >
@@ -364,11 +416,12 @@ const ClientMovements = () => {
                                     <th style={{ padding: '1rem' }}>Cliente</th>
                                     <th style={{ padding: '1rem' }}>Estado</th>
                                     <th style={{ padding: '1rem' }}>Detalle</th>
+                                    <th style={{ padding: '1rem' }}>Acción</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {loadingDaily && <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</td></tr>}
-                                {!loadingDaily && dailyOrders.length === 0 && <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center' }}>No hay registros.</td></tr>}
+                                {loadingDaily && <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</td></tr>}
+                                {!loadingDaily && dailyOrders.length === 0 && <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center' }}>No hay registros.</td></tr>}
 
                                 {!loadingDaily && dailyOrders.map(order => (
                                     <tr key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -379,81 +432,39 @@ const ClientMovements = () => {
                                         <td style={{ padding: '1rem' }}>
                                             <span style={{
                                                 padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold',
-                                                background: order.status === 'COMPLETED' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                                color: order.status === 'COMPLETED' ? '#34d399' : '#fbbf24'
+                                                background: (order.status === 'COMPLETED' || order.status === 'FINALIZADO' || order.status === 'ATENDIDO') ? 'rgba(16, 185, 129, 0.1)' :
+                                                    (order.status === 'PENDING' || order.status === 'PENDIENTE') ? 'rgba(245, 158, 11, 0.1)' :
+                                                        (order.status === 'IN_PROGRESS' || order.status === 'EN PROCESO') ? 'rgba(59, 130, 246, 0.1)' : 'rgba(148, 163, 184, 0.1)',
+                                                color: (order.status === 'COMPLETED' || order.status === 'FINALIZADO' || order.status === 'ATENDIDO') ? '#34d399' :
+                                                    (order.status === 'PENDING' || order.status === 'PENDIENTE') ? '#fbbf24' :
+                                                        (order.status === 'IN_PROGRESS' || order.status === 'EN PROCESO') ? '#60a5fa' : '#cbd5e1'
                                             }}>
                                                 {order.status || 'REGISTRADO'}
                                             </span>
                                         </td>
                                         <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>{order.description || order.details || '-'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* VIEW: PENDING LIST */}
-            {viewMode === 'PENDING' && (
-                <div className="animate-fade-in">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <h3 style={{ color: 'white', margin: 0 }}>Trámites Pendientes (Solicitados en Caja)</h3>
-                        <button onClick={fetchDailyOrders} className="btn-secondary" style={{ fontSize: '0.8rem' }}>🔄 Actualizar</button>
-                    </div>
-
-                    <div className="glass-card" style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '1px solid #334155', textAlign: 'left', color: '#94a3b8' }}>
-                                    <th style={{ padding: '1rem' }}>#</th>
-                                    <th style={{ padding: '1rem' }}>Fecha</th>
-                                    <th style={{ padding: '1rem' }}>Tipo</th>
-                                    <th style={{ padding: '1rem' }}>Cliente</th>
-                                    <th style={{ padding: '1rem' }}>Estado</th>
-                                    <th style={{ padding: '1rem' }}>Detalle / Motivo</th>
-                                    <th style={{ padding: '1rem' }}>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loadingDaily && <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</td></tr>}
-                                {!loadingDaily && dailyOrders.filter(o => o.status === 'PENDING').length === 0 && <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center' }}>No hay trámites pendientes.</td></tr>}
-
-                                {!loadingDaily && dailyOrders.filter(o => o.status === 'PENDING').map(order => (
-                                    <tr key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <td style={{ padding: '1rem' }}>{order.id}</td>
-                                        <td style={{ padding: '1rem' }}>{new Date(order.created_at).toLocaleDateString()}</td>
-                                        <td style={{ padding: '1rem', fontWeight: 'bold' }}>{order.type || order.action}</td>
-                                        <td style={{ padding: '1rem' }}>{order.client_name || 'N/A'}</td>
                                         <td style={{ padding: '1rem' }}>
-                                            <span style={{
-                                                padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold',
-                                                background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24'
-                                            }}>
-                                                PENDIENTE
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '300px' }}>
-                                            {order.description || order.details || 'Sin detalles'}
-                                        </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <button
-                                                onClick={() => {
-                                                    const clientToManage = {
-                                                        id: order.client_id,
-                                                        full_name: order.client_name,
-                                                        status: order.client_status || 'active', // Fallback
-                                                        address_street: order.address_street || '',
-                                                        contract_number: order.contract_number || ''
-                                                    };
-                                                    handleSelectClient(clientToManage);
-                                                    setViewMode('SEARCH'); // Switch to Management View
-                                                }}
-                                                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#60a5fa', fontSize: '1.2rem' }}
-                                                title="Gestionar Cliente"
-                                            >
-                                                ➡️
-                                            </button>
+                                            {order.client_id ? (
+                                                <button
+                                                    onClick={() => {
+                                                        const clientToManage = {
+                                                            id: order.client_id,
+                                                            full_name: order.client_name,
+                                                            status: order.client_status || 'active', // Fallback
+                                                            address_street: order.address_street || '',
+                                                            contract_number: order.contract_number || ''
+                                                        };
+                                                        handleSelectClient(clientToManage);
+                                                        setViewMode('SEARCH'); // Switch to Management View
+                                                    }}
+                                                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#60a5fa', fontSize: '1.2rem' }}
+                                                    title="Gestionar Cliente"
+                                                >
+                                                    ➡️
+                                                </button>
+                                            ) : (
+                                                <span style={{ color: '#64748b', fontSize: '0.9rem' }}>N/A</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

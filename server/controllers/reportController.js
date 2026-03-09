@@ -553,9 +553,13 @@ exports.getServiceOrdersReport = async (req, res) => {
 
         // IF LIST IS REQUESTED (For ClientMovements View)
         if (list) {
-            const sDate = startDate || new Date().toISOString().split('T')[0];
-            const eDate = endDate || sDate;
             let params = [];
+            let dateCondition = '';
+
+            if (startDate && endDate) {
+                dateCondition = ` DATE(so.created_at) BETWEEN ? AND ? `;
+                params.push(sDate, eDate);
+            }
 
             // 1. Fetch Service Orders
             let querySO = `
@@ -566,51 +570,89 @@ exports.getServiceOrdersReport = async (req, res) => {
                 LEFT JOIN clients c ON so.client_id = c.id
             `;
 
+            let conditionsSO = [];
+
             if (status === 'PENDING') {
-                querySO += ` WHERE so.status = 'PENDING'`;
-            } else {
-                querySO += ` WHERE DATE(so.created_at) BETWEEN ? AND ?`;
-                params.push(sDate, eDate);
+                conditionsSO.push(`so.status IN ('PENDING', 'IN_PROGRESS')`);
+            } else if (status === 'COMPLETED') {
+                conditionsSO.push(`so.status IN ('COMPLETED', 'FINALIZADO')`);
             }
-            querySO += ` ORDER BY so.created_at DESC LIMIT 100`;
+
+            if (dateCondition) {
+                conditionsSO.push(dateCondition);
+            }
+
+            if (conditionsSO.length > 0) {
+                querySO += ` WHERE ` + conditionsSO.join(' AND ');
+            }
+
+            querySO += ` ORDER BY so.created_at DESC LIMIT 200`;
 
             const [soRows] = await pool.query(querySO, params);
 
-            // 2. Fetch Web Averias (ONLY if not filtering by PENDING status)
-            // We want to see "Revisado" or "Atendido" averias in the Daily View
+            // 2. Fetch Web Averias
             let averiaRows = [];
-            if (status !== 'PENDING') {
-                const [avRows] = await pool.query(`
-                    SELECT id, fecha_reporte as created_at, 'REPORTE WEB' as type, estado as status, detalles_averia as description,
-                           nombre_completo as client_name, NULL as client_id,
-                           zona_barrio as address_street, NULL as contract_number, 'N/A' as client_status
-                    FROM averias
-                    WHERE estado IN ('Revisado', 'Atendido')
-                    AND DATE(fecha_reporte) BETWEEN ? AND ?
-                    ORDER BY fecha_reporte DESC
-                `, [sDate, eDate]);
 
-                // Format Averias to match Service Order structure
-                averiaRows = avRows.map(a => ({
-                    ...a,
-                    id: `WEB-${a.id}`, // Avoid ID collision in UI keys
-                    status: a.status === 'Revisado' ? 'FINALIZADO' : 'COMPLETED'
-                }));
+            let avConditions = [];
+            let avParams = [];
+            if (status === 'PENDING') {
+                avConditions.push(`estado = 'Pendiente'`);
+            } else if (status === 'COMPLETED') {
+                avConditions.push(`estado IN ('Revisado', 'Atendido')`);
+            } else {
+                // ALL -> no status filter
             }
+
+            if (startDate && endDate) {
+                avConditions.push(`DATE(fecha_reporte) BETWEEN ? AND ?`);
+                avParams.push(sDate, eDate);
+            }
+
+            let queryAv = `
+                SELECT id, fecha_reporte as created_at, 'REPORTE WEB' as type, estado as status, detalles_averia as description,
+                       nombre_completo as client_name, NULL as client_id,
+                       zona_barrio as address_street, NULL as contract_number, 'N/A' as client_status
+                FROM averias
+            `;
+            if (avConditions.length > 0) {
+                queryAv += ` WHERE ` + avConditions.join(' AND ');
+            }
+            const [avRows] = await pool.query(queryAv, avParams);
+
+            // Format Averias to match Service Order structure
+            averiaRows = avRows.map(a => ({
+                ...a,
+                id: `WEB-${a.id}`, // Avoid ID collision in UI keys
+                status: a.status === 'Revisado' ? 'FINALIZADO' : 'COMPLETED'
+            }));
 
             // 3. Fetch Client Logs (Trámites: Changes, Disconnects, etc.)
             let logRows = [];
-            // Only fetch logs if not filtering by PENDING status specifically (logs are usually history)
-            if (status !== 'PENDING') {
-                const [lRows] = await pool.query(`
+            // Logs are inherently "completed" actions.
+            // Only show them in ALL or COMPLETED
+            if (status === 'ALL' || status === 'COMPLETED') {
+                let logConditions = [];
+                let logParams = [];
+
+                if (startDate && endDate) {
+                    logConditions.push(`DATE(l.timestamp) BETWEEN ? AND ?`);
+                    logParams.push(sDate, eDate);
+                }
+
+                let queryLog = `
                     SELECT l.id, l.timestamp as created_at, l.action, l.details,
                            c.full_name as client_name, c.id as client_id,
                            c.address_street, c.contract_number, c.status as client_status
                     FROM client_logs l
                     LEFT JOIN clients c ON l.client_id = c.id
-                    WHERE DATE(l.timestamp) BETWEEN ? AND ?
-                    ORDER BY l.timestamp DESC
-                `, [sDate, eDate]);
+                `;
+
+                if (logConditions.length > 0) {
+                    queryLog += ` WHERE ` + logConditions.join(' AND ');
+                }
+                queryLog += ` ORDER BY l.timestamp DESC LIMIT 100`;
+
+                const [lRows] = await pool.query(queryLog, logParams);
 
                 logRows = lRows.map(l => {
                     // Map Action to readable Type
@@ -636,34 +678,49 @@ exports.getServiceOrdersReport = async (req, res) => {
                         client_status: l.client_status
                     };
                 }).filter(Boolean); // Remove nulls
-            }
-
-            // 4. Fetch Web Contacts (Atendidos)
+            }        // 4. Fetch Web Contacts
             let contactRows = [];
-            if (status !== 'PENDING') {
-                const [cRows] = await pool.query(`
-                    SELECT c.id, c.fecha_contacto as created_at, c.mensaje, c.nombre_completo, c.barrio_direccion,
-                           u.username as assigned_user
-                    FROM contactos c
-                    LEFT JOIN users u ON c.assigned_user_id = u.id
-                    WHERE c.atendido = 1
-                    AND DATE(c.fecha_contacto) BETWEEN ? AND ?
-                    ORDER BY c.fecha_contacto DESC
-                `, [sDate, eDate]);
 
-                contactRows = cRows.map(c => ({
-                    id: `CONT-${c.id}`,
-                    created_at: c.created_at,
-                    type: 'CONTACTO WEB',
-                    status: 'ATENDIDO',
-                    description: c.mensaje + (c.assigned_user ? ` (Atendido por: ${c.assigned_user})` : ''),
-                    client_name: c.nombre_completo,
-                    client_id: null,
-                    address_street: c.barrio_direccion,
-                    contract_number: null,
-                    client_status: 'N/A'
-                }));
+            let contactConditions = [];
+            let contactParams = [];
+
+            if (status === 'PENDING') {
+                contactConditions.push(`c.atendido = 0`);
+            } else if (status === 'COMPLETED') {
+                contactConditions.push(`c.atendido = 1`);
             }
+
+            if (startDate && endDate) {
+                contactConditions.push(`DATE(c.fecha_contacto) BETWEEN ? AND ?`);
+                contactParams.push(sDate, eDate);
+            }
+
+            let queryContact = `
+                SELECT c.id, c.fecha_contacto as created_at, c.mensaje, c.nombre_completo, c.barrio_direccion, c.atendido,
+                       u.username as assigned_user
+                FROM contactos c
+                LEFT JOIN users u ON c.assigned_user_id = u.id
+            `;
+
+            if (contactConditions.length > 0) {
+                queryContact += ` WHERE ` + contactConditions.join(' AND ');
+            }
+            queryContact += ` ORDER BY c.fecha_contacto DESC LIMIT 100`;
+
+            const [cRows] = await pool.query(queryContact, contactParams);
+
+            contactRows = cRows.map(c => ({
+                id: `CONT-${c.id}`,
+                created_at: c.created_at,
+                type: 'CONTACTO WEB',
+                status: c.atendido === 1 ? 'ATENDIDO' : 'PENDIENTE',
+                description: c.mensaje + (c.assigned_user ? ` (Atendido por: ${c.assigned_user})` : ''),
+                client_name: c.nombre_completo,
+                client_id: null,
+                address_street: c.barrio_direccion,
+                contract_number: null,
+                client_status: 'N/A'
+            }));
 
             // 5. Combine and Sort
             const combined = [...soRows, ...averiaRows, ...logRows, ...contactRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
