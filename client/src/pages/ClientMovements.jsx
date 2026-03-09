@@ -21,7 +21,7 @@ const ClientMovements = () => {
     // UI Selection State
     const [selectedClient, setSelectedClient] = useState(null);
     const [selectedAction, setSelectedAction] = useState('');
-    // Actions: 'CHANGE_NAME', 'CHANGE_ADDRESS', 'DISCONNECT_REQ', 'DISCONNECT_MORA', 'NONE'
+    // Actions: 'CHANGE_NAME', 'CHANGE_ADDRESS', 'DISCONNECT_REQ', 'DISCONNECT_MORA', 'INSTALLATION', 'REPAIR', 'RECONNECT'
 
     // Form State
     const [formValue, setFormValue] = useState('');
@@ -278,11 +278,11 @@ const ClientMovements = () => {
             setEndDate('');
         }
     };
-    // Create Repair Order
-    const handleCreateRepair = async () => {
+    // Create Service Order (Repair / Installation)
+    const handleCreateOrder = async (orderType) => {
         if (!selectedClient) return;
         if (!formReason.trim()) {
-            setAlert({ show: true, title: 'Error', message: 'Debe ingresar un motivo o detalle de la avería.', type: 'error' });
+            setAlert({ show: true, title: 'Error', message: 'Debe ingresar un motivo o detalle.', type: 'error' });
             return;
         }
         setActionLoading(true);
@@ -291,11 +291,11 @@ const ClientMovements = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    type: 'REPAIR',
+                    type: orderType,
                     description: formReason
                 })
             });
-            setAlert({ show: true, title: 'Éxito', message: 'Reporte de avería creado correctamente.', type: 'success' });
+            setAlert({ show: true, title: 'Éxito', message: 'Orden creada correctamente.', type: 'success' });
             setSelectedAction('');
             setFormReason('');
             fetchOrders(selectedClient.id);
@@ -305,6 +305,7 @@ const ClientMovements = () => {
             setActionLoading(false);
         }
     };
+
 
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
@@ -549,6 +550,12 @@ const ClientMovements = () => {
                         {/* Action Select */}
                         {!selectedAction ? (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <button onClick={() => setSelectedAction('INSTALLATION')} className="btn-dark-glow" style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                                    <span style={{ fontSize: '2rem' }}>📡</span>
+                                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>Nueva Instalación</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Crear orden de instalación</span>
+                                </button>
+
                                 <button onClick={() => setSelectedAction('CHANGE_NAME')} className="btn-dark-glow" style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
                                     <span style={{ fontSize: '2rem' }}>📝</span>
                                     <span style={{ fontWeight: 'bold' }}>Cambio de Razón Social</span>
@@ -592,6 +599,7 @@ const ClientMovements = () => {
                                 </button>
 
                                 <h3 style={{ borderLeft: '4px solid #3b82f6', paddingLeft: '1rem', color: 'white', marginBottom: '1.5rem' }}>
+                                    {selectedAction === 'INSTALLATION' && 'Nueva Instalación'}
                                     {selectedAction === 'CHANGE_NAME' && 'Cambio de Nombre / Titular'}
                                     {selectedAction === 'CHANGE_ADDRESS' && 'Cambio de Dirección / Traslado'}
                                     {selectedAction === 'DISCONNECT_REQ' && 'Solicitud de Baja'}
@@ -619,16 +627,18 @@ const ClientMovements = () => {
                                     {/* Common Reason Field */}
                                     <div>
                                         <label className="label-dark">
-                                            {selectedAction === 'REPAIR' ? 'Detalles de la Avería (Requerido)' : 'Motivo / Observaciones (Requerido)'}
+                                            {selectedAction === 'REPAIR' ? 'Detalles de la Avería (Requerido)' :
+                                                selectedAction === 'INSTALLATION' ? 'Detalles de la Instalación (Requerido)' :
+                                                    'Motivo / Observaciones (Requerido)'}
                                         </label>
-                                        <textarea className="input-dark" value={formReason} onChange={e => setFormReason(e.target.value)} required rows="3" placeholder={selectedAction === 'REPAIR' ? "Describa el problema reportado..." : "Explique brevemente el motivo del trámite..."} />
+                                        <textarea className="input-dark" value={formReason} onChange={e => setFormReason(e.target.value)} required rows="3" placeholder={selectedAction === 'REPAIR' ? "Describa el problema reportado..." : selectedAction === 'INSTALLATION' ? "Describa los detalles de la instalación..." : "Explique brevemente el motivo del trámite..."} />
                                     </div>
 
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                                         <button type="button" onClick={() => setSelectedAction('')} className="btn-secondary">Cancelar</button>
-                                        {selectedAction === 'REPAIR' ? (
-                                            <button type="button" onClick={handleCreateRepair} disabled={actionLoading} className="btn-primary-glow" style={{ minWidth: '150px' }}>
-                                                {actionLoading ? 'Guardando...' : 'Crear Reporte'}
+                                        {selectedAction === 'REPAIR' || selectedAction === 'INSTALLATION' ? (
+                                            <button type="button" onClick={() => handleCreateOrder(selectedAction)} disabled={actionLoading} className="btn-primary-glow" style={{ minWidth: '150px' }}>
+                                                {actionLoading ? 'Guardando...' : 'Crear Orden'}
                                             </button>
                                         ) : (
                                             <button type="submit" disabled={actionLoading} className="btn-primary-glow" style={{ minWidth: '150px' }}>
@@ -743,36 +753,43 @@ const ClientMovements = () => {
                     </div>
 
                 </div>
-            )}
+            )
+            }
 
             {/* HISTORY MODAL */}
-            {showHistory && selectedClient && (
-                <HistoryModal
-                    client={selectedClient}
-                    initialTab="logs"
-                    onClose={() => setShowHistory(false)}
-                />
-            )}
+            {
+                showHistory && selectedClient && (
+                    <HistoryModal
+                        client={selectedClient}
+                        initialTab="logs"
+                        onClose={() => setShowHistory(false)}
+                    />
+                )
+            }
 
-            {showNotifications && (
-                <WebNotificationsModal
-                    onClose={() => setShowNotifications(false)}
-                    onAssignClient={(averia) => {
-                        setShowNotifications(false);
-                        setSearch(averia.nombre_completo); // Auto-search
-                        setViewMode('SEARCH');
-                        setAlert({ show: true, type: 'info', title: 'Buscando Cliente', message: `Buscando coincidencias para: ${averia.nombre_completo}` });
-                    }}
-                />
-            )}
+            {
+                showNotifications && (
+                    <WebNotificationsModal
+                        onClose={() => setShowNotifications(false)}
+                        onAssignClient={(averia) => {
+                            setShowNotifications(false);
+                            setSearch(averia.nombre_completo); // Auto-search
+                            setViewMode('SEARCH');
+                            setAlert({ show: true, type: 'info', title: 'Buscando Cliente', message: `Buscando coincidencias para: ${averia.nombre_completo}` });
+                        }}
+                    />
+                )
+            }
 
             {/* MATERIALS MODAL */}
-            {showMaterialsModal && selectedOrderForMaterials && (
-                <MaterialsModal
-                    order={selectedOrderForMaterials}
-                    onClose={() => { setShowMaterialsModal(false); setSelectedOrderForMaterials(null); }}
-                />
-            )}
+            {
+                showMaterialsModal && selectedOrderForMaterials && (
+                    <MaterialsModal
+                        order={selectedOrderForMaterials}
+                        onClose={() => { setShowMaterialsModal(false); setSelectedOrderForMaterials(null); }}
+                    />
+                )
+            }
 
             <CustomAlert
                 isOpen={alert.show}
