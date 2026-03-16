@@ -664,9 +664,9 @@ exports.exportClientsXLS = async (req, res) => {
                 if (c.last_paid_month) {
                     const d = new Date(c.last_paid_month);
                     if (!isNaN(d.getTime())) {
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const year = d.getFullYear();
+                        const day = String(d.getUTCDate()).padStart(2, '0');
+                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                        const year = d.getUTCFullYear();
                         lastPaid = `${day}/${month}/${year}`;
                     } else {
                         lastPaid = String(c.last_paid_month);
@@ -798,7 +798,7 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                 if (c.last_paid_month) {
                     const lp = new Date(c.last_paid_month);
                     if (!isNaN(lp.getTime())) {
-                        lastPaidStr = `${monthNames[lp.getMonth()]} ${lp.getFullYear()}`;
+                        lastPaidStr = `${monthNames[lp.getUTCMonth()]} ${lp.getUTCFullYear()}`;
 
                         // Calculate Pending Months
                         // Logic: Start from Next Month until Current Month
@@ -809,7 +809,7 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                         const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
                         // Next due month is month after last_paid
-                        let iterator = new Date(lp.getFullYear(), lp.getMonth() + 1, 1);
+                        let iterator = new Date(lp.getUTCFullYear(), lp.getUTCMonth() + 1, 1);
                         // We iterate until iterator matches currentMonthDate (inclusive, so if now is Jan and last paid Nov, we want Dec, Jan)
 
                         let pendingArr = [];

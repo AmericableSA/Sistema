@@ -4,11 +4,11 @@ const db = require('../config/db');
 exports.getTransactions = async (req, res) => {
     try {
         const query = `
-            SELECT t.*, p.name as product_name, u.username as user_name 
+            SELECT t.*, t.transaction_date as created_at, p.name as product_name, u.username as user_name 
             FROM inventory_transactions t
             JOIN products p ON t.product_id = p.id
             LEFT JOIN users u ON t.user_id = u.id
-            ORDER BY t.created_at DESC
+            ORDER BY t.transaction_date DESC
         `;
         const [rows] = await db.query(query);
         res.json(rows);

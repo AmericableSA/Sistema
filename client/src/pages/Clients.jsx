@@ -398,7 +398,7 @@ const Clients = () => {
                                             <div><span style={{ color: '#64748b' }}>Contrato:</span> {c.contract_number || '--'}</div>
                                             <div><span style={{ color: '#64748b' }}>Tel:</span> {c.phone_primary || '--'}</div>
                                             <div><span style={{ color: '#64748b' }}>Zona:</span> {c.zone_name || 'General'}</div>
-                                            <div><span style={{ color: '#64748b' }}>Vence:</span> {c.last_paid_month ? new Date(c.last_paid_month).toLocaleDateString() : '--'}</div>
+                                            <div><span style={{ color: '#64748b' }}>Vence:</span> {c.last_paid_month ? c.last_paid_month.split('T')[0].split('-').reverse().join('/') : '--'}</div>
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
