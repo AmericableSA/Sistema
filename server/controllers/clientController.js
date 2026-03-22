@@ -587,6 +587,7 @@ exports.exportClientsXLS = async (req, res) => {
         const search = (req.query.search || '').trim();
         const start_letter = (req.query.start_letter || '').trim();
         const status = (req.query.status || 'all').trim();
+        const collector_id = req.query.collector_id;
 
         // Replicating Filter Logic
         let whereClauses = [];
@@ -615,6 +616,11 @@ exports.exportClientsXLS = async (req, res) => {
                 whereClauses.push('c.status = ?');
                 params.push(status);
             }
+        }
+
+        if (collector_id) {
+            whereClauses.push('c.preferred_collector_id = ?');
+            params.push(collector_id);
         }
 
         const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';

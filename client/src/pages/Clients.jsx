@@ -119,7 +119,8 @@ const Clients = () => {
             const params = new URLSearchParams({
                 search: debouncedSearch,
                 start_letter: letterFilter,
-                status: statusFilter
+                status: statusFilter,
+                collector_id: collectorFilter
             });
 
             const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/clients/export-xls?${params.toString()}`);

@@ -208,13 +208,32 @@ exports.deleteProduct = async (req, res) => {
 // Get All Inventory History
 exports.getAllInventoryHistory = async (req, res) => {
     try {
-        const [rows] = await db.query(`
+        const { startDate, endDate } = req.query;
+        let query = `
             SELECT t.*, t.transaction_date as created_at, p.name as product_name, p.sku, u.full_name as user_name 
             FROM inventory_transactions t
             LEFT JOIN products p ON t.product_id = p.id
             LEFT JOIN users u ON t.user_id = u.id
-            ORDER BY t.transaction_date DESC
-        `);
+        `;
+        const params = [];
+        const whereClauses = [];
+
+        if (startDate) {
+            whereClauses.push('t.transaction_date >= ?');
+            params.push(`${startDate} 00:00:00`);
+        }
+        if (endDate) {
+            whereClauses.push('t.transaction_date <= ?');
+            params.push(`${endDate} 23:59:59`);
+        }
+
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
+        }
+
+        query += ' ORDER BY t.transaction_date DESC';
+
+        const [rows] = await db.query(query, params);
         res.json(rows);
     } catch (err) {
         console.error(err);
