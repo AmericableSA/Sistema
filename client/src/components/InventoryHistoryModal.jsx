@@ -7,6 +7,7 @@ const InventoryHistoryModal = ({ onClose }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [activeTab, setActiveTab] = useState('detalles');
 
     const fetchHistory = useCallback(() => {
         setLoading(true);
@@ -56,10 +57,28 @@ const InventoryHistoryModal = ({ onClose }) => {
         periodSummary = { label, ...totals };
     }
 
+    // Generate general product summary
+    const generalSummary = {};
+    filteredHistory.forEach(item => {
+        const prod = item.product_name || 'Desconocido';
+        if (!generalSummary[prod]) {
+            generalSummary[prod] = { in: 0, out: 0 };
+        }
+        const qty = Math.abs(item.quantity || 0);
+        if (item.transaction_type === 'IN') {
+            generalSummary[prod].in += qty;
+        } else if (item.transaction_type === 'OUT') {
+            generalSummary[prod].out += qty;
+        } else {
+            if (item.quantity > 0) generalSummary[prod].in += qty;
+            else if (item.quantity < 0) generalSummary[prod].out += qty;
+        }
+    });
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200
+            backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '5vh', zIndex: 1200
         }}>
             <div className="glass-card" style={{ width: '900px', maxHeight: '85vh', height: '85vh', display: 'flex', flexDirection: 'column', background: '#0f172a', border: '1px solid #334155' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #334155', flexWrap: 'wrap', gap: '1rem' }}>
@@ -99,6 +118,21 @@ const InventoryHistoryModal = ({ onClose }) => {
                     </div>
                 </div>
 
+                <div style={{ display: 'flex', borderBottom: '1px solid #334155', background: '#1e293b' }}>
+                    <button 
+                        onClick={() => setActiveTab('detalles')}
+                        style={{ flex: 1, padding: '1rem', background: activeTab === 'detalles' ? 'rgba(59, 130, 246, 0.1)' : 'transparent', border: 'none', borderBottom: activeTab === 'detalles' ? '2px solid #3b82f6' : '2px solid transparent', color: activeTab === 'detalles' ? '#60a5fa' : '#94a3b8', cursor: 'pointer', fontWeight: activeTab === 'detalles' ? 'bold' : 'normal' }}
+                    >
+                        📑 Detalles de Movimientos
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('resumen')}
+                        style={{ flex: 1, padding: '1rem', background: activeTab === 'resumen' ? 'rgba(59, 130, 246, 0.1)' : 'transparent', border: 'none', borderBottom: activeTab === 'resumen' ? '2px solid #3b82f6' : '2px solid transparent', color: activeTab === 'resumen' ? '#60a5fa' : '#94a3b8', cursor: 'pointer', fontWeight: activeTab === 'resumen' ? 'bold' : 'normal' }}
+                    >
+                        📊 Resumen General por Producto
+                    </button>
+                </div>
+
                 {periodSummary && (
                     <div style={{ padding: '1.5rem', borderBottom: '1px solid #334155', background: 'rgba(30, 41, 59, 0.5)' }}>
                         <h4 style={{ margin: '0 0 1rem 0', color: '#e2e8f0', fontSize: '1rem' }}>📊 Resumen del Periodo: <span style={{color: '#94a3b8'}}>{periodSummary.label}</span></h4>
@@ -125,6 +159,7 @@ const InventoryHistoryModal = ({ onClose }) => {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead style={{ position: 'sticky', top: 0, background: '#1e293b' }}>
+                            {activeTab === 'detalles' ? (
                             <tr>
                                 <th style={{ textAlign: 'left', padding: '1rem', color: '#94a3b8' }}>Fecha</th>
                                 <th style={{ textAlign: 'left', padding: '1rem', color: '#94a3b8' }}>Producto</th>
@@ -132,35 +167,65 @@ const InventoryHistoryModal = ({ onClose }) => {
                                 <th style={{ textAlign: 'right', padding: '1rem', color: '#94a3b8' }}>Cant.</th>
                                 <th style={{ textAlign: 'left', padding: '1rem', color: '#94a3b8' }}>Razón / Usuario</th>
                             </tr>
+                            ) : (
+                            <tr>
+                                <th style={{ textAlign: 'left', padding: '1rem', color: '#94a3b8' }}>Producto</th>
+                                <th style={{ textAlign: 'right', padding: '1rem', color: '#4ade80' }}>Tot. Entradas</th>
+                                <th style={{ textAlign: 'right', padding: '1rem', color: '#f87171' }}>Tot. Salidas</th>
+                                <th style={{ textAlign: 'right', padding: '1rem', color: '#94a3b8' }}>Diferencia Neta</th>
+                            </tr>
+                            )}
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Cargando historial...</td></tr>
                             ) : filteredHistory.length === 0 ? (
                                 <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>{searchTerm || startDate || endDate ? 'No se encontraron resultados.' : 'Sin movimientos registrados.'}</td></tr>
-                            ) : filteredHistory.map((item, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={{ padding: '1rem', color: '#cbd5e1' }}>{new Date(item.created_at).toLocaleString()}</td>
-                                    <td style={{ padding: '1rem', color: 'white', fontWeight: 500 }}>{item.product_name}</td>
-                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                        <span style={{
-                                            padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem',
-                                            background: item.transaction_type === 'IN' ? 'rgba(34, 197, 94, 0.2)' :
-                                                item.transaction_type === 'OUT' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                                            color: item.transaction_type === 'IN' ? '#4ade80' :
-                                                item.transaction_type === 'OUT' ? '#f87171' : '#60a5fa'
-                                        }}>
-                                            {item.transaction_type}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'right', color: 'white', fontWeight: 700 }}>
-                                        {item.quantity > 0 ? `+${item.quantity}` : item.quantity}
-                                    </td>
-                                    <td style={{ padding: '1rem', color: '#94a3b8' }}>
-                                        {item.reason}
-                                    </td>
-                                </tr>
-                            ))}
+                            ) : activeTab === 'detalles' ? (
+                                filteredHistory.map((item, i) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '1rem', color: '#cbd5e1' }}>{new Date(item.created_at).toLocaleString()}</td>
+                                        <td style={{ padding: '1rem', color: 'white', fontWeight: 500 }}>{item.product_name}</td>
+                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                            <span style={{
+                                                padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem',
+                                                background: item.transaction_type === 'IN' ? 'rgba(34, 197, 94, 0.2)' :
+                                                    item.transaction_type === 'OUT' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                                                color: item.transaction_type === 'IN' ? '#4ade80' :
+                                                    item.transaction_type === 'OUT' ? '#f87171' : '#60a5fa'
+                                            }}>
+                                                {item.transaction_type}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1rem', textAlign: 'right', color: 'white', fontWeight: 700 }}>
+                                            {item.quantity > 0 ? `+${item.quantity}` : item.quantity}
+                                        </td>
+                                        <td style={{ padding: '1rem', color: '#94a3b8' }}>
+                                            {item.reason}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                Object.entries(generalSummary)
+                                    .sort((a,b) => a[0].localeCompare(b[0]))
+                                    .map(([producto, totales], i) => {
+                                        const diff = totales.in - totales.out;
+                                        return (
+                                            <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                                                <td style={{ padding: '1rem', color: 'white', fontWeight: 500 }}>{producto}</td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>
+                                                    +{totales.in}
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', color: '#f87171', fontWeight: 'bold' }}>
+                                                    -{totales.out}
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', color: diff >= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>
+                                                    {diff > 0 ? '+' : ''}{diff}
+                                                </td>
+                                            </tr>
+                                        )
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>
