@@ -209,13 +209,21 @@ exports.deleteProduct = async (req, res) => {
 exports.getAllInventoryHistory = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
+        let futureMovementsSelect = "0 as future_movements_net";
+        const params = [];
+
+        if (endDate) {
+           futureMovementsSelect = "(SELECT COALESCE(SUM(CASE WHEN transaction_type = 'IN' THEN ABS(quantity) WHEN transaction_type = 'OUT' THEN -ABS(quantity) ELSE quantity END), 0) FROM inventory_transactions ft WHERE ft.product_id = t.product_id AND ft.transaction_date > ?) as future_movements_net";
+           params.push(`${endDate} 23:59:59`);
+        }
+
         let query = `
-            SELECT t.*, t.transaction_date as created_at, p.name as product_name, p.sku, u.full_name as user_name 
+            SELECT t.*, t.transaction_date as created_at, p.name as product_name, p.sku, p.current_stock, ${futureMovementsSelect}, u.full_name as user_name 
             FROM inventory_transactions t
             LEFT JOIN products p ON t.product_id = p.id
             LEFT JOIN users u ON t.user_id = u.id
         `;
-        const params = [];
+        
         const whereClauses = [];
 
         if (startDate) {

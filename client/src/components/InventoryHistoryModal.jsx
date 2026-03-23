@@ -62,7 +62,12 @@ const InventoryHistoryModal = ({ onClose }) => {
     filteredHistory.forEach(item => {
         const prod = item.product_name || 'Desconocido';
         if (!generalSummary[prod]) {
-            generalSummary[prod] = { in: 0, out: 0 };
+            generalSummary[prod] = { 
+                in: 0, 
+                out: 0, 
+                current_stock: item.current_stock || 0,
+                future_movements_net: item.future_movements_net || 0
+            };
         }
         const qty = Math.abs(item.quantity || 0);
         if (item.transaction_type === 'IN') {
@@ -173,6 +178,7 @@ const InventoryHistoryModal = ({ onClose }) => {
                                 <th style={{ textAlign: 'right', padding: '1rem', color: '#4ade80' }}>Tot. Entradas</th>
                                 <th style={{ textAlign: 'right', padding: '1rem', color: '#f87171' }}>Tot. Salidas</th>
                                 <th style={{ textAlign: 'right', padding: '1rem', color: '#94a3b8' }}>Diferencia Neta</th>
+                                <th style={{ textAlign: 'right', padding: '1rem', color: '#e2e8f0' }}>Stock Final<br/><span style={{fontSize:'0.75rem', fontWeight:'normal'}}>(en la fecha)</span></th>
                             </tr>
                             )}
                         </thead>
@@ -210,6 +216,7 @@ const InventoryHistoryModal = ({ onClose }) => {
                                     .sort((a,b) => a[0].localeCompare(b[0]))
                                     .map(([producto, totales], i) => {
                                         const diff = totales.in - totales.out;
+                                        const stockAtDate = Number(totales.current_stock) - Number(totales.future_movements_net);
                                         return (
                                             <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
                                                 <td style={{ padding: '1rem', color: 'white', fontWeight: 500 }}>{producto}</td>
@@ -221,6 +228,9 @@ const InventoryHistoryModal = ({ onClose }) => {
                                                 </td>
                                                 <td style={{ padding: '1rem', textAlign: 'right', color: diff >= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>
                                                     {diff > 0 ? '+' : ''}{diff}
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                                    {stockAtDate}
                                                 </td>
                                             </tr>
                                         )

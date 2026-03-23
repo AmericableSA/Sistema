@@ -266,6 +266,26 @@ const ClientMovements = () => {
         if (viewMode === 'LIST' || viewMode === 'PENDING' || viewMode === 'COMPLETED') fetchDailyOrders();
     }, [viewMode, startDate, endDate]);
 
+    const handleExportExcel = async () => {
+        try {
+            setAlert({ show: true, type: 'info', title: 'Generando Reporte', message: 'Por favor espere...' });
+            const res = await fetch(`/api/reports/orders/export?startDate=${startDate}&endDate=${endDate}&status=${viewMode}`);
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Reporte_Tramites_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            setAlert({ ...alert, show: false });
+        } catch (e) {
+            console.error(e);
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'Error al exportar a Excel.' });
+        }
+    };
+
     // Handle Tab Change
     const handleTabChange = (mode) => {
         setViewMode(mode);
@@ -397,7 +417,7 @@ const ClientMovements = () => {
                                 </button>
                             )}
                             <button
-                                onClick={() => window.open(`/api/reports/orders/export?startDate=${startDate}&endDate=${endDate}&status=${viewMode}`, '_blank')}
+                                onClick={handleExportExcel}
                                 className="btn-secondary"
                                 style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
                             >
