@@ -422,7 +422,8 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         const [txRows] = await pool.query(`
             SELECT 
                 t.created_at, t.amount, t.type, t.payment_method, t.description, t.status, t.cancellation_reason,
-                c.full_name as client_name, c.contract_number, COALESCE(u.username, 'Sistema') as collector,
+                c.full_name as client_name, c.contract_number, c.status as client_status, c.last_paid_month, c.last_payment_date, c.installation_date, c.cutoff_date,
+                COALESCE(u.username, 'Sistema') as collector,
                 u.role as collector_role
             FROM transactions t
             LEFT JOIN clients c ON t.client_id = c.id
@@ -433,7 +434,8 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         const [moveRows] = await pool.query(`
             SELECT 
                 m.created_at, m.amount, m.type, 'cash' as payment_method, m.description, 'COMPLETED' as status, NULL as cancellation_reason,
-                'Movimiento Manual' as client_name, '' as contract_number, COALESCE(u.username, 'Cajero') as collector,
+                'Movimiento Manual' as client_name, '' as contract_number, 'N/A' as client_status, NULL as last_paid_month, NULL as last_payment_date, NULL as installation_date, NULL as cutoff_date,
+                COALESCE(u.username, 'Cajero') as collector,
                 u.role as collector_role
             FROM cash_movements m
             LEFT JOIN cash_sessions s ON m.session_id = s.id
@@ -455,6 +457,10 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             { header: 'Caja (Origen)', key: 'box', width: 15 },
             { header: 'Tipo', key: 'type', width: 15 },
             { header: 'Cliente / Descripción', key: 'desc', width: 40 },
+            { header: 'Estado Cliente', key: 'client_status', width: 15 },
+            { header: 'Fecha Corte', key: 'cutoff_date', width: 15 },
+            { header: 'Último Pago', key: 'last_payment_date', width: 15 },
+            { header: 'Fecha Instalación', key: 'installation_date', width: 18 },
             { header: 'Responsable', key: 'collector', width: 15 },
             { header: 'Método', key: 'method', width: 10 },
             { header: 'Monto', key: 'amount', width: 15 },
@@ -466,12 +472,29 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
             const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA');
             const boxLabel = row.collector_role === 'collector' ? 'COLECTORES' : 'OFICINA';
+            
+            const formatDate = (date) => {
+                if (!date) return 'N/A';
+                const d = new Date(date);
+                if (!isNaN(d.getTime())) return d.toLocaleDateString('es-NI');
+                return String(date);
+            };
+
+            const statusMap = {
+                'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
+                'pending_install': 'Pendiente', 'disconnected_by_request': 'Desc. Solicitud',
+                'promotions': 'Promociones', 'courtesy': 'Cortesía', 'provider': 'Proveedor', 'office': 'Oficina'
+            };
 
             sheet.addRow({
                 time: new Date(row.created_at).toLocaleString('es-NI'),
                 box: boxLabel,
                 type: typeLabel,
                 desc: (row.client_name || row.description) + (row.contract_number ? ` (#${row.contract_number})` : ''),
+                client_status: statusMap[row.client_status] || row.client_status || 'N/A',
+                cutoff_date: formatDate(row.cutoff_date),
+                last_payment_date: formatDate(row.last_payment_date),
+                installation_date: formatDate(row.installation_date),
                 collector: row.collector,
                 method: row.payment_method,
                 amount: (isIncome ? 1 : -1) * parseFloat(row.amount),
@@ -775,7 +798,8 @@ exports.exportServiceOrdersXLS = async (req, res) => {
             SELECT so.id, so.created_at, so.type, so.status, so.technician_notes as description,
                    c.full_name as client_name, c.contract_number, c.address_street,
                    c.phone_primary, n.name as neighborhood_name, z.name as zone_name,
-                   u.full_name as technician_name
+                   u.full_name as technician_name,
+                   c.status as client_status, c.last_paid_month, c.last_payment_date, c.installation_date, c.cutoff_date
             FROM service_orders so
             LEFT JOIN clients c ON so.client_id = c.id
             LEFT JOIN neighborhoods n ON c.neighborhood_id = n.id
@@ -814,24 +838,45 @@ exports.exportServiceOrdersXLS = async (req, res) => {
             { header: 'Tipo', key: 'type', width: 20 },
             { header: 'Cliente', key: 'client_name', width: 30 },
             { header: 'Contrato', key: 'contract_number', width: 15 },
+            { header: 'Estado Cliente', key: 'client_status', width: 15 },
             { header: 'Teléfono', key: 'phone_primary', width: 15 },
             { header: 'Dirección', key: 'address_street', width: 30 },
             { header: 'Barrio', key: 'neighborhood_name', width: 20 },
             { header: 'Zona', key: 'zone_name', width: 15 },
             { header: 'Técnico', key: 'technician_name', width: 20 },
-            { header: 'Estado', key: 'status', width: 15 },
+            { header: 'Estado Orden', key: 'status', width: 15 },
+            { header: 'Fecha Corte', key: 'cutoff_date', width: 15 },
+            { header: 'Último Pago', key: 'last_payment_date', width: 15 },
+            { header: 'Fecha Instalación', key: 'installation_date', width: 18 },
             { header: 'Detalles / Notas', key: 'description', width: 40 }
         ];
 
         worksheet.getRow(1).font = { bold: true };
 
+        const formatDate = (date) => {
+            if (!date) return 'N/A';
+            const d = new Date(date);
+            if (!isNaN(d.getTime())) return d.toLocaleDateString('es-NI');
+            return String(date);
+        };
+
+        const statusMap = {
+            'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
+            'pending_install': 'Pendiente', 'disconnected_by_request': 'Desc. Solicitud',
+            'promotions': 'Promociones', 'courtesy': 'Cortesía', 'provider': 'Proveedor', 'office': 'Oficina'
+        };
+
         rows.forEach(r => {
             worksheet.addRow({
                 ...r,
+                client_status: statusMap[r.client_status] || r.client_status || 'N/A',
                 neighborhood_name: r.neighborhood_name || '',
                 zone_name: r.zone_name || '',
                 technician_name: r.technician_name || '',
                 phone_primary: r.phone_primary || '',
+                cutoff_date: formatDate(r.cutoff_date),
+                last_payment_date: formatDate(r.last_payment_date),
+                installation_date: formatDate(r.installation_date),
                 created_at: new Date(r.created_at).toLocaleString()
             });
         });

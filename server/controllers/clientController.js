@@ -629,7 +629,7 @@ exports.exportClientsXLS = async (req, res) => {
 
         // Safely Query Data (Explicit Columns)
         const [rows] = await db.query(`
-            SELECT c.contract_number, c.full_name, c.identity_document, c.phone_primary, c.address_street, c.last_paid_month, c.status, c.cutoff_date,
+            SELECT c.contract_number, c.full_name, c.identity_document, c.phone_primary, c.address_street, c.last_paid_month, c.status, c.cutoff_date, c.installation_date, c.last_payment_date,
                    z.name as zone_name, n.name as neighborhood_name,
                    u.username as collector_name
             FROM clients c
@@ -658,7 +658,9 @@ exports.exportClientsXLS = async (req, res) => {
             { header: 'Colector', key: 'collector', width: 20 },
             { header: 'Estado', key: 'status', width: 15 },
             { header: 'Último Mes Pagado', key: 'last_paid', width: 20 },
-            { header: 'Fecha de Corte', key: 'cutoff_date', width: 20 }
+            { header: 'Fecha de Corte', key: 'cutoff_date', width: 20 },
+            { header: 'Fecha Instalación', key: 'installation_date', width: 20 },
+            { header: 'Fecha Último Pago', key: 'last_payment_date', width: 20 }
         ];
 
         // STYLE
@@ -696,6 +698,36 @@ exports.exportClientsXLS = async (req, res) => {
                 }
             } catch (e) { cutoffDateStr = 'Error Fecha'; }
 
+            let installationDateStr = 'N/A';
+            try {
+                if (c.installation_date) {
+                    const d = new Date(c.installation_date);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getUTCDate()).padStart(2, '0');
+                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                        const year = d.getUTCFullYear();
+                        installationDateStr = `${day}/${month}/${year}`;
+                    } else {
+                        installationDateStr = String(c.installation_date);
+                    }
+                }
+            } catch (e) { installationDateStr = 'Error Fecha'; }
+
+            let lastPaymentDateStr = 'N/A';
+            try {
+                if (c.last_payment_date) {
+                    const d = new Date(c.last_payment_date);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getUTCDate()).padStart(2, '0');
+                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                        const year = d.getUTCFullYear();
+                        lastPaymentDateStr = `${day}/${month}/${year}`;
+                    } else {
+                        lastPaymentDateStr = String(c.last_payment_date);
+                    }
+                }
+            } catch (e) { lastPaymentDateStr = 'Error Fecha'; }
+
             const statusMap = {
                 'active': 'Activo',
                 'suspended': 'Cortado',
@@ -719,7 +751,9 @@ exports.exportClientsXLS = async (req, res) => {
                 collector: c.collector_name || 'Sin Asignar',
                 status: statusMap[c.status] || c.status,
                 last_paid: lastPaid,
-                cutoff_date: cutoffDateStr
+                cutoff_date: cutoffDateStr,
+                installation_date: installationDateStr,
+                last_payment_date: lastPaymentDateStr
             });
         });
 
@@ -750,7 +784,7 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
         const [rows] = await db.query(`
             SELECT 
                 c.contract_number, c.full_name, c.address_street, c.phone_primary,
-                c.last_paid_month, c.last_payment_date,
+                c.last_paid_month, c.last_payment_date, c.status, c.installation_date, c.cutoff_date,
                 z.tariff,
                 COALESCE(u.username, 'Sin Asignar') as collector_name,
                 n.name as neighborhood_name
@@ -794,11 +828,14 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
             sheet.columns = [
                 { header: 'Contrato', key: 'contract', width: 15 },
                 { header: 'Nombre', key: 'name', width: 35 },
+                { header: 'Estado', key: 'status', width: 15 },
                 { header: 'Dirección', key: 'address', width: 45 },
                 { header: 'Barrio', key: 'neighborhood', width: 25 },
                 { header: 'Teléfono', key: 'phone', width: 15 },
+                { header: 'Fecha Corte', key: 'cutoff_date_str', width: 15 },
                 { header: 'Ultimo Mes Pagado', key: 'last_paid_str', width: 18 },
                 { header: 'Ultima Fecha Pag', key: 'last_payment_date_str', width: 18 },
+                { header: 'Fecha Instalación', key: 'installation_date_str', width: 20 },
                 { header: 'Meses Pendientes', key: 'months_owed_list', width: 30 },
                 { header: 'Cant. Mora', key: 'months_mora', width: 12 },
                 { header: 'Deuda Aprox', key: 'debt', width: 15 },
@@ -870,14 +907,37 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
 
                 totalDebt += debt;
 
+                let cutoffDateStr = 'N/A';
+                if (c.cutoff_date) {
+                    const cd = new Date(c.cutoff_date);
+                    if (!isNaN(cd.getTime())) cd.setMinutes(cd.getMinutes() + cd.getTimezoneOffset());
+                    if (!isNaN(cd.getTime())) {
+                        cutoffDateStr = cd.toLocaleDateString('es-NI');
+                    }
+                }
+
+                let installationDateStr = 'N/A';
+                if (c.installation_date) {
+                    const idate = new Date(c.installation_date);
+                    if (!isNaN(idate.getTime())) idate.setMinutes(idate.getMinutes() + idate.getTimezoneOffset());
+                    if (!isNaN(idate.getTime())) {
+                        installationDateStr = idate.toLocaleDateString('es-NI');
+                    }
+                }
+
+                const statusMap = { 'active': 'Activo' }; // Query already filters for active
+
                 sheet.addRow({
                     contract: c.contract_number,
                     name: c.full_name,
+                    status: statusMap[c.status] || 'Activo',
                     address: c.address_street,
                     neighborhood: c.neighborhood_name || '',
                     phone: c.phone_primary,
+                    cutoff_date_str: cutoffDateStr,
                     last_paid_str: lastPaidStr,
                     last_payment_date_str: lastPaymentDateStr,
+                    installation_date_str: installationDateStr,
                     months_owed_list: monthsList,
                     months_mora: monthsMora,
                     debt: debt
