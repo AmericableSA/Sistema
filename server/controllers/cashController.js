@@ -53,25 +53,36 @@ exports.getSessionStats = async (req, res) => {
             stats.tx_count += p.count;
         });
 
-        // 2. Cash Movements
+        // 2. Cash Movements (Detect Refunds)
         const [moves] = await db.query(`
-            SELECT type, SUM(amount) as total FROM cash_movements WHERE session_id = ? GROUP BY type
+            SELECT type, amount, description FROM cash_movements WHERE session_id = ?
         `, [sessionId]);
 
-        let manualIn = 0, manualOut = 0;
+        let manualIn = 0, manualOut = 0, refunds = 0;
         moves.forEach(m => {
-            if (m.type === 'IN') manualIn = parseFloat(m.total);
-            else manualOut = parseFloat(m.total);
+            if (m.type === 'IN') {
+                manualIn += parseFloat(m.amount);
+            } else if (m.type === 'REFUND') {
+                refunds += parseFloat(m.amount);
+            } else if (m.type === 'OUT') {
+                if (m.description && m.description.includes('[REEMB]')) {
+                    refunds += parseFloat(m.amount);
+                } else {
+                    manualOut += parseFloat(m.amount);
+                }
+            }
         });
 
         const currentRate = parseFloat(sessions[0].exchange_rate || 37);
         const dollarsInCordobas = stats.sales_dollars * currentRate;
-        const cashInDrawer = startAmount + stats.sales_cash + dollarsInCordobas + manualIn - manualOut;
+        // Refunds are a reversal of income, so they subtract from the expected cash
+        const cashInDrawer = startAmount + stats.sales_cash + dollarsInCordobas + manualIn - manualOut - refunds;
 
         res.json({
             ...stats,
             manual_in: manualIn,
             manual_out: manualOut,
+            refunds: refunds,
             start_amount: startAmount,
             cash_in_drawer: cashInDrawer,
             session_id: sessionId
@@ -165,16 +176,25 @@ exports.closeSession = async (req, res) => {
             if (i.payment_method === 'dollars') dollarSales = Number(i.total);
         });
 
-        // 3. Calculate Manual Movements
+        // 3. Calculate Manual Movements (Detailed)
         const [movements] = await connection.query(
-            'SELECT type, SUM(amount) as total FROM cash_movements WHERE session_id = ? GROUP BY type',
+            'SELECT type, amount, description FROM cash_movements WHERE session_id = ?',
             [session_id]
         );
 
-        let manualIn = 0, manualOut = 0;
+        let manualIn = 0, manualOut = 0, refunds = 0;
         movements.forEach(m => {
-            if (m.type === 'IN') manualIn = Number(m.total);
-            if (m.type === 'OUT') manualOut = Number(m.total);
+            if (m.type === 'IN') {
+                manualIn += Number(m.amount);
+            } else if (m.type === 'REFUND') {
+                refunds += Number(m.amount);
+            } else if (m.type === 'OUT') {
+                if (m.description && m.description.includes('[REEMB]')) {
+                    refunds += Number(m.amount);
+                } else {
+                    manualOut += Number(m.amount);
+                }
+            }
         });
 
         const startAmount = Number(session.start_amount);
@@ -182,7 +202,8 @@ exports.closeSession = async (req, res) => {
         const dollarValueInCordobas = dollarSales * sessionRate;
 
         // 4. Final Totals
-        const systemTotal = startAmount + cashSales + dollarValueInCordobas + manualIn - manualOut;
+        // Balance = Start + Sales + Manual In - Manual Out - Refunds
+        const systemTotal = startAmount + cashSales + dollarValueInCordobas + manualIn - manualOut - refunds;
         const difference = Number(end_amount_physical) - systemTotal;
 
         // 5. Justification check

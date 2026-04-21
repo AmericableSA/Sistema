@@ -486,28 +486,52 @@ exports.cancelTransaction = async (req, res) => {
             [reason, validUserId, id]
         );
 
-        // 5. Revert Client Dates (Rollback the "Paid Up To" date)
+        // 5. Revert Client Dates & Status (Rollback to previous state)
         if (tx.client_id) {
             let details = {};
             try { details = JSON.parse(tx.details_json || '{}'); } catch (e) { }
 
             const monthsPaid = parseInt(details.months_paid, 10) || 0;
+            const hadReconnection = details.include_reconnection || details.reconnection_fee > 0;
 
-            if (monthsPaid > 0) {
-                const [cRows] = await conn.query('SELECT last_paid_month FROM clients WHERE id = ?', [tx.client_id]);
-                if (cRows.length > 0) {
-                    const client = cRows[0];
-                    if (client.last_paid_month) {
-                        const newDate = new Date(client.last_paid_month);
-                        newDate.setMonth(newDate.getMonth() - monthsPaid);
-                        
-                        const y = newDate.getFullYear();
-                        const m = newDate.getMonth() + 1;
-                        const d = newDate.getDate();
-                        const newDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            // 5a. Revert Mes Pagado
+            let [cRows] = await conn.query('SELECT last_paid_month, status FROM clients WHERE id = ?', [tx.client_id]);
+            if (cRows.length > 0) {
+                const client = cRows[0];
+                let updateFields = {};
 
-                        await conn.query('UPDATE clients SET last_paid_month = ?, status = "active" WHERE id = ?', [newDateStr, tx.client_id]);
-                    }
+                // Revert Month
+                if (monthsPaid > 0 && client.last_paid_month) {
+                    const newDate = new Date(client.last_paid_month);
+                    newDate.setMonth(newDate.getMonth() - monthsPaid);
+                    const y = newDate.getFullYear();
+                    const m = newDate.getMonth() + 1;
+                    const d = newDate.getDate();
+                    updateFields.last_paid_month = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                }
+
+                // Revert Status if it was a reconnection
+                // If the payment was a reconnection, they were suspended before.
+                if (hadReconnection) {
+                    updateFields.status = 'suspended';
+                }
+
+                // 5b. Revert Last Payment Date (Find previous successful payment)
+                const [prevTx] = await conn.query(
+                    'SELECT created_at FROM transactions WHERE client_id = ? AND status = "SUCCESS" AND id != ? ORDER BY created_at DESC LIMIT 1',
+                    [tx.client_id, id]
+                );
+                
+                if (prevTx.length > 0) {
+                    updateFields.last_payment_date = prevTx[0].created_at;
+                } else {
+                    updateFields.last_payment_date = null; // No previous payments
+                }
+
+                if (Object.keys(updateFields).length > 0) {
+                    const setClause = Object.keys(updateFields).map(k => `${k} = ?`).join(', ');
+                    const setValues = Object.values(updateFields);
+                    await conn.query(`UPDATE clients SET ${setClause} WHERE id = ?`, [...setValues, tx.client_id]);
                 }
             }
         }

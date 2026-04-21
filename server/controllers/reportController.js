@@ -235,9 +235,9 @@ exports.getDailyClosing = async (req, res) => {
         );
         const salesTotal = parseFloat(salesRows[0].total || 0);
 
-        // 2. Manual Cash Movements
+        // 2. Manual Cash Movements (Detecting Refunds by type or prefix)
         const [moveRows] = await pool.query(
-            "SELECT type, SUM(amount) as total FROM cash_movements WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY type",
+            "SELECT type, amount, description FROM cash_movements WHERE DATE(created_at) BETWEEN ? AND ?",
             [sDate, eDate]
         );
 
@@ -245,9 +245,18 @@ exports.getDailyClosing = async (req, res) => {
         let manualOut = 0;
         let devoluciones = 0;
         moveRows.forEach(r => {
-            if (r.type === 'IN') manualIn += parseFloat(r.total);
-            else if (r.type === 'OUT') manualOut += parseFloat(r.total);
-            else if (r.type === 'REFUND') devoluciones += parseFloat(r.total); // Facturas anuladas — no es gasto
+            if (r.type === 'IN') {
+                manualIn += parseFloat(r.amount);
+            } else if (r.type === 'REFUND') {
+                devoluciones += parseFloat(r.amount);
+            } else if (r.type === 'OUT') {
+                // Check for refund prefix in fallback scenario
+                if (r.description && r.description.includes('[REEMB]')) {
+                    devoluciones += parseFloat(r.amount);
+                } else {
+                    manualOut += parseFloat(r.amount);
+                }
+            }
         });
 
         // 3. Breakdown by User
@@ -377,8 +386,14 @@ exports.getDailyDetails = async (req, res) => {
                 const val = parseFloat(item.amount);
                 if (item.category === 'TRANSACTION') sales += val;
                 else if (item.type === 'IN') manualIn += val;
-                else if (item.type === 'OUT') manualOut += val;
                 else if (item.type === 'REFUND') refunds += val; // Facturas anuladas
+                else if (item.type === 'OUT') {
+                    if (item.description && item.description.includes('[REEMB]')) {
+                        refunds += val;
+                    } else {
+                        manualOut += val;
+                    }
+                }
             });
             return { totalSales: sales, totalManualIn: manualIn, totalManualOut: manualOut, totalRefunds: refunds, net: (sales + manualIn) - manualOut - refunds };
         };
