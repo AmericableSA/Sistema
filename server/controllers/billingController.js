@@ -78,7 +78,7 @@ exports.getBillingDetails = async (req, res) => {
 
         // Prepare list of owed months names
         const owedMonths = [];
-        let nextMonth = new Date(lastPaidNorm);
+        let nextMonth = new Date(lastPaidYear, lastPaidMonth, 1);
         for (let i = 0; i < monthsOwedCount; i++) {
             nextMonth.setMonth(nextMonth.getMonth() + 1);
             owedMonths.push(nextMonth.toLocaleString('es-ES', { month: 'long', year: 'numeric' }));
