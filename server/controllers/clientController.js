@@ -133,7 +133,7 @@ exports.getGlobalHistory = async (req, res) => {
 exports.createClient = async (req, res) => {
     const {
         contract_number, identity_document, full_name,
-        phone_primary, phone_secondary, address_street, // Added phone_secondary
+        phone_primary, phone_secondary, address_street,
         city_id, neighborhood_id, zone_id,
         status,
         last_paid_month, last_payment_date, cutoff_date, reconnection_date, cutoff_reason,
@@ -141,9 +141,16 @@ exports.createClient = async (req, res) => {
         preferred_collector_id
     } = req.body;
 
+    if (!full_name || full_name.trim() === '') {
+        return res.status(400).json({ msg: 'El nombre completo es requerido.' });
+    }
+
     const userId = req.user?.id || 1;
+    const connection = await db.getConnection();
 
     try {
+        await connection.beginTransaction();
+
         let finalContract = contract_number;
 
         // Auto-Generate Contract if missing
@@ -153,17 +160,15 @@ exports.createClient = async (req, res) => {
             finalContract = `CTR-${datePart}${randomPart}`;
         }
 
-        // Prevent duplicates
-        if (finalContract) {
-            const [existing] = await db.query('SELECT id FROM clients WHERE contract_number = ?', [finalContract]);
-            if (existing.length > 0) {
-                return res.status(400).json({ msg: 'Número de contrato ya existe (Intenta de nuevo)' });
-            }
+        // Prevent duplicates with Lock
+        const [existing] = await connection.query('SELECT id FROM clients WHERE contract_number = ? FOR UPDATE', [finalContract]);
+        if (existing.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({ msg: 'El número de contrato ya existe. Intente guardar nuevamente para generar uno nuevo.' });
         }
-        // Duplicate check for identity_document removed as per request
 
-
-        const [result] = await db.query(
+        // Insert Client
+        const [result] = await connection.query(
             `INSERT INTO clients (
                 contract_number, identity_document, full_name,
                 phone_primary, phone_secondary, address_street, 
@@ -184,18 +189,23 @@ exports.createClient = async (req, res) => {
             ]
         );
 
-        // Audit Log
         const clientId = result.insertId;
-        await db.query(
+
+        // Audit Log
+        await connection.query(
             'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
-            [clientId, userId, 'CREATE', `Cliente creado: ${full_name}`]
+            [clientId, userId, 'CREATE', `Cliente creado exitosamente: ${full_name}`]
         );
 
-        res.json({ id: clientId, msg: 'Cliente registrado exitosamente' });
+        await connection.commit();
+        res.status(201).json({ id: clientId, msg: 'Cliente registrado con éxito.', contract: finalContract });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
+        await connection.rollback();
+        console.error("Create Client Error:", err);
+        res.status(500).json({ msg: 'Error crítico al registrar cliente: ' + err.message });
+    } finally {
+        connection.release();
     }
 };
 
@@ -213,23 +223,29 @@ exports.updateClient = async (req, res) => {
     } = req.body;
 
     const userId = req.user?.id || 1;
+    const connection = await db.getConnection();
 
     try {
-        // Get old values for comparison
-        const [oldRows] = await db.query(`
+        await connection.beginTransaction();
+
+        // 1. Get old values for comparison with Lock
+        const [oldRows] = await connection.query(`
             SELECT c.*, z.name as zone_name 
             FROM clients c 
             LEFT JOIN zones z ON c.zone_id = z.id
-            WHERE c.id = ?
+            WHERE c.id = ? FOR UPDATE
         `, [id]);
 
-        if (oldRows.length === 0) return res.status(404).json({ msg: 'Cliente no encontrado' });
+        if (oldRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ msg: 'Cliente no encontrado' });
+        }
         const oldData = oldRows[0];
 
-        // Fetch New Zone Name if changed
+        // 2. Fetch New Zone Name if changed
         let newZoneName = '';
         if (zone_id && zone_id != oldData.zone_id) {
-            const [zRows] = await db.query('SELECT name FROM zones WHERE id = ?', [zone_id]);
+            const [zRows] = await connection.query('SELECT name FROM zones WHERE id = ?', [zone_id]);
             if (zRows.length > 0) newZoneName = zRows[0].name;
         }
 
@@ -248,6 +264,7 @@ exports.updateClient = async (req, res) => {
         const normalizeDate = (d) => {
             if (!d) return null;
             const dateObj = new Date(d);
+            if (isNaN(dateObj.getTime())) return null;
             return dateObj.toISOString().split('T')[0];
         };
 
@@ -270,7 +287,7 @@ exports.updateClient = async (req, res) => {
 
         const incoming = {
             full_name, identity_document, phone_primary, phone_secondary, address_street, contract_number,
-            zone_id, status, last_paid_month, cutoff_date, reconnection_date, cutoff_reason,
+            zone_id, status: status || oldData.status, last_paid_month, cutoff_date, reconnection_date, cutoff_reason,
             installation_date
         };
 
@@ -316,7 +333,8 @@ exports.updateClient = async (req, res) => {
             }
         }
 
-        await db.query(
+        // 3. Update Client
+        await connection.query(
             `UPDATE clients SET 
                 contract_number=?, identity_document=?, full_name=?,
                 phone_primary=?, phone_secondary=?, address_street=?,
@@ -324,13 +342,14 @@ exports.updateClient = async (req, res) => {
                 status=?,
                 last_paid_month=?, last_payment_date=?, cutoff_date=?, reconnection_date=?, cutoff_reason=?,
                 installation_date=?,
-                preferred_collector_id=?
+                preferred_collector_id=?,
+                updated_at=NOW()
              WHERE id=?`,
             [
-                contract_number || null, identity_document || null, full_name,
+                contract_number || oldData.contract_number, identity_document || null, full_name || oldData.full_name,
                 phone_primary, phone_secondary || null, address_street,
-                city_id || 1, neighborhood_id || 1, zone_id || 1,
-                status,
+                city_id || 1, neighborhood_id || 1, zone_id || oldData.zone_id,
+                status || oldData.status,
                 last_paid_month || null, last_payment_date || null, cutoff_date || null, reconnection_date || null, cutoff_reason || null,
                 installation_date || null,
                 preferred_collector_id || null,
@@ -338,17 +357,23 @@ exports.updateClient = async (req, res) => {
             ]
         );
 
+        // 4. Log Changes
         if (changes.length > 0) {
-            await db.query(
+            await connection.query(
                 'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
                 [id, userId, 'UPDATE', JSON.stringify(changes)]
             );
         }
 
-        res.json({ msg: 'Cliente actualizado' });
+        await connection.commit();
+        res.json({ msg: 'Cliente actualizado exitosamente', changes_count: changes.length });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
+        await connection.rollback();
+        console.error("Update Client Error:", err);
+        res.status(500).json({ msg: 'Error crítico al actualizar cliente: ' + err.message });
+    } finally {
+        connection.release();
     }
 };
 

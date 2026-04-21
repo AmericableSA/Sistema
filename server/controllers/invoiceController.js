@@ -59,44 +59,68 @@ exports.getInvoices = async (req, res) => {
 
 // Register Payment (Expense/Outgoing)
 exports.registerPayment = async (req, res) => {
+    const { invoice_id } = req.params;
+    const { amount, reference_number, notes } = req.body;
+    const userId = req.user ? req.user.id : null;
+
+    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+        return res.status(400).json({ msg: 'Monto de pago inválido.' });
+    }
+
+    const payAmount = parseFloat(amount);
+    const connection = await db.getConnection();
+
     try {
-        const { invoice_id } = req.params;
-        const { amount, reference_number, notes } = req.body;
-        const userId = req.user ? req.user.id : null;
+        await connection.beginTransaction();
 
-        const payAmount = parseFloat(amount);
-
-        // 1. Get Invoice
-        const [invRows] = await db.query("SELECT * FROM invoices WHERE id = ?", [invoice_id]);
-        if (invRows.length === 0) return res.status(404).json({ msg: 'Factura no encontrada' });
+        // 1. Get Invoice with Lock
+        const [invRows] = await connection.query("SELECT * FROM invoices WHERE id = ? FOR UPDATE", [invoice_id]);
+        if (invRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ msg: 'Factura no encontrada' });
+        }
         const invoice = invRows[0];
 
-        if (payAmount > invoice.balance) {
-            return res.status(400).json({ msg: 'El pago excede el saldo pendiente' });
+        if (payAmount > parseFloat(invoice.balance) + 0.01) {
+            await connection.rollback();
+            return res.status(400).json({ msg: `El pago (C$ ${payAmount}) excede el saldo pendiente (C$ ${invoice.balance})` });
         }
 
         // 2. Update Invoice Balance
-        const newBalance = parseFloat(invoice.balance) - payAmount;
+        const newBalance = Math.max(0, parseFloat(invoice.balance) - payAmount);
         let newStatus = invoice.status;
         if (newBalance <= 0.05) newStatus = 'PAID';
         else newStatus = 'PARTIAL';
 
-        await db.query("UPDATE invoices SET balance = ?, status = ? WHERE id = ?", [newBalance, newStatus, invoice_id]);
+        await connection.query(
+            "UPDATE invoices SET balance = ?, status = ?, updated_at = NOW() WHERE id = ?",
+            [newBalance, newStatus, invoice_id]
+        );
 
         // 3. Register OUT Transaction (Expense)
-        // Note: We use type 'OUT' for expenses.
-        await db.query(
+        await connection.query(
             `INSERT INTO transactions 
             (invoice_id, amount, type, description, created_at, reference_number, notes, user_id) 
             VALUES (?, ?, 'OUT', ?, NOW(), ?, ?, ?)`,
-            [invoice_id, payAmount, `Pago a Factura #${invoice_id} (${invoice.reference_number || 'Sin Ref'})`, reference_number, notes, userId]
+            [
+                invoice_id, 
+                payAmount, 
+                `Pago a Factura Proveedor #${invoice_id} (${invoice.reference_number || 'Sin Ref'})`, 
+                reference_number || null, 
+                notes || null, 
+                userId
+            ]
         );
 
-        res.json({ msg: 'Pago registrado', new_balance: newBalance, status: newStatus });
+        await connection.commit();
+        res.json({ msg: 'Pago registrado exitosamente', new_balance: newBalance, status: newStatus });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ msg: 'Error al registrar pago' });
+        await connection.rollback();
+        console.error("Register Payment Error:", err);
+        res.status(500).json({ msg: 'Error crítico al registrar pago: ' + err.message });
+    } finally {
+        connection.release();
     }
 };
 

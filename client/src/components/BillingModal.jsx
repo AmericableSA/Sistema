@@ -540,11 +540,25 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
 
                         <button
                             onClick={handlePay}
-                            // disabled removed to allow validation clicks
-                            className="btn-primary-glow"
-                            style={{ marginTop: 'auto', padding: '1.2rem', fontSize: '1.1rem' }}
+                            disabled={isSubmitting}
+                            className={`btn-primary-glow ${isSubmitting ? 'loading' : ''}`}
+                            style={{ 
+                                marginTop: 'auto', 
+                                padding: '1.2rem', 
+                                fontSize: '1.1rem',
+                                opacity: isSubmitting ? 0.6 : 1,
+                                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                position: 'relative'
+                            }}
                         >
-                            💰 REALIZAR PAGO
+                            {isSubmitting ? (
+                                <div className="flex-center" style={{ gap: '0.8rem' }}>
+                                    <span className="spinner-small"></span>
+                                    PROCESANDO PAGO...
+                                </div>
+                            ) : (
+                                "💰 REALIZAR PAGO"
+                            )}
                         </button>
                     </div>
                 </div>

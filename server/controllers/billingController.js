@@ -457,15 +457,26 @@ exports.cancelTransaction = async (req, res) => {
 
         if (sessions.length === 0) {
             await conn.rollback();
-            return res.status(403).json({ msg: 'No hay ninguna caja abierta para registrar el reembolso.' });
+            return res.status(403).json({ msg: 'No hay ninguna caja abierta para registrar el reembolso. Abra caja primero.' });
         }
 
         // 3. Register Refund (REFUND — NOT a gasto, shown separately in reports)
-        await conn.query(
-            `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
-             VALUES (?, ?, ?, 'REFUND', NOW())`,
-            [sessions[0].id, tx.amount, `Devolución Factura #${tx.reference_id || id}. Motivo: ${reason}`]
-        );
+        // Note: Using 'OUT' as fallback if 'REFUND' is not in ENUM yet, but preferring designated type.
+        // We attempt REFUND, and if it fails due to Enum, we use OUT with prefix.
+        try {
+            await conn.query(
+                `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
+                 VALUES (?, ?, ?, 'REFUND', NOW())`,
+                [sessions[0].id, tx.amount, `Reembolso Factura #${tx.reference_id || id}. Motivo: ${reason}`]
+            );
+        } catch (sqlErr) {
+            console.log("REFUND type failed, falling back to OUT. Error:", sqlErr.message);
+            await conn.query(
+                `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
+                 VALUES (?, ?, ?, 'OUT', NOW())`,
+                [sessions[0].id, tx.amount, `[REEMB] Factura #${tx.reference_id || id}. Motivo: ${reason}`]
+            );
+        }
 
         // 4. Update Transaction Status
         await conn.query(
@@ -475,7 +486,7 @@ exports.cancelTransaction = async (req, res) => {
             [reason, validUserId, id]
         );
 
-        // 5. Revert Client Dates
+        // 5. Revert Client Dates (Rollback the "Paid Up To" date)
         if (tx.client_id) {
             let details = {};
             try { details = JSON.parse(tx.details_json || '{}'); } catch (e) { }
@@ -488,37 +499,34 @@ exports.cancelTransaction = async (req, res) => {
                     const client = cRows[0];
                     if (client.last_paid_month) {
                         const newDate = new Date(client.last_paid_month);
-                        // Safe decrement
                         newDate.setMonth(newDate.getMonth() - monthsPaid);
-                        // Normalize to avoid date shift if day > 28? (e.g. March 31 -> Feb 28)
-                        // This uses local time, but `toISOString` uses UTC.
-                        // Best practice for YYYY-MM-DD store:
+                        
                         const y = newDate.getFullYear();
-                        const m = newDate.getMonth() + 1; // 0-indexed
-                        const d = newDate.getDate(); // Keep day (usually user wants same cutoff day)
+                        const m = newDate.getMonth() + 1;
+                        const d = newDate.getDate();
                         const newDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-                        await conn.query('UPDATE clients SET last_paid_month = ? WHERE id = ?', [newDateStr, tx.client_id]);
+                        await conn.query('UPDATE clients SET last_paid_month = ?, status = "active" WHERE id = ?', [newDateStr, tx.client_id]);
                     }
                 }
             }
         }
 
-        // 6. Log
+        // 6. Log interaction
         if (tx.client_id) {
             await conn.query(
                 'INSERT INTO client_logs (client_id, user_id, action, details) VALUES (?, ?, ?, ?)',
-                [tx.client_id, validUserId, 'CANCELLATION', `Factura #${tx.reference_id || id} Cancelada. Motivo: ${reason}. Reembolso: ${tx.amount}`]
+                [tx.client_id, validUserId, 'CANCELLATION', `Factura #${tx.reference_id || id} Cancelada. Reembolso: ${tx.amount}. Motivo: ${reason}`]
             );
         }
 
         await conn.commit();
-        res.json({ msg: 'Factura cancelada y reembolso registrado' });
+        res.json({ msg: 'Factura cancelada y reembolso registrado correctamente.' });
 
     } catch (err) {
         await conn.rollback();
-        console.error(err);
-        res.status(500).json({ msg: 'Error al cancelar: ' + err.message });
+        console.error("Cancel Transaction Error:", err);
+        res.status(500).json({ msg: 'Error crítico al cancelar: ' + err.message });
     } finally {
         conn.release();
     }

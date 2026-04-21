@@ -90,15 +90,19 @@ exports.updateProduct = async (req, res) => {
     const { id } = req.params;
     const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, user_id, reason, type, bundle_items, unit_of_measure } = req.body;
 
+    if (!name || isNaN(selling_price)) {
+        return res.status(400).json({ msg: 'Nombre y Precio de Venta son obligatorios.' });
+    }
+
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 1. Get old data
-        const [oldData] = await connection.query('SELECT * FROM products WHERE id = ?', [id]);
+        // 1. Get old data with Lock
+        const [oldData] = await connection.query('SELECT * FROM products WHERE id = ? FOR UPDATE', [id]);
         if (oldData.length === 0) {
             await connection.rollback();
-            return res.status(404).json({ msg: 'Product not found' });
+            return res.status(404).json({ msg: 'Producto no encontrado' });
         }
         const oldProduct = oldData[0];
 
@@ -112,10 +116,9 @@ exports.updateProduct = async (req, res) => {
 
         // Critical: Detect Stock Change
         const oldStock = Number(oldProduct.current_stock);
-        const newStock = Number(current_stock);
+        const newStock = isNaN(current_stock) ? oldStock : Number(current_stock);
         let stockDiff = 0;
 
-        // Only track stock diff for physical items or if changed manually
         if (oldStock !== newStock) {
             stockDiff = newStock - oldStock;
             changes.push(`Stock: ${oldStock} -> ${newStock}`);
@@ -123,32 +126,34 @@ exports.updateProduct = async (req, res) => {
 
         // 3. Update Product Main Data
         await connection.query(
-            'UPDATE products SET sku=?, name=?, description=?, category_id=?, provider_id=?, current_stock=?, min_stock_alert=?, unit_cost=?, selling_price=?, type=?, unit_of_measure=? WHERE id=?',
-            [sku, name, description, category_id, provider_id || null, current_stock, min_stock_alert, unit_cost, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', id]
+            'UPDATE products SET sku=?, name=?, description=?, category_id=?, provider_id=?, current_stock=?, min_stock_alert=?, unit_cost=?, selling_price=?, type=?, unit_of_measure=?, updated_at=NOW() WHERE id=?',
+            [sku, name, description, category_id, provider_id || null, newStock, min_stock_alert || 5, unit_cost || 0, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', id]
         );
 
-        // 4. Handle Bundle Items Update (Delete All + Re-insert)
-        // Only if type is bundle
+        // 4. Handle Bundle Items Update
         if (type === 'bundle' || oldProduct.type === 'bundle') {
             await connection.query('DELETE FROM bundle_items WHERE bundle_id = ?', [id]);
 
             if (Array.isArray(bundle_items) && bundle_items.length > 0) {
                 for (const item of bundle_items) {
-                    await connection.query(
-                        'INSERT INTO bundle_items (bundle_id, product_id, quantity) VALUES (?, ?, ?)',
-                        [id, item.product_id, item.quantity]
-                    );
+                    // Validate that the component product exists
+                    const [compExists] = await connection.query('SELECT id FROM products WHERE id = ?', [item.product_id]);
+                    if (compExists.length > 0) {
+                        await connection.query(
+                            'INSERT INTO bundle_items (bundle_id, product_id, quantity) VALUES (?, ?, ?)',
+                            [id, item.product_id, item.quantity]
+                        );
+                    }
                 }
-                changes.push('Items del Combo Actualizados');
+                changes.push('Componentes del Combo actualizados');
             }
         }
 
-        // 5. Log Transaction (ALWAYS if changes > 0 OR reason is provided)
+        // 5. Log Transaction
         if (changes.length > 0 || reason) {
             const changesText = changes.length > 0 ? changes.join(', ') : 'Edición sin cambios detectados';
             const auditReason = reason ? `${reason} | ${changesText}` : changesText;
 
-            // Determine transaction type based on stock movement
             let transType = 'EDIT';
             let transQty = 0;
 
@@ -157,7 +162,6 @@ exports.updateProduct = async (req, res) => {
                 transQty = Math.abs(stockDiff);
             }
 
-            // Use current unit_cost for the record
             const recordedCost = unit_cost || oldProduct.unit_cost || 0;
 
             await connection.query(
@@ -167,11 +171,11 @@ exports.updateProduct = async (req, res) => {
         }
 
         await connection.commit();
-        res.json({ message: 'Product updated successfully' });
+        res.json({ message: 'Producto actualizado exitosamente', changes_count: changes.length });
     } catch (err) {
         await connection.rollback();
-        console.error(err);
-        res.status(500).json({ msg: 'Server Error: ' + err.message });
+        console.error("Update Product Error:", err);
+        res.status(500).json({ msg: 'Error crítico al actualizar producto: ' + err.message });
     } finally {
         connection.release();
     }

@@ -131,14 +131,30 @@ exports.closeSession = async (req, res) => {
     const { session_id, end_amount_physical, closing_note, current_user_id } = req.body;
     const closerId = await getValidUser(current_user_id || req.user?.id);
 
+    if (end_amount_physical === undefined || isNaN(end_amount_physical)) {
+        return res.status(400).json({ msg: 'El monto físico final es requerido y debe ser un número.' });
+    }
+
+    const connection = await db.getConnection();
+
     try {
-        const [session] = await db.query('SELECT * FROM cash_sessions WHERE id = ?', [session_id]);
-        if (!session.length) return res.status(404).json({ msg: 'Sesión no encontrada' });
+        await connection.beginTransaction();
 
-        // Note: Global sessions can be closed by anyone authorized
-        // We might want to restrict to Admin or let the closer be logged.
+        // 1. Get Session with Lock to prevent double closure or concurrent modifications
+        const [sessionRows] = await connection.query('SELECT * FROM cash_sessions WHERE id = ? FOR UPDATE', [session_id]);
+        if (sessionRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ msg: 'Sesión no encontrada' });
+        }
+        const session = sessionRows[0];
 
-        const [income] = await db.query(
+        if (session.status === 'closed') {
+            await connection.rollback();
+            return res.status(400).json({ msg: 'Esta sesión ya ha sido cerrada previamente.' });
+        }
+
+        // 2. Calculate Sales Income (Cash and Dollars)
+        const [income] = await connection.query(
             'SELECT payment_method, SUM(amount) as total FROM transactions WHERE session_id = ? AND type != "void" GROUP BY payment_method',
             [session_id]
         );
@@ -149,7 +165,8 @@ exports.closeSession = async (req, res) => {
             if (i.payment_method === 'dollars') dollarSales = Number(i.total);
         });
 
-        const [movements] = await db.query(
+        // 3. Calculate Manual Movements
+        const [movements] = await connection.query(
             'SELECT type, SUM(amount) as total FROM cash_movements WHERE session_id = ? GROUP BY type',
             [session_id]
         );
@@ -160,34 +177,50 @@ exports.closeSession = async (req, res) => {
             if (m.type === 'OUT') manualOut = Number(m.total);
         });
 
-        const startAmount = Number(session[0].start_amount);
-        const sessionRate = parseFloat(session[0].exchange_rate || 37);
+        const startAmount = Number(session.start_amount);
+        const sessionRate = parseFloat(session.exchange_rate || 37);
         const dollarValueInCordobas = dollarSales * sessionRate;
 
+        // 4. Final Totals
         const systemTotal = startAmount + cashSales + dollarValueInCordobas + manualIn - manualOut;
         const difference = Number(end_amount_physical) - systemTotal;
 
-        if (Math.abs(difference) > 0.5 && !closing_note) {
+        // 5. Justification check
+        if (Math.abs(difference) > 0.99 && !closing_note) {
+            await connection.rollback();
             return res.status(400).json({
                 error: 'JUSTIFICATION_REQUIRED',
-                msg: `Diferencia detectada de ${difference.toFixed(2)}. Debe agregar una NOTA DE JUSTIFICACIÓN.`,
+                msg: `Diferencia detectada de ${difference.toFixed(2)}. Debe agregar una NOTA DE JUSTIFICACIÓN para cerrar con este descuadre.`,
                 systemTotal,
                 difference
             });
         }
 
-        await db.query(
+        // 6. Update Session (Close it)
+        await connection.query(
             `UPDATE cash_sessions SET 
              end_time = NOW(), 
              status = "closed", 
              end_amount_system = ?, 
              end_amount_physical = ?, 
              difference = ?,
-             closing_note = ?
+             closing_note = ?,
+             closed_by_user_id = ?
              WHERE id = ?`,
-            [systemTotal, end_amount_physical, difference, closing_note || null, session_id]
+            [systemTotal, end_amount_physical, difference, closing_note || null, closerId, session_id]
         );
 
-        res.json({ msg: 'Caja Cerrada Correctamente' });
-    } catch (err) { res.status(500).send(err); }
+        await connection.commit();
+        res.json({ 
+            msg: 'Caja Cerrada Correctamente', 
+            stats: { systemTotal, end_amount_physical, difference } 
+        });
+
+    } catch (err) {
+        await connection.rollback();
+        console.error("Close Session Error:", err);
+        res.status(500).json({ msg: 'Error crítico al cerrar caja: ' + err.message });
+    } finally {
+        connection.release();
+    }
 };

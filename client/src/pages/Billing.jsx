@@ -113,17 +113,49 @@ const Billing = () => {
     return (
         <div className="page-container" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
+            <div className="animate-entry" style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '3rem', 
+                background: 'linear-gradient(90deg, rgba(30, 41, 59, 0.4) 0%, transparent 100%)',
+                padding: '1.5rem 2rem',
+                borderRadius: '24px',
+                border: '1px solid rgba(255,255,255,0.05)',
+                backdropFilter: 'blur(10px)'
+            }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', color: 'white', margin: 0, fontWeight: 'bold' }}>Facturación y Caja</h1>
-                    <p style={{ color: '#94a3b8', margin: '0.5rem 0 0 0' }}>Control de Turnos y Cobros</p>
+                    <h1 style={{ 
+                        fontSize: '2.5rem', 
+                        color: 'white', 
+                        margin: 0, 
+                        fontWeight: '900',
+                        letterSpacing: '-1px',
+                        background: 'linear-gradient(135deg, #fff 0%, #94a3b8 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                    }}>Facturación y Caja</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <span style={{ color: '#3b82f6', fontWeight: '800' }}>●</span>
+                        <p style={{ color: '#94a3b8', margin: 0, fontSize: '1rem', fontWeight: '500' }}>Centro de Operaciones y Control de Turnos</p>
+                    </div>
                 </div>
                 <button
                     onClick={() => setShowTicketConfig(true)}
                     className="btn-secondary"
-                    style={{ fontSize: '0.9rem' }}
+                    style={{ 
+                        padding: '0.75rem 1.5rem', 
+                        borderRadius: '14px', 
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}
                 >
-                    ⚙️ Ticket
+                    <span style={{ fontSize: '1.2rem' }}>⚙️</span> 
+                    IMPRESORA
                 </button>
             </div>
 
@@ -140,32 +172,52 @@ const Billing = () => {
             {/* 2. SEARCH CLIENT TO BILL */}
             {isSessionOpen && viewMode === 'SEARCH' && (
                 <div className="animate-fade-in">
-                    <div style={{ background: '#1e293b', padding: '1.5rem', borderRadius: '12px', border: '1px solid #334155', marginBottom: '2rem' }}>
-                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ 
+                        background: 'rgba(30, 41, 59, 0.6)', 
+                        padding: '2rem', 
+                        borderRadius: '28px', 
+                        border: '1px solid rgba(255,255,255,0.05)', 
+                        marginBottom: '2.5rem',
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+                    }}>
+                        <div style={{ position: 'relative', marginBottom: '2rem' }}>
                             <input
                                 type="text"
-                                placeholder="🔍 Buscar por Nombre, Cédula o Contrato..."
+                                placeholder="Buscar por Nombre, Cédula o Contrato..."
                                 className="input-dark"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                style={{ flex: 1, minWidth: '300px', fontSize: '1.1rem' }}
+                                style={{ 
+                                    width: '100%', 
+                                    fontSize: '1.25rem', 
+                                    padding: '1.25rem 1.5rem 1.25rem 3.5rem',
+                                    borderRadius: '18px',
+                                    background: 'rgba(15, 23, 42, 0.8)',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                    boxShadow: '0 0 0 0 rgba(59, 130, 246, 0)'
+                                }}
                             />
+                            <span style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1.5rem', opacity: 0.5 }}>🔍</span>
                         </div>
 
-                        {/* Alphabet Filter */}
-                        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', marginTop: '1.5rem', paddingBottom: '0.5rem' }} className="scrollbar-hide">
+                        {/* Alphabet Filter Premium */}
+                        <div style={{ display: 'flex', gap: '0.6rem', overflowX: 'auto', paddingBottom: '0.8rem' }} className="scrollbar-hide">
                             <button
                                 onClick={() => setLetterFilter('')}
                                 className={`btn-letter ${letterFilter === '' ? 'active' : ''}`}
                                 style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '8px',
-                                    background: letterFilter === '' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
-                                    color: letterFilter === '' ? 'white' : '#94a3b8',
-                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    padding: '0.6rem 1.25rem',
+                                    borderRadius: '12px',
+                                    background: letterFilter === '' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'rgba(255,255,255,0.03)',
+                                    color: letterFilter === '' ? 'white' : '#64748b',
+                                    border: letterFilter === '' ? 'none' : '1px solid rgba(255,255,255,0.05)',
                                     cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    whiteSpace: 'nowrap'
+                                    fontWeight: '900',
+                                    fontSize: '0.9rem',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: letterFilter === '' ? '0 10px 20px rgba(59, 130, 246, 0.3)' : 'none'
                                 }}
                             >
                                 TODOS
@@ -176,14 +228,21 @@ const Billing = () => {
                                     onClick={() => setLetterFilter(char)}
                                     className={`btn-letter ${letterFilter === char ? 'active' : ''}`}
                                     style={{
-                                        minWidth: '40px',
-                                        padding: '0.5rem',
-                                        borderRadius: '8px',
-                                        background: letterFilter === char ? '#3b82f6' : 'rgba(255,255,255,0.05)',
-                                        color: letterFilter === char ? 'white' : '#94a3b8',
-                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        minWidth: '42px',
+                                        height: '42px',
+                                        padding: '0',
+                                        borderRadius: '12px',
+                                        background: letterFilter === char ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'rgba(255,255,255,0.03)',
+                                        color: letterFilter === char ? 'white' : '#64748b',
+                                        border: letterFilter === char ? 'none' : '1px solid rgba(255,255,255,0.05)',
                                         cursor: 'pointer',
-                                        fontWeight: 'bold'
+                                        fontWeight: '900',
+                                        fontSize: '0.9rem',
+                                        transition: 'all 0.2s ease',
+                                        boxShadow: letterFilter === char ? '0 10px 20px rgba(59, 130, 246, 0.3)' : 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
                                     }}
                                 >
                                     {char}
@@ -203,35 +262,49 @@ const Billing = () => {
                         )}
 
                         {!loading && clients.map((c) => (
-                            <div key={c.id} style={{
-                                background: '#0f172a',
-                                border: '1px solid #334155',
-                                borderRadius: '12px',
-                                padding: '1.5rem',
-                                borderLeft: c.status === 'active' ? '4px solid #10b981' : '4px solid #ef4444',
-                                transition: 'transform 0.2s',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            <div key={c.id} className="client-billing-card" style={{
+                                background: 'rgba(30, 41, 59, 0.4)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                borderRadius: '24px',
+                                padding: '2rem',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                overflow: 'hidden'
                             }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                                    <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem', fontWeight: '600' }}>{c.full_name}</h3>
+                                {/* Estatus Decorativo */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '6px',
+                                    height: '100%',
+                                    background: c.status === 'active' ? '#10b981' : '#ef4444'
+                                }}></div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1.5rem' }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, color: 'white', fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.5px' }}>{c.full_name}</h3>
+                                        <div style={{ color: '#3b82f6', fontSize: '0.85rem', fontWeight: 'bold', marginTop: '0.2rem' }}>CONTRATO: {c.contract_number}</div>
+                                    </div>
                                     <span style={{
-                                        fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        padding: '0.25rem 0.5rem',
-                                        borderRadius: '4px',
-                                        background: c.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                        color: c.status === 'active' ? '#34d399' : '#f87171'
+                                        fontSize: '0.7rem',
+                                        fontWeight: '900',
+                                        padding: '0.4rem 0.75rem',
+                                        borderRadius: '10px',
+                                        background: c.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                        color: c.status === 'active' ? '#10b981' : '#ef4444',
+                                        border: `1px solid ${c.status === 'active' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                                     }}>
-                                        {c.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
+                                        {c.status === 'active' ? 'AL DÍA' : 'MOROSO'}
                                     </span>
                                 </div>
 
-                                <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '1.5rem', display: 'grid', gap: '0.5rem' }}>
+                                <div style={{ fontSize: '0.95rem', color: '#94a3b8', marginBottom: '2rem', display: 'grid', gap: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '16px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span>Zona:</span> <span style={{ color: '#cbd5e1' }}>{c.zone_name || 'N/A'}</span>
+                                        <span style={{ color: '#64748b' }}>📍 Zona:</span> <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{c.zone_name || 'Sin Zona'}</span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span>Contrato:</span> <span style={{ color: '#cbd5e1' }}>{c.contract_number}</span>
+                                        <span style={{ color: '#64748b' }}>📅 Último Pago:</span> <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{c.last_paid_month ? new Date(c.last_paid_month).toLocaleDateString() : 'NUNCA'}</span>
                                     </div>
                                 </div>
 
@@ -239,16 +312,24 @@ const Billing = () => {
                                     <button
                                         onClick={() => { setSelectedClient(c); setShowBilling(true); }}
                                         className="btn-primary-glow"
-                                        style={{ justifyContent: 'center', padding: '0.75rem', fontSize: '0.9rem' }}
+                                        style={{ justifyContent: 'center', padding: '1rem', fontSize: '1rem', borderRadius: '14px', fontWeight: '800' }}
                                     >
-                                        💲 Cobrar
+                                        COBRAR
                                     </button>
                                     <button
                                         onClick={() => openVisitModal(c)}
                                         className="btn-secondary"
-                                        style={{ justifyContent: 'center', padding: '0.75rem', fontSize: '0.9rem', border: '1px solid #3b82f6', color: '#60a5fa' }}
+                                        style={{ 
+                                            justifyContent: 'center', 
+                                            padding: '1rem', 
+                                            fontSize: '1rem', 
+                                            borderRadius: '14px', 
+                                            fontWeight: '800',
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}
                                     >
-                                        🛠️ Visita
+                                        TRAMITE
                                     </button>
                                 </div>
                             </div>

@@ -42,6 +42,29 @@ const ProtectedRoute = ({ children, roles }: { children: JSX.Element, roles?: st
   return children;
 };
 
+// --- Error Boundary (Antierrores) ---
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: any, errorInfo: any) { console.error("Global Error Boundary:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '4rem', textAlign: 'center', color: 'white', background: '#0f172a', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '4rem' }}>🛰️</h1>
+          <h2 style={{ marginBottom: '1rem' }}>Oops! Algo salió mal en el sistema.</h2>
+          <p style={{ color: '#94a3b8', maxWidth: '500px' }}>Se ha detectado un error inesperado. Hemos registrado el incidente para solucionarlo.</p>
+          <button onClick={() => window.location.href = '/'} className="btn-primary-glow" style={{ marginTop: '2rem', padding: '1rem 2rem' }}>Reiniciar Aplicación</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const location = useLocation();
@@ -54,34 +77,36 @@ function App() {
   if (!user) return <Routes><Route path="*" element={<Login />} /></Routes>;
 
   return (
-    <div className="app-container">
-      <div
-        className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`}
-        onClick={() => setIsSidebarOpen(false)}
-      />
+    <ErrorBoundary>
+      <div className="app-container">
+        <div
+          className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`}
+          onClick={() => setIsSidebarOpen(false)}
+        />
 
-      <div className={`app-sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <div className={`app-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        </div>
+
+        <div className="app-main">
+          <Header onMenuClick={() => setIsSidebarOpen(true)} />
+
+          <main key={location.pathname} className="animate-page" style={{ flex: 1, position: 'relative' }}>
+            <Routes>
+              <Route path="/" element={<ProtectedRoute><MainMenu /></ProtectedRoute>} />
+              <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+              <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+              <Route path="/inventory/history" element={<ProtectedRoute><InventoryHistory /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute roles={['admin']}><Reports /></ProtectedRoute>} />
+              <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
+              <Route path="/invoices" element={<ProtectedRoute roles={['admin', 'cajero']}><Invoices /></ProtectedRoute>} />
+              <Route path="/movements" element={<ProtectedRoute><ClientMovements /></ProtectedRoute>} />
+            </Routes>
+          </main>
+        </div>
       </div>
-
-      <div className="app-main">
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
-
-        <main key={location.pathname} className="animate-page" style={{ flex: 1, position: 'relative' }}>
-          <Routes>
-            <Route path="/" element={<ProtectedRoute><MainMenu /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-            <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-            <Route path="/inventory/history" element={<ProtectedRoute><InventoryHistory /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute roles={['admin']}><Reports /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
-            <Route path="/invoices" element={<ProtectedRoute roles={['admin', 'cajero']}><Invoices /></ProtectedRoute>} />
-            <Route path="/movements" element={<ProtectedRoute><ClientMovements /></ProtectedRoute>} />
-          </Routes>
-        </main>
-      </div>
-    </div>
+    </ErrorBoundary>
   );
 }
 
