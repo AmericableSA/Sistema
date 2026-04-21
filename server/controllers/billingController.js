@@ -453,26 +453,11 @@ exports.cancelTransaction = async (req, res) => {
             return res.status(403).json({ msg: 'No hay ninguna caja abierta para registrar el reembolso. Abra caja primero.' });
         }
 
-        // 3. Register Refund ONLY IF the transaction belongs to a DIFFERENT session.
-        // If it belongs to the CURRENT session, marking it CANCELLED is enough to exclude it from today's sales.
-        if (tx.session_id !== sessions[0].id) {
-            try {
-                await conn.query(
-                    `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
-                     VALUES (?, ?, ?, 'REFUND', NOW())`,
-                    [sessions[0].id, tx.amount, `Reembolso Factura #${tx.reference_id || id}. Motivo: ${reason}`]
-                );
-            } catch (sqlErr) {
-                console.log("REFUND type failed, falling back to OUT. Error:", sqlErr.message);
-                await conn.query(
-                    `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
-                     VALUES (?, ?, ?, 'OUT', NOW())`,
-                    [sessions[0].id, tx.amount, `[REEMB] Factura #${tx.reference_id || id}. Motivo: ${reason}`]
-                );
-            }
-        }
-
-        // 4. Update Transaction Status
+        // En el flujo actual, las anulaciones son solo lógicas para el sistema de clientes
+        // y no implican una devolución física del efectivo en la gaveta, especialmente si
+        // provienen de sesiones anteriores.
+        // Por ende, no se inserta 'REFUND' ni 'OUT' en la caja actual, manteniendo la 
+        // integridad del conteo físico.        // 4. Update Transaction Status
         await conn.query(
             `UPDATE transactions 
              SET status = 'CANCELLED', cancellation_reason = ?, cancelled_by = ?, cancelled_at = NOW() 
