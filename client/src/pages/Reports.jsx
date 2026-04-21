@@ -6,7 +6,7 @@ import {
 } from 'chart.js';
 import {
     FaCalendarAlt, FaChartBar, FaUserTimes, FaUserCheck,
-    FaMoneyBillWave, FaArrowLeft, FaSync, FaCashRegister, FaExchangeAlt
+    FaMoneyBillWave, FaArrowLeft, FaSync, FaCashRegister, FaExchangeAlt, FaUndo
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../components/CustomAlert';
@@ -560,7 +560,7 @@ const Reports = () => {
                 {/* Devoluciones - facturas anuladas, NO es gasto */}
                 {dailyClosing.devoluciones > 0 && (
                     <Card style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)' }}>
-                        <Label style={{ color: 'white' }}>{'\U0001f504'} Devoluciones</Label>
+                        <Label style={{ color: 'white' }}><FaUndo /> Devoluciones</Label>
                         <Value>{formatCurrency(dailyClosing.devoluciones)}</Value>
                         <div style={{ color: '#ddd6fe', fontSize: '0.85rem' }}>Facturas anuladas (no es gasto)</div>
                     </Card>

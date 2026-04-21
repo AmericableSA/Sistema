@@ -4,6 +4,11 @@ import CustomAlert from './CustomAlert';
 import ConfirmModal from './ConfirmModal';
 import ReceiptSettingsModal from './ReceiptSettingsModal';
 import ReceiptModal from './ReceiptModal';
+import { 
+    FaCashRegister, FaHandHoldingUsd, FaHistory, FaLock, 
+    FaArrowUp, FaArrowDown, FaBuilding, FaMotorcycle, FaSyncAlt 
+} from 'react-icons/fa';
+import styled, { keyframes } from 'styled-components';
 
 const CashRegister = (props) => {
     const { hasRole, user } = useAuth();
@@ -237,46 +242,46 @@ const CashRegister = (props) => {
                         onClick={() => setSessionType('OFICINA')}
                         className={`btn-session-tab ${sessionType === 'OFICINA' ? 'active office' : ''}`}
                         style={{
-                            padding: '1rem 2rem',
-                            borderRadius: '18px',
+                            padding: '1.25rem 2.5rem',
+                            borderRadius: '20px',
                             border: 'none',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.75rem',
+                            gap: '1rem',
                             fontSize: '1.1rem',
-                            fontWeight: '800',
-                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                            background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'rgba(255,255,255,0.03)',
-                            color: sessionType === 'OFICINA' ? '#fff' : '#64748b',
-                            boxShadow: sessionType === 'OFICINA' ? '0 10px 25px rgba(59, 130, 246, 0.4)' : 'none',
-                            border: sessionType === 'OFICINA' ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.05)'
+                            fontWeight: '900',
+                            transition: 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
+                            background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'rgba(255,255,255,0.05)',
+                            color: sessionType === 'OFICINA' ? '#fff' : '#94a3b8',
+                            boxShadow: sessionType === 'OFICINA' ? '0 15px 35px rgba(37, 99, 235, 0.4)' : 'none',
+                            border: '1px solid rgba(255,255,255,0.1)'
                         }}
                     >
-                        <span style={{ fontSize: '1.6rem' }}>🏢</span>
+                        <FaBuilding style={{ fontSize: '1.4rem' }} />
                         <span>OFICINA CENTRAL</span>
                     </button>
                     <button
                         onClick={() => setSessionType('COBRADOR')}
                         className={`btn-session-tab ${sessionType === 'COBRADOR' ? 'active collectors' : ''}`}
                         style={{
-                            padding: '1rem 2rem',
-                            borderRadius: '18px',
+                            padding: '1.25rem 2.5rem',
+                            borderRadius: '20px',
                             border: 'none',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.75rem',
+                            gap: '1rem',
                             fontSize: '1.1rem',
-                            fontWeight: '800',
-                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                            background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' : 'rgba(255,255,255,0.03)',
-                            color: sessionType === 'COBRADOR' ? '#fff' : '#64748b',
-                            boxShadow: sessionType === 'COBRADOR' ? '0 10px 25px rgba(139, 92, 246, 0.4)' : 'none',
-                            border: sessionType === 'COBRADOR' ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.05)'
+                            fontWeight: '900',
+                            transition: 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
+                            background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)' : 'rgba(255,255,255,0.05)',
+                            color: sessionType === 'COBRADOR' ? '#fff' : '#94a3b8',
+                            boxShadow: sessionType === 'COBRADOR' ? '0 15px 35px rgba(124, 58, 237, 0.4)' : 'none',
+                            border: '1px solid rgba(255,255,255,0.1)'
                         }}
                     >
-                        <span style={{ fontSize: '1.6rem' }}>🛵</span>
+                        <FaMotorcycle style={{ fontSize: '1.4rem' }} />
                         <span>COBRADORES / RUTA</span>
                     </button>
                 </div>
@@ -316,7 +321,7 @@ const CashRegister = (props) => {
                                 fontSize: '2rem',
                                 boxShadow: `0 10px 30px ${sessionType === 'OFICINA' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`
                             }}>
-                                {sessionType === 'OFICINA' ? '🏛️' : '🚛'}
+                                    {sessionType === 'OFICINA' ? <FaBuilding /> : <FaMotorcycle />}
                             </div>
                             <div>
                                 <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: '800', color: 'white', letterSpacing: '-0.5px' }}>
@@ -356,51 +361,39 @@ const CashRegister = (props) => {
                             onClick={() => { setMovementType('IN'); props.setViewMode('MOVEMENT_IN'); }}
                             className="dashboard-action-card"
                             style={{
-                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%)',
-                                border: '1px solid rgba(16, 185, 129, 0.2)',
-                                borderRadius: '24px',
-                                padding: '2rem 1.5rem',
-                                color: '#10b981',
-                                transition: 'all 0.3s ease'
+                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0) 100%)',
+                                color: '#10b981'
                             }}
                         >
-                            <div className="icon-wrapper" style={{ fontSize: '3rem', marginBottom: '1rem' }}>💰</div>
-                            <div style={{ fontWeight: '800', fontSize: '1.1rem' }}>Entrada Efectivo</div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.3rem' }}>Registrar ingreso manual</div>
+                            <div className="icon-wrapper"><FaArrowDown /></div>
+                            <div style={{ fontWeight: '900', fontSize: '1.25rem' }}>Entrada</div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.5rem', fontWeight: '500' }}>REGISTRAR INGRESO</div>
                         </button>
 
                         <button
                             onClick={() => { setMovementType('OUT'); props.setViewMode('MOVEMENT_OUT'); }}
                             className="dashboard-action-card"
                             style={{
-                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.02) 100%)',
-                                border: '1px solid rgba(239, 68, 68, 0.2)',
-                                borderRadius: '24px',
-                                padding: '2rem 1.5rem',
-                                color: '#ef4444',
-                                transition: 'all 0.3s ease'
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(15, 23, 42, 0) 100%)',
+                                color: '#ef4444'
                             }}
                         >
-                            <div className="icon-wrapper" style={{ fontSize: '3rem', marginBottom: '1rem' }}>💸</div>
-                            <div style={{ fontWeight: '800', fontSize: '1.1rem' }}>Salida Efectivo</div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.3rem' }}>Registrar gasto manual</div>
+                            <div className="icon-wrapper"><FaArrowUp /></div>
+                            <div style={{ fontWeight: '900', fontSize: '1.25rem' }}>Salida</div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.5rem', fontWeight: '500' }}>REGISTRAR GASTO</div>
                         </button>
 
                         <button
                             onClick={() => props.setViewMode('HISTORY')}
                             className="dashboard-action-card"
                             style={{
-                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%)',
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
-                                borderRadius: '24px',
-                                padding: '2rem 1.5rem',
-                                color: '#3b82f6',
-                                transition: 'all 0.3s ease'
+                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(15, 23, 42, 0) 100%)',
+                                color: '#3b82f6'
                             }}
                         >
-                            <div className="icon-wrapper" style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
-                            <div style={{ fontWeight: '800', fontSize: '1.1rem' }}>Historial Diario</div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.3rem' }}>Ver todas las transacciones</div>
+                            <div className="icon-wrapper"><FaHistory /></div>
+                            <div style={{ fontWeight: '900', fontSize: '1.25rem' }}>Historial</div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.5rem', fontWeight: '500' }}>VER TRANSACCIONES</div>
                         </button>
 
                         {hasRole(['admin', 'cajero']) && (
@@ -408,17 +401,13 @@ const CashRegister = (props) => {
                                 onClick={() => setShowClosePrompt(true)}
                                 className="dashboard-action-card"
                                 style={{
-                                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%)',
-                                    border: '1px solid rgba(245, 158, 11, 0.2)',
-                                    borderRadius: '24px',
-                                    padding: '2rem 1.5rem',
-                                    color: '#f59e0b',
-                                    transition: 'all 0.3s ease'
+                                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 23, 42, 0) 100%)',
+                                    color: '#f59e0b'
                                 }}
                             >
-                                <div className="icon-wrapper" style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
-                                <div style={{ fontWeight: '800', fontSize: '1.1rem' }}>Cerrar Turno</div>
-                                <div style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '0.3rem' }}>Cierre y arqueo de caja</div>
+                                <div className="icon-wrapper"><FaLock /></div>
+                                <div style={{ fontWeight: '900', fontSize: '1.25rem' }}>Cierre</div>
+                                <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.5rem', fontWeight: '500' }}>FINALIZAR TURNO</div>
                             </button>
                         )}
                     </div>
@@ -439,85 +428,63 @@ const CashRegister = (props) => {
 
                 {/* Premium Style for hover effects and animations */}
                 <style>{`
-                    .btn-action-premium {
-                        text-align: center;
-                        font-family: inherit;
-                    }
-                    .btn-action-premium:hover {
-                        transform: translateY(-4px) scale(1.02);
-                        filter: brightness(1.15);
-                        box-shadow: 0 12px 32px rgba(0,0,0,0.3) !important;
+                    @keyframes glass-shine {
+                        0% { transform: translateX(-100%) rotate(45deg); }
+                        100% { transform: translateX(200%) rotate(45deg); }
                     }
                     .dashboard-action-card {
-                        text-align: center;
                         position: relative;
                         overflow: hidden;
                         display: flex;
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                        border-radius: 28px;
+                        padding: 2.5rem 1.5rem;
+                        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                        cursor: pointer;
+                        z-index: 1;
+                    }
+                    .dashboard-action-card::before {
+                        content: '';
+                        position: absolute;
+                        top: 0; left: 0; width: 100%; height: 100%;
+                        background: radial-gradient(circle at top left, rgba(255,255,255,0.1), transparent 70%);
+                        opacity: 0; transition: opacity 0.4s;
+                        z-index: -1;
                     }
                     .dashboard-action-card:hover {
-                        transform: translateY(-8px) scale(1.02);
-                        filter: brightness(1.2);
-                        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-                        cursor: pointer;
+                        transform: translateY(-8px) scale(1.03);
+                        border-color: rgba(255, 255, 255, 0.2);
+                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
                     }
-                    .dashboard-action-card:active {
-                        transform: translateY(-2px);
+                    .dashboard-action-card:hover::before { opacity: 1; }
+                    .dashboard-action-card .icon-wrapper {
+                        font-size: 3.5rem;
+                        margin-bottom: 1.25rem;
+                        filter: drop-shadow(0 0 15px currentColor);
+                        transition: transform 0.4s;
                     }
-                    .btn-session-tab:hover {
-                        transform: translateY(-2px);
-                        filter: brightness(1.1);
+                    .dashboard-action-card:hover .icon-wrapper {
+                        transform: rotate(10deg) scale(1.1);
                     }
-                    .table-tuani thead th {
-                        padding: 1.5rem 1rem;
-                        background: #0f172a;
-                        color: #64748b;
-                        text-transform: uppercase;
-                        font-size: 0.8rem;
-                        font-weight: 800;
-                        letter-spacing: 1.5px;
-                        border-bottom: 2px solid rgba(255,255,255,0.03);
+                    .btn-session-tab {
+                        position: relative;
+                        overflow: hidden;
                     }
-                    .row-hover:hover {
-                        background: rgba(255,255,255,0.02) !important;
+                    .btn-session-tab::after {
+                        content: '';
+                        position: absolute;
+                        top: 0; left: -100%; width: 100%; height: 100%;
+                        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                        transition: 0.5s;
                     }
-                    .badge {
-                        padding: 0.5rem 1rem;
-                        border-radius: 12px;
-                        font-size: 0.8rem;
-                        font-weight: 900;
-                        letter-spacing: 0.5px;
+                    .btn-session-tab:hover::after {
+                        left: 100%;
                     }
-                    .badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
-                    .badge-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-                    .search-icon-btn:hover { color: #3b82f6; transform: scale(1.1); cursor: pointer; }
-                    .btn-icon-soft {
-                        width: 40px;
-                        height: 40px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border-radius: 12px;
-                        background: rgba(255,255,255,0.05);
-                        border: 1px solid rgba(255,255,255,0.05);
-                        cursor: pointer;
-                        transition: all 0.2s;
-                    }
-                    .btn-icon-soft:hover { background: rgba(255,255,255,0.12) !important; transform: scale(1.1); }
-                    .btn-nav {
-                        padding: 0.75rem 1.5rem;
-                        background: rgba(255,255,255,0.05);
-                        border: 1px solid rgba(255,255,255,0.1);
-                        color: white;
-                        border-radius: 12px;
-                        font-weight: 700;
-                        cursor: pointer;
-                        transition: 0.2s;
-                    }
-                    .btn-nav:hover:not(:disabled) { background: #3b82f6; transform: translateY(-2px); }
-                    .btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+                    .animate-slide-up { animation: slideUp 0.6s ease-out; }
+                    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } }
                 `}</style>
 
                 {/* INLINE MOVEMENT FORM */}

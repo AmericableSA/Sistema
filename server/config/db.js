@@ -13,7 +13,8 @@ const pool = mysql.createPool({
     queueLimit: 0,
     // Esto ayuda en entornos de producción (DigitalOcean) para evitar cierres inesperados
     enableKeepAlive: true,
-    keepAliveInitialDelay: 0
+    keepAliveInitialDelay: 0,
+    timezone: '-06:00'
 });
 
 // Prueba de conexión inmediata
