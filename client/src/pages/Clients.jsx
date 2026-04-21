@@ -7,6 +7,7 @@ import HistoryModal from '../components/HistoryModal';
 import ZoneModal from '../components/ZoneModal';
 import BulkUploadModal from '../components/BulkUploadModal';
 import CityManagerModal from '../components/CityManagerModal';
+import eventBus from '../utils/eventBus';
 import { useAuth } from '../context/AuthContext';
 
 const Clients = () => {
@@ -44,6 +45,14 @@ const Clients = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [search]);
+
+    // Recarga Global
+    useEffect(() => {
+        const unsubscribe = eventBus.subscribe('GLOBAL_REFRESH', () => {
+            fetchClients(currentPage);
+        });
+        return () => unsubscribe();
+    }, [currentPage, debouncedSearch, letterFilter, statusFilter, collectorFilter, itemsPerPage]);
 
     useEffect(() => {
         fetch('/api/users')

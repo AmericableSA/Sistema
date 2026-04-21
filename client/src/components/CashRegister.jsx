@@ -9,6 +9,7 @@ import {
     FaArrowUp, FaArrowDown, FaBuilding, FaMotorcycle, FaSyncAlt 
 } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
+import eventBus from '../utils/eventBus';
 
 const CashRegister = (props) => {
     const { hasRole, user } = useAuth();
@@ -205,6 +206,7 @@ const CashRegister = (props) => {
                 setAlertInfo({ show: true, type: 'success', title: 'Cancelado', message: 'Transacción cancelada correctamente' });
                 setCancelTxId(null);
                 fetchHistory(); // Refresh list to show CANCELLED status
+                eventBus.dispatch('GLOBAL_REFRESH'); // Transmit to the rest of the application
             } else {
                 setAlertInfo({ show: true, type: 'error', title: 'Error', message: data.msg });
             }

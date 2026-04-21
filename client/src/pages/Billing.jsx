@@ -6,6 +6,7 @@ import BillingModal from '../components/BillingModal';
 // @ts-ignore
 import CustomAlert from '../components/CustomAlert';
 import ReceiptSettingsModal from '../components/ReceiptSettingsModal';
+import eventBus from '../utils/eventBus';
 
 const Billing = () => {
     // Data State
@@ -44,6 +45,14 @@ const Billing = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [search]);
+
+    // Global Event Source Config for Realtime Updating
+    useEffect(() => {
+        const unsubscribe = eventBus.subscribe('GLOBAL_REFRESH', () => {
+            setRefreshTrigger(prev => prev + 1);
+        });
+        return () => unsubscribe();
+    }, []);
 
     // Fetch Clients (Backend Filtered) - Only if Session Open and Search Mode
     useEffect(() => {

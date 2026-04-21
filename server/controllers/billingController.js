@@ -40,36 +40,35 @@ exports.getBillingDetails = async (req, res) => {
         // const cutoffDay = parseInt(settingsMap['cutoff_day'] || 15);
 
         // NEW: Individual Cutoff based on "Mes Pagado" (Vencimiento)
-        // User requested: "fije en su fecha ultimo pago" -> We use last_paid_month which tracks coverage/due date.
-        // If last_paid_month is '2025-11-18', the cutoff is 18.
-        const cycleDate = new Date(client.last_paid_month || client.created_at || new Date());
-        const cutoffDay = cycleDate.getDate();
+        // Extract directly from string to avoid timezone offsets: "YYYY-MM-DD"
+        let cutoffDay = 15;
+        let lastPaidYear = new Date().getFullYear();
+        let lastPaidMonth = new Date().getMonth();
 
-        // Calculate Months Owed
-        const lastPaid = new Date(client.last_paid_month); // e.g. 2024-12-01
+        const refDateObj = client.last_paid_month || client.created_at;
+        if (refDateObj) {
+            const dStr = new Date(refDateObj).toLocaleDateString('en-CA', { timeZone: 'America/Managua' }); 
+            const parts = dStr.split('-');
+            lastPaidYear = parseInt(parts[0], 10);
+            lastPaidMonth = parseInt(parts[1], 10) - 1; // JS months 0-11
+            cutoffDay = parseInt(parts[2], 10);
+        }
 
-        // Normalize Last Paid to start of month to avoid day shifts
-        const lastPaidNorm = new Date(lastPaid.getFullYear(), lastPaid.getMonth(), 1);
-
-        const today = new Date();
-        const todayNorm = new Date(today.getFullYear(), today.getMonth(), 1);
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Managua' });
+        const todayParts = todayStr.split('-');
+        const todayYear = parseInt(todayParts[0], 10);
+        const todayMonth = parseInt(todayParts[1], 10) - 1;
+        const currentDay = parseInt(todayParts[2], 10);
 
         // Months diff interaction:
-        let monthsOwedCount = (todayNorm.getFullYear() - lastPaidNorm.getFullYear()) * 12 + (todayNorm.getMonth() - lastPaidNorm.getMonth());
+        let monthsOwedCount = (todayYear - lastPaidYear) * 12 + (todayMonth - lastPaidMonth);
 
         // Mora Logic
-        // Rule: Mora applies if you are PAST the cutoff day of the current owing month.
-        // If monthsOwed = 1 (Means I owe Current Month). 
-        //   If todayDay > cutoffDay -> Mora = YES.
-        // If monthsOwed > 1 (Means I owe Current + Previous).
-        //   Mora = YES (Definitely).
-        // If monthsOwed = 0 (Paid up). -> Mora = NO.
-
         let hasMora = false;
         if (monthsOwedCount > 1) {
             hasMora = true;
         } else if (monthsOwedCount === 1) {
-            if (today.getDate() > cutoffDay) {
+            if (currentDay > cutoffDay) {
                 hasMora = true;
             }
         }
@@ -218,25 +217,15 @@ exports.createTransaction = async (req, res) => {
         }
 
         // AUTO-UPDATE CLIENT DATES
-        // If details_json includes "months_paid", we advance the last_paid_month
         if (client_id && details_json && details_json.months_paid > 0) {
-            // Fetch current date
-            const [cRows] = await conn.query('SELECT last_paid_month FROM clients WHERE id = ?', [client_id]);
-            const currentLastPaid = new Date(cRows[0].last_paid_month);
-
-            // Add months (Force Integer to prevent string concatenation "5"+"1" = "51" -> 4 years jump)
             const monthsToAdd = parseInt(details_json.months_paid, 10) || 0;
-            currentLastPaid.setMonth(currentLastPaid.getMonth() + monthsToAdd);
-            const newDateStr = currentLastPaid.toISOString().slice(0, 10); // YYYY-MM-DD
 
             // SMART STATUS: If paying months, reactivate client if suspended
-            // We blindly set to 'active' if they pay months. Or should we check?
-            // "Think how company works": Paying debt = Service Restoration.
             await conn.query(`
                 UPDATE clients 
-                SET last_paid_month = ?, mora_balance = 0, has_mora = FALSE, status = 'active', last_payment_date = NOW()
+                SET last_paid_month = DATE_ADD(last_paid_month, INTERVAL ? MONTH), mora_balance = 0, has_mora = FALSE, status = 'active', last_payment_date = NOW()
                 WHERE id = ?
-            `, [newDateStr, client_id]);
+            `, [monthsToAdd, client_id]);
         }
 
         // If Just Mora paid? 
@@ -402,7 +391,11 @@ exports.getTransactionById = async (req, res) => {
         const tx = rows[0];
         // Parse details to get items
         let details = {};
-        try { details = JSON.parse(tx.details_json || '{}'); } catch (e) { }
+        if (typeof tx.details_json === 'string') {
+            try { details = JSON.parse(tx.details_json); } catch (e) { }
+        } else if (typeof tx.details_json === 'object' && tx.details_json !== null) {
+            details = tx.details_json;
+        }
 
         const result = {
             ...tx,
@@ -490,7 +483,11 @@ exports.cancelTransaction = async (req, res) => {
         // 5. Revert Client Dates & Status (Rollback to previous state)
         if (tx.client_id) {
             let details = {};
-            try { details = JSON.parse(tx.details_json || '{}'); } catch (e) { }
+            if (typeof tx.details_json === 'string') {
+                try { details = JSON.parse(tx.details_json); } catch (e) { }
+            } else if (typeof tx.details_json === 'object' && tx.details_json !== null) {
+                details = tx.details_json;
+            }
 
             const monthsPaid = parseInt(details.months_paid, 10) || 0;
             const hadReconnection = details.include_reconnection || details.reconnection_fee > 0;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CustomAlert from './CustomAlert';
 import ReceiptModal from './ReceiptModal';
+import eventBus from '../utils/eventBus';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -277,6 +278,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                 setCart([]);
                 setReceivedAmount('');
                 setManualInvoiceNo('');
+                eventBus.dispatch('GLOBAL_REFRESH');
+
+                if (onPaymentSuccess) onPaymentSuccess();
             } else {
                 setAlert({ show: true, type: 'error', title: 'Error', message: data.msg });
             }
