@@ -31,7 +31,6 @@ const Login = () => {
             position: 'relative',
             overflow: 'hidden'
         }}>
-            {/* Background Orbs */}
             <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '50vw', height: '50vw', borderRadius: '50%', background: '#3b82f6', filter: 'blur(100px)', opacity: 0.2 }}></div>
             <div style={{ position: 'absolute', bottom: '-10%', left: '-10%', width: '40vw', height: '40vw', borderRadius: '50%', background: '#8b5cf6', filter: 'blur(100px)', opacity: 0.2 }}></div>
 
@@ -98,7 +97,7 @@ const Login = () => {
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
-                    Americable © Copyright 2025
+                    Ameri-Cable © Copyright 2026
                 </p>
             </div>
         </div>

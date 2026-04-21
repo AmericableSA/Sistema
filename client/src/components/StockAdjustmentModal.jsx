@@ -2,20 +2,19 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 
 const StockAdjustmentModal = ({ product, onClose, onSave }) => {
-    const [type, setType] = useState('IN'); // IN or OUT
+    const [type, setType] = useState(product?._defaultType || 'IN'); // Default from button clicked (IN or OUT)
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState('');
     const [error, setError] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
 
     useEffect(() => {
-        // Get user from local storage to ensure valid user_id
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
                 setCurrentUser(JSON.parse(storedUser));
             } catch (e) {
-                console.error("Error parsing user", e);
+                console.error("Error al procesar usuario", e);
             }
         }
     }, []);
@@ -68,35 +67,13 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
     const finalStock = type === 'IN' ? currentStock + qtyVal : currentStock - qtyVal;
 
     return ReactDOM.createPortal(
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(5px)',
-            zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: 'fadeIn 0.2s ease-out'
-        }}>
-            <style>{`
-                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-            `}</style>
-
-            <div className="glass-card" style={{
-                width: '500px',
-                maxWidth: '95%',
-                background: '#0f172a',
-                border: '1px solid #334155',
-                borderRadius: '16px',
-                padding: '2rem',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                animation: 'slideIn 0.3s ease-out',
-                color: 'white'
-            }}>
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '500px' }}>
                 <h2 style={{
                     marginTop: 0,
                     marginBottom: '1.5rem',
                     fontSize: '1.5rem',
-                    borderBottom: '1px solid #334155',
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
                     paddingBottom: '1rem',
                     color: 'white'
                 }}>
@@ -112,43 +89,42 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
 
-                    {/* TIPO DE MOVIMIENTO */}
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600, color: '#e2e8f0' }}>Tipo de Movimiento</label>
+                        <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>Tipo de Movimiento</label>
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <button
                                 type="button"
                                 onClick={() => setType('IN')}
+                                className="btn-secondary"
                                 style={{
                                     flex: 1, padding: '1rem', borderRadius: '12px',
-                                    border: type === 'IN' ? '2px solid #22c55e' : '1px solid #334155',
-                                    background: type === 'IN' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.02)',
+                                    border: type === 'IN' ? '2px solid #22c55e' : '1px solid rgba(255,255,255,0.1)',
+                                    background: type === 'IN' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
                                     color: type === 'IN' ? '#4ade80' : '#94a3b8',
-                                    cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem',
-                                    transition: 'all 0.2s'
+                                    fontWeight: 'bold', fontSize: '1rem'
                                 }}
                             >
-                                📥 Entrada (Sumar)
+                                📥 Entrada
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setType('OUT')}
+                                className="btn-secondary"
                                 style={{
                                     flex: 1, padding: '1rem', borderRadius: '12px',
-                                    border: type === 'OUT' ? '2px solid #ef4444' : '1px solid #334155',
-                                    background: type === 'OUT' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.02)',
+                                    border: type === 'OUT' ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+                                    background: type === 'OUT' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
                                     color: type === 'OUT' ? '#f87171' : '#94a3b8',
-                                    cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem',
-                                    transition: 'all 0.2s'
+                                    fontWeight: 'bold', fontSize: '1rem'
                                 }}
                             >
-                                📤 Salida (Restar)
+                                📤 Salida
                             </button>
                         </div>
                     </div>
 
                     {/* CANTIDAD CALCULATION */}
-                    <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1.5rem', borderRadius: '12px', border: '1px solid #334155' }}>
+                    <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                             <div style={{ textAlign: 'center' }}>
                                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, marginBottom: '0.25rem' }}>ACTUAL</div>
@@ -164,12 +140,8 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
                                     type="number" min="1"
                                     value={quantity} onChange={(e) => setQuantity(e.target.value)}
                                     required
-                                    style={{
-                                        width: '100%', textAlign: 'center', fontSize: '1.5rem', fontWeight: 'bold',
-                                        padding: '0.75rem', borderRadius: '8px',
-                                        background: '#1e293b', border: '1px solid #475569', color: 'white',
-                                        outline: 'none'
-                                    }}
+                                    className="input-dark"
+                                    style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 'bold' }}
                                 />
                             </div>
 
@@ -182,19 +154,15 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
                         </div>
                     </div>
 
-                    {/* MOTIVO */}
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600, color: '#e2e8f0' }}>Motivo / Razón</label>
+                        <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>Motivo / Razón</label>
                         <textarea
                             rows="2"
                             placeholder="Ej: Compra de lote, Devolución..."
                             value={reason} onChange={(e) => setReason(e.target.value)}
                             required
-                            style={{
-                                width: '100%', padding: '0.8rem', borderRadius: '8px',
-                                background: '#1e293b', border: '1px solid #475569', color: 'white',
-                                fontSize: '1rem', resize: 'vertical', fontFamily: 'inherit'
-                            }}
+                            className="input-dark"
+                            style={{ resize: 'vertical' }}
                         />
                     </div>
 
@@ -205,21 +173,12 @@ const StockAdjustmentModal = ({ product, onClose, onSave }) => {
                     )}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                        <button type="button" onClick={onClose} style={{
-                            background: 'transparent', border: '1px solid #475569',
-                            padding: '0.8rem 1.5rem', borderRadius: '8px',
-                            fontWeight: 600, color: '#cbd5e1', cursor: 'pointer',
-                            transition: 'background 0.2s'
-                        }}>
+                        <button type="button" onClick={onClose} className="btn-secondary">
                             Cancelar
                         </button>
-                        <button type="submit" style={{
+                        <button type="submit" className="btn-primary-glow" style={{
                             background: type === 'IN' ? '#22c55e' : '#ef4444',
-                            border: 'none',
-                            padding: '0.8rem 2rem', borderRadius: '8px',
-                            fontWeight: 700, color: 'white', cursor: 'pointer',
                             boxShadow: type === 'IN' ? '0 4px 12px rgba(34, 197, 94, 0.3)' : '0 4px 12px rgba(239, 68, 68, 0.3)',
-                            transition: 'transform 0.1s'
                         }}>
                             {type === 'IN' ? 'Confirmar Entrada' : 'Confirmar Salida'}
                         </button>

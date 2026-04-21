@@ -157,9 +157,10 @@ exports.getCableStats = async (req, res) => {
         morososCount = mRows[0]?.c || 0;
         morososDebt = mRows[0]?.d || 0;
 
-        // 2. Cortes vs Retirados
-        const [sRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'suspended'");
+        // 2. Cortes vs Retirados vs Solicitud
+        const [sRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'suspended'"); // Cortado por mora
         const [rRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status IN ('retired', 'inactive', 'disconnected')");
+        const [discReqRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'disconnected_by_request'"); // Corte a solicitud
 
         // NEW: Active Clients for Al Dia calculation
         const [activeRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'active'");
@@ -198,7 +199,9 @@ exports.getCableStats = async (req, res) => {
         res.json({
             morosos: { count: morososCount, deuda: morososDebt || 0 },
             al_dia: alDiaCount,
-            suspendidos: sRows[0]?.c || 0,
+            clientes_activos: activeCount,
+            suspendidos: sRows[0]?.c || 0,             // Cortado por mora/deuda
+            desconectados_solicitud: discReqRows[0]?.c || 0, // Corte voluntario a solicitud
             retirados: rRows[0]?.c || 0,
             instalaciones_mes: nRows[0]?.c || 0,
             total_clientes: tRows[0]?.c || 0,
@@ -240,9 +243,11 @@ exports.getDailyClosing = async (req, res) => {
 
         let manualIn = 0;
         let manualOut = 0;
+        let devoluciones = 0;
         moveRows.forEach(r => {
             if (r.type === 'IN') manualIn += parseFloat(r.total);
             else if (r.type === 'OUT') manualOut += parseFloat(r.total);
+            else if (r.type === 'REFUND') devoluciones += parseFloat(r.total); // Facturas anuladas — no es gasto
         });
 
         // 3. Breakdown by User
@@ -257,7 +262,8 @@ exports.getDailyClosing = async (req, res) => {
         res.json({
             ingresos: salesTotal + manualIn,
             egresos: manualOut,
-            balance_dia: (salesTotal + manualIn) - manualOut,
+            devoluciones: devoluciones,
+            balance_dia: (salesTotal + manualIn) - manualOut - devoluciones,
             por_usuario: userRows
         });
 
@@ -366,14 +372,15 @@ exports.getDailyDetails = async (req, res) => {
 
         // Helper to sum
         const calcSum = (list) => {
-            let sales = 0, manualIn = 0, manualOut = 0;
+            let sales = 0, manualIn = 0, manualOut = 0, refunds = 0;
             list.forEach(item => {
                 const val = parseFloat(item.amount);
                 if (item.category === 'TRANSACTION') sales += val;
                 else if (item.type === 'IN') manualIn += val;
                 else if (item.type === 'OUT') manualOut += val;
+                else if (item.type === 'REFUND') refunds += val; // Facturas anuladas
             });
-            return { totalSales: sales, totalManualIn: manualIn, totalManualOut: manualOut, net: (sales + manualIn) - manualOut };
+            return { totalSales: sales, totalManualIn: manualIn, totalManualOut: manualOut, totalRefunds: refunds, net: (sales + manualIn) - manualOut - refunds };
         };
 
         const officeSummary = calcSum(office);
@@ -384,7 +391,8 @@ exports.getDailyDetails = async (req, res) => {
             net: officeSummary.net + collectorsSummary.net,
             entries: officeSummary.totalManualIn + collectorsSummary.totalManualIn,
             exits: officeSummary.totalManualOut + collectorsSummary.totalManualOut,
-            sales: officeSummary.totalSales + collectorsSummary.totalSales
+            sales: officeSummary.totalSales + collectorsSummary.totalSales,
+            refunds: (officeSummary.totalRefunds || 0) + (collectorsSummary.totalRefunds || 0)
         };
 
         res.json({
@@ -470,7 +478,10 @@ exports.exportDailyDetailsXLS = async (req, res) => {
 
         combined.forEach(row => {
             const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
-            const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA');
+            const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' 
+                : row.type === 'IN' ? 'INGRESO' 
+                : row.type === 'REFUND' ? 'DEVOLUCIÓN' 
+                : 'SALIDA';
             const boxLabel = row.collector_role === 'collector' ? 'COLECTORES' : 'OFICINA';
             
             const formatDate = (date) => {
@@ -663,7 +674,9 @@ exports.getServiceOrdersReport = async (req, res) => {
                 }
 
                 // Only fetch specific Tramite actions
-                logConditions.push(`l.action IN ('CHANGE_NAME', 'CHANGE_ADDRESS', 'DISCONNECT_REQ', 'DISCONNECT_MORA', 'RECONNECT', 'REPAIR')`);
+                // Note: RECONNECT is excluded — it's tracked as a service_order (PENDING/IN_PROGRESS)
+                // including it here would confuse users seeing it as FINALIZADO when order is still pending
+                logConditions.push(`l.action IN ('CHANGE_NAME', 'CHANGE_ADDRESS', 'DISCONNECT_REQ', 'DISCONNECT_MORA', 'REPAIR')`);
 
                 let queryLog = `
                     SELECT l.id, l.timestamp as created_at, l.action, l.details,

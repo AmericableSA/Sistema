@@ -2,11 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ProductModal from '../components/ProductModal';
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
-// @ts-ignore
 import CustomAlert from '../components/CustomAlert';
 import ComboManagerModal from '../components/ComboManagerModal';
 import InventoryHistoryModal from '../components/InventoryHistoryModal';
@@ -18,13 +14,11 @@ const Inventory = () => {
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
     const [confirm, setConfirm] = useState({ show: false, message: '', action: null });
 
-    // Modals State
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [showStockModal, setShowStockModal] = useState(false);
     const [stockProduct, setStockProduct] = useState(null);
 
-    // New Managers State
     const [showComboManager, setShowComboManager] = useState(false);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
 
@@ -35,7 +29,7 @@ const Inventory = () => {
             setProducts(data);
             setLoading(false);
         } catch (error) {
-            console.error("Error fetching products:", error);
+            console.error("Error al obtener productos:", error);
             setLoading(false);
         }
     };
@@ -46,7 +40,6 @@ const Inventory = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Filtered Products
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.sku.toLowerCase().includes(searchTerm.toLowerCase())
@@ -61,8 +54,6 @@ const Inventory = () => {
         setEditingProduct({ type });
         setShowModal(true);
     };
-
-    // Delete Logic reused for Combo Manager
     const handleDeleteProduct = (product) => {
         setConfirm({
             show: true,
@@ -84,8 +75,6 @@ const Inventory = () => {
             }
         });
     };
-
-    // Handle Export
     const handleExport = async () => {
         try {
             setAlert({ show: true, type: 'info', title: 'Exportando...', message: 'Generando archivo Excel, por favor espere.' });
@@ -96,7 +85,7 @@ const Inventory = () => {
 
             const res = await fetch(`/api/products/export-xls?${params.toString()}`);
 
-            if (!res.ok) throw new Error('Error generando reporte');
+            if (!res.ok) throw new Error('Error al generar reporte');
 
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
@@ -116,24 +105,16 @@ const Inventory = () => {
     };
 
     return (
-        <div className="page-container" style={{ padding: '2rem', maxWidth: '100%' }}>
+        <div className="page-container">
             {loading && <FullPageLoader />}
 
-            {/* Header (Matching Clients.jsx) */}
-            <div className="animate-entry header-flex" style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem',
-                borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '2rem'
-            }}>
+            <div className="animate-entry page-header">
                 <div>
-                    <h1 style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0', background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Inventario General
-                    </h1>
-                    <p style={{ color: '#64748b', fontSize: '1.1rem', margin: 0, fontWeight: 500 }}>
-                        Gestión completa de productos, existencias y precios.
-                    </p>
+                    <h1>Inventario General</h1>
+                    <p>Gestión completa de productos, existencias y precios.</p>
                 </div>
 
-                <div className="header-actions" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div className="header-actions">
                     <button
                         className="btn-dark-glow"
                         onClick={handleExport}
@@ -148,37 +129,34 @@ const Inventory = () => {
                         Historial
                     </button>
 
-                    <button className="btn-dark-glow" onClick={() => handleCreate('product')} style={{ fontSize: '1rem', padding: '1rem 2rem' }}>
-                        <span style={{ fontSize: '1.2rem' }}>+</span>
-                        NUEVO PRODUCTO
+                    <button className="btn-dark-glow" onClick={() => handleCreate('product')} style={{ padding: '0.8rem 1.5rem' }}>
+                        + NUEVO PRODUCTO
                     </button>
                 </div>
             </div>
 
-            {/* Search and Controls */}
-            <div className="animate-entry" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
+            <div className="animate-entry" style={{ marginBottom: '1.5rem' }}>
                 <input
                     type="text"
                     placeholder="Buscar SKU o Nombre..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="input-dark"
-                    style={{ maxWidth: '400px', width: '100%', padding: '0.8rem 1rem' }}
+                    style={{ maxWidth: '400px' }}
                 />
             </div>
 
-            {/* Inventory Glass Card */}
             <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="responsive-table-wrapper">
+                    <table className="table-tuani">
                         <thead>
-                            <tr style={{ background: 'rgba(30, 41, 59, 0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>SKU</th>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>Producto</th>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'left' }}>Tipo</th>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Stock / Unidad</th>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>Precio</th>
-                                <th style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'center' }}>Acciones</th>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th>Tipo</th>
+                                <th style={{ textAlign: 'right' }}>Stock / Unidad</th>
+                                <th style={{ textAlign: 'right' }}>Precio</th>
+                                <th style={{ textAlign: 'center' }}>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -219,7 +197,7 @@ const Inventory = () => {
                                             </span>
                                         )}
                                     </td>
-                                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
+                                    <td style={{ textAlign: 'right' }}>
                                         {product.type === 'bundle' || product.type === 'service' ? (
                                             <span style={{ color: '#64748b' }}>-</span>
                                         ) : (
@@ -243,15 +221,48 @@ const Inventory = () => {
                                             </div>
                                         )}
                                     </td>
-                                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right', fontWeight: 700, color: 'white', fontSize: '1rem' }}>
+                                    <td style={{ textAlign: 'right', fontWeight: 700, color: 'white' }}>
                                         C$ {Number(product.selling_price).toFixed(2)}
                                     </td>
-                                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.8rem' }}>
-                                            <button onClick={() => handleEdit(product)} className="btn-icon btn-edit" title="Editar">
+                                    <td style={{ textAlign: 'center' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {/* Bug 4: Visible Entrada/Salida buttons for products only */}
+                                            {product.type !== 'bundle' && product.type !== 'service' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => { setStockProduct({ ...product, _defaultType: 'IN' }); setShowStockModal(true); }}
+                                                        title="Registrar Entrada de Stock"
+                                                        style={{
+                                                            background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)',
+                                                            color: '#4ade80', padding: '0.45rem 0.75rem', borderRadius: '8px',
+                                                            cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                                                            display: 'flex', alignItems: 'center', gap: '3px', transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(34,197,94,0.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(34,197,94,0.12)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                    >
+                                                        📥 Entrada
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setStockProduct({ ...product, _defaultType: 'OUT' }); setShowStockModal(true); }}
+                                                        title="Registrar Salida de Stock"
+                                                        style={{
+                                                            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                                                            color: '#f87171', padding: '0.45rem 0.75rem', borderRadius: '8px',
+                                                            cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                                                            display: 'flex', alignItems: 'center', gap: '3px', transition: 'all 0.2s'
+                                                        }}
+                                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                    >
+                                                        📤 Salida
+                                                    </button>
+                                                </>
+                                            )}
+                                            <button onClick={() => handleEdit(product)} className="btn-icon btn-edit" title="Editar producto">
                                                 ✎
                                             </button>
-                                            <button onClick={() => handleDeleteProduct(product)} className="btn-icon btn-delete" title="Eliminar">
+                                            <button onClick={() => handleDeleteProduct(product)} className="btn-icon btn-delete" title="Eliminar producto">
                                                 ✕
                                             </button>
                                         </div>
@@ -261,11 +272,9 @@ const Inventory = () => {
                         </tbody>
                     </table>
                 </div>
-            </div >
+            </div>
 
-            {/* PRODUCT MODAL */}
-            {
-                showModal && (
+            {showModal && (
                     <ProductModal
                         product={editingProduct}
                         allProducts={products}

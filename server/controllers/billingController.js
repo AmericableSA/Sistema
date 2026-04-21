@@ -460,10 +460,10 @@ exports.cancelTransaction = async (req, res) => {
             return res.status(403).json({ msg: 'No hay ninguna caja abierta para registrar el reembolso.' });
         }
 
-        // 3. Register Refund (OUT)
+        // 3. Register Refund (REFUND — NOT a gasto, shown separately in reports)
         await conn.query(
             `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
-             VALUES (?, ?, ?, 'OUT', NOW())`,
+             VALUES (?, ?, ?, 'REFUND', NOW())`,
             [sessions[0].id, tx.amount, `Devolución Factura #${tx.reference_id || id}. Motivo: ${reason}`]
         );
 

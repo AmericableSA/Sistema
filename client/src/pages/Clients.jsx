@@ -1,25 +1,19 @@
-import React, { useState, useEffect } from 'react';
-// @ts-ignore
-import ClientModal from '../components/ClientModal'; // @ts-ignore
+import ClientModal from '../components/ClientModal';
 import CustomAlert from '../components/CustomAlert';
 import ConfirmModal from '../components/ConfirmModal';
-// @ts-ignore
 import HistoryModal from '../components/HistoryModal';
-// @ts-ignore
-import ZoneModal from '../components/ZoneModal'; // @ts-ignore
+import ZoneModal from '../components/ZoneModal';
 import BulkUploadModal from '../components/BulkUploadModal';
 import CityManagerModal from '../components/CityManagerModal';
 import { useAuth } from '../context/AuthContext';
 
 const Clients = () => {
-    // Data State
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // UI State
     const [showModal, setShowModal] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
-    const [initialHistoryTab, setInitialHistoryTab] = useState('logs'); // 'logs' or 'invoices'
+    const [initialHistoryTab, setInitialHistoryTab] = useState('logs');
     const [showZoneModal, setShowZoneModal] = useState(false);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showCityModal, setShowCityModal] = useState(false);
@@ -27,7 +21,6 @@ const Clients = () => {
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
     const [confirmDelete, setConfirmDelete] = useState({ show: false, id: null });
 
-    // Filter State (Backend)
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [letterFilter, setLetterFilter] = useState('');
@@ -35,7 +28,6 @@ const Clients = () => {
     const [collectorFilter, setCollectorFilter] = useState('');
     const [collectors, setCollectors] = useState([]);
 
-    // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(30);
     const [totalPages, setTotalPages] = useState(1);
@@ -43,31 +35,26 @@ const Clients = () => {
 
     const { user } = useAuth();
 
-    // Debounce Search Logic
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search);
-            if (search !== debouncedSearch) setCurrentPage(1); // Reset to page 1 on new search
+            if (search !== debouncedSearch) setCurrentPage(1);
         }, 500);
         return () => clearTimeout(timer);
     }, [search]);
 
-    // Fetch Collectors for Filter
     useEffect(() => {
         fetch('/api/users')
             .then(res => res.json())
             .then(data => setCollectors(data))
-            .catch(err => console.error('Error fetching collectors:', err));
+            .catch(err => console.error('Error al obtener colectores:', err));
     }, []);
 
-    // Active View Logic (Hides the main grid to save performance/focus)
     const isViewActive = showModal || showHistory || showZoneModal || showUploadModal;
 
-    // Fetch Clients (Backend Filtered)
     const fetchClients = async (page = 1) => {
         setLoading(true);
         try {
-            // Build Query Params for Backend
             const params = new URLSearchParams({
                 page: page,
                 limit: itemsPerPage,
@@ -77,7 +64,6 @@ const Clients = () => {
                 collector_id: collectorFilter
             });
 
-            // Added cache: 'no-store' to prevent browser caching issues
             const res = await fetch(`/api/clients?${params.toString()}`, { cache: 'no-store' });
 
             if (!res.ok) throw new Error('Error en el servidor');
@@ -90,28 +76,21 @@ const Clients = () => {
                 setCurrentPage(data.currentPage);
                 setTotalClients(data.total);
             } else {
-                setClients(data); // Fallback
+                setClients(data);
             }
         } catch (err) {
             console.error(err);
             setAlert({ show: true, type: 'error', title: 'Error de Conexión', message: 'No se pudieron cargar los clientes.' });
-            setClients([]); // Clear list on error to avoid confusion
+            setClients([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Refetch when params change
-    useEffect(() => {
-        fetchClients(currentPage);
-    }, [currentPage, itemsPerPage, debouncedSearch, letterFilter, statusFilter, collectorFilter]);
-
-    // Handle Delete
     const handleDelete = (id) => {
         setConfirmDelete({ show: true, id });
     };
 
-    // Handle Export
     const handleExport = async () => {
         try {
             setAlert({ show: true, type: 'info', title: 'Exportando...', message: 'Generando archivo Excel, por favor espere.' });
@@ -125,13 +104,13 @@ const Clients = () => {
 
             const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/clients/export-xls?${params.toString()}`);
 
-            if (!res.ok) throw new Error('Error generando reporte');
+            if (!res.ok) throw new Error('Error al generar reporte');
 
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'Reporte_Clientes.xlsx'; // Force extension
+            a.download = 'Reporte_Clientes.xlsx';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -158,24 +137,15 @@ const Clients = () => {
     };
 
     return (
-        <div className="page-container" style={{ padding: '2rem', maxWidth: '1600px', margin: '0 auto' }}>
+        <div className="page-container">
 
-            {/* Header (Always Visible) */}
-            <div className="animate-entry header-flex" style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem',
-                borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '2rem'
-            }}>
+            <div className="animate-entry page-header">
                 <div>
-                    <h1 style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0', background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Gestión de Clientes
-                    </h1>
-                    <p style={{ color: '#64748b', fontSize: '1.1rem', margin: 0, fontWeight: 500 }}>
-                        Base de datos de servicio (Tarifas, Zonas y Estados).
-                    </p>
+                    <h1>Gestión de Clientes</h1>
+                    <p>Base de datos de servicio (Tarifas, Zonas y Estados).</p>
                 </div>
 
-                <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
-                    {/* EXPORT BUTTON */}
+                <div className="header-actions">
                     <button
                         className="btn-dark-glow"
                         onClick={handleExport}
@@ -203,9 +173,8 @@ const Clients = () => {
                     <button className="btn-dark-glow" onClick={() => { setSelectedClient(null); setShowHistory(true); }} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
                         Historial Global
                     </button>
-                    <button className="btn-dark-glow" onClick={() => { setSelectedClient(null); setShowModal(true); }} style={{ fontSize: '1rem', padding: '1rem 2rem' }}>
-                        <span style={{ fontSize: '1.2rem' }}>+</span>
-                        NUEVO CLIENTE
+                    <button className="btn-dark-glow" onClick={() => { setSelectedClient(null); setShowModal(true); }} style={{ padding: '0.8rem 1.5rem' }}>
+                        + NUEVO CLIENTE
                     </button>
                 </div>
             </div>
@@ -258,28 +227,24 @@ const Clients = () => {
                 onClose={() => setAlert({ ...alert, show: false })}
             />
 
-            {/* Main Content (Hidden if any view is active to optimize performance) */}
             {!isViewActive && (
                 <>
-                    {/* Controls & Search */}
                     <div className="animate-entry" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
 
-                        {/* Global Backend Search */}
-                        <div style={{ flex: 1, minWidth: '300px' }}>
+                        <div style={{ flex: 1, minWidth: '280px' }}>
                             <input
                                 type="text"
                                 placeholder="🔍 Buscar Global (Nombre, Cédula, Contrato)..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="input-dark"
-                                style={{ width: '100%', height: '50px', fontSize: '1.1rem' }}
+                                style={{ height: '50px', fontSize: '1.1rem' }}
                             />
                         </div>
 
-                        {/* Collector Filter */}
                         <select
                             className="input-dark"
-                            style={{ maxWidth: '250px', height: '50px' }}
+                            style={{ flex: '1', minWidth: '150px', maxWidth: '280px', height: '50px' }}
                             value={collectorFilter}
                             onChange={(e) => {
                                 setCollectorFilter(e.target.value);
@@ -292,10 +257,9 @@ const Clients = () => {
                             ))}
                         </select>
 
-                        {/* Status Filter (Backend) */}
                         <select
                             className="input-dark"
-                            style={{ maxWidth: '250px', height: '50px' }}
+                            style={{ flex: '1', minWidth: '150px', maxWidth: '280px', height: '50px' }}
                             value={statusFilter}
                             onChange={(e) => {
                                 setStatusFilter(e.target.value);
@@ -314,11 +278,9 @@ const Clients = () => {
                         </select>
                     </div>
 
-                    {/* Alphabet Filter Strip (Backend Filter) */}
                     <div className="animate-entry" style={{
-                        display: 'flex', gap: '0.25rem', overflowX: 'auto', paddingBottom: '1rem', marginBottom: '1.5rem',
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        scrollbarWidth: 'thin'
+                        display: 'flex', gap: '0.25rem', overflowX: 'auto', paddingBottom: '0.75rem', marginBottom: '1.5rem',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
                     }}>
                         <button
                             onClick={() => { setLetterFilter(''); setCurrentPage(1); }}
@@ -443,10 +405,6 @@ const Clients = () => {
 
                     <style>{`
                         @media (max-width: 768px) {
-                            .page-container { padding: 1rem !important; }
-                            .header-flex { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
-                            .header-actions { width: 100%; flex-wrap: wrap; }
-                            .header-actions button { flex: 1; text-align: center; justify-content: center; }
                             .clients-grid { grid-template-columns: 1fr !important; }
                         }
                     `}</style>

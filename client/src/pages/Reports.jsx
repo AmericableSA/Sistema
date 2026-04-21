@@ -225,8 +225,8 @@ const ActionButton = styled.button`
 const Reports = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [cableStats, setCableStats] = useState({ morosos: { count: 0, deuda: 0 }, retirados: 0, instalaciones_mes: 0 });
-    const [dailyClosing, setDailyClosing] = useState({ ingresos: 0, egresos: 0, balance_dia: 0, por_usuario: [] });
+    const [cableStats, setCableStats] = useState({ morosos: { count: 0, deuda: 0 }, retirados: 0, instalaciones_mes: 0, clientes_activos: 0, suspendidos: 0, desconectados_solicitud: 0 });
+    const [dailyClosing, setDailyClosing] = useState({ ingresos: 0, egresos: 0, devoluciones: 0, balance_dia: 0, por_usuario: [] });
     const [topCollectors, setTopCollectors] = useState([]);
     const [collectorPerformance, setCollectorPerformance] = useState([]);
     const [movements, setMovements] = useState({});
@@ -557,6 +557,14 @@ const Reports = () => {
                         📥 Exportar Detalle
                     </ActionButton>
                 </Card>
+                {/* Devoluciones - facturas anuladas, NO es gasto */}
+                {dailyClosing.devoluciones > 0 && (
+                    <Card style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)' }}>
+                        <Label style={{ color: 'white' }}>{'\U0001f504'} Devoluciones</Label>
+                        <Value>{formatCurrency(dailyClosing.devoluciones)}</Value>
+                        <div style={{ color: '#ddd6fe', fontSize: '0.85rem' }}>Facturas anuladas (no es gasto)</div>
+                    </Card>
+                )}
                 <Card>
                     <Label><FaMoneyBillWave /> Balance Neto</Label>
                     <Value style={{ color: dailyClosing.balance_dia >= 0 ? '#4ade80' : '#ef4444' }}>
@@ -893,6 +901,19 @@ const Reports = () => {
 
             <SectionTitle>Estado de Cartera de Clientes</SectionTitle>
             <Grid>
+                {/* Clientes Activos - NUEVO */}
+                <Card>
+                    <Label style={{ color: '#22d3ee' }}><FaUserCheck /> Clientes Activos</Label>
+                    <Value style={{ color: '#22d3ee' }}>{cableStats.clientes_activos || 0}</Value>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Total con servicio activo</div>
+                    <ActionButton
+                        $variant="outline-primary"
+                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', borderColor: 'rgba(34,211,238,0.3)', color: '#22d3ee' }}
+                        onClick={() => { fetch('/api/clients/export-xls?status=active').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Activos.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                    >
+                        📥 Exportar Excel
+                    </ActionButton>
+                </Card>
                 <Card>
                     <Label style={{ color: '#10b981' }}><FaUserCheck /> Clientes al Día</Label>
                     <Value style={{ color: '#10b981' }}>{cableStats.al_dia || 0}</Value>
@@ -900,19 +921,8 @@ const Reports = () => {
                     <ActionButton
                         $variant="outline-success"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
-                        onClick={() => {
-                            fetch('/api/clients/export-xls?status=up_to_date')
-                                .then(res => res.blob())
-                                .then(blob => {
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'Clientes_Al_Dia.xlsx';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    a.remove();
-                                });
-                        }}>
+                        onClick={() => { fetch('/api/clients/export-xls?status=up_to_date').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Al_Dia.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                    >
                         📥 Exportar Excel
                     </ActionButton>
                 </Card>
@@ -923,42 +933,34 @@ const Reports = () => {
                     <ActionButton
                         $variant="outline-danger"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
-                        onClick={() => {
-                            fetch('/api/clients/export-xls?status=in_arrears')
-                                .then(res => res.blob())
-                                .then(blob => {
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'Clientes_Mora.xlsx';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    a.remove();
-                                });
-                        }}>
+                        onClick={() => { fetch('/api/clients/export-xls?status=in_arrears').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Mora.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                    >
                         📥 Exportar Excel
                     </ActionButton>
                 </Card>
+                {/* Suspendidos = Cortado por Mora (status suspended) */}
                 <Card>
-                    <Label style={{ color: '#f59e0b' }}><FaUserTimes /> Cortado a solicitud del cliente</Label>
-                    <Value style={{ color: '#f59e0b' }}>{cableStats.suspendidos}</Value>
-                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Servicio suspendido</div>
+                    <Label style={{ color: '#f59e0b' }}><FaUserTimes /> Servicio Suspendido (Mora)</Label>
+                    <Value style={{ color: '#f59e0b' }}>{cableStats.suspendidos || 0}</Value>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Cortado por falta de pago</div>
                     <ActionButton
                         $variant="outline-warning"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
-                        onClick={() => {
-                            fetch('/api/clients/export-xls?status=suspended')
-                                .then(res => res.blob())
-                                .then(blob => {
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'Clientes_Suspendidos.xlsx';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    a.remove();
-                                });
-                        }}>
+                        onClick={() => { fetch('/api/clients/export-xls?status=suspended').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Suspendidos.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                    >
+                        📥 Exportar Excel
+                    </ActionButton>
+                </Card>
+                {/* Corte a Solicitud - diferente de suspenso por mora */}
+                <Card>
+                    <Label style={{ color: '#a78bfa' }}><FaUserTimes /> Corte a Solicitud</Label>
+                    <Value style={{ color: '#a78bfa' }}>{cableStats.desconectados_solicitud || 0}</Value>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Desconexiones voluntarias del cliente</div>
+                    <ActionButton
+                        $variant="outline-purple"
+                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
+                        onClick={() => { fetch('/api/clients/export-xls?status=disconnected_by_request').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Desconectados_Solicitud.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                    >
                         📥 Exportar Excel
                     </ActionButton>
                 </Card>
@@ -968,20 +970,9 @@ const Reports = () => {
                     <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Base instalada total</div>
                     <ActionButton
                         $variant="outline-primary"
-                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', borderColor: 'rgba(148, 163, 184, 0.3)', color: '#94a3b8' }}
-                        onClick={() => {
-                            fetch('/api/clients/export-xls?status=all')
-                                .then(res => res.blob())
-                                .then(blob => {
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'Total_Clientes.xlsx';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    a.remove();
-                                });
-                        }}>
+                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', borderColor: 'rgba(148,163,184,0.3)', color: '#94a3b8' }}
+                        onClick={() => { fetch('/api/clients/export-xls?status=all').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Total_Clientes.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                    >
                         📥 Exportar Excel
                     </ActionButton>
                 </Card>

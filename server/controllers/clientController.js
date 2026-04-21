@@ -631,7 +631,9 @@ exports.exportClientsXLS = async (req, res) => {
         const [rows] = await db.query(`
             SELECT c.contract_number, c.full_name, c.identity_document, c.phone_primary, c.address_street, c.last_paid_month, c.status, c.cutoff_date, c.installation_date, c.last_payment_date,
                    z.name as zone_name, n.name as neighborhood_name,
-                   u.username as collector_name
+                   u.username as collector_name,
+                   (SELECT GROUP_CONCAT(cn.note_content ORDER BY cn.created_at DESC SEPARATOR ' | ')
+                    FROM client_notes cn WHERE cn.client_id = c.id) as notas
             FROM clients c
             LEFT JOIN zones z ON c.zone_id = z.id
             LEFT JOIN neighborhoods n ON c.neighborhood_id = n.id
@@ -660,7 +662,8 @@ exports.exportClientsXLS = async (req, res) => {
             { header: 'Último Mes Pagado', key: 'last_paid', width: 20 },
             { header: 'Fecha de Corte', key: 'cutoff_date', width: 20 },
             { header: 'Fecha Instalación', key: 'installation_date', width: 20 },
-            { header: 'Fecha Último Pago', key: 'last_payment_date', width: 20 }
+            { header: 'Fecha Último Pago', key: 'last_payment_date', width: 20 },
+            { header: 'Notas del Cliente', key: 'notas', width: 50 }
         ];
 
         // STYLE
@@ -753,7 +756,8 @@ exports.exportClientsXLS = async (req, res) => {
                 last_paid: lastPaid,
                 cutoff_date: cutoffDateStr,
                 installation_date: installationDateStr,
-                last_payment_date: lastPaymentDateStr
+                last_payment_date: lastPaymentDateStr,
+                notas: c.notas || ''
             });
         });
 

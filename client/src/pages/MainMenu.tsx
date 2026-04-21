@@ -44,28 +44,15 @@ const MainMenu = () => {
             path: '/users',
             color: 'linear-gradient(135deg, #ec4899, #db2777)',
             icon: 'lock',
-            roles: ['admin'] // Restricted
+            roles: ['admin']
         },
-        /* {
-            title: 'Facturas',
-            desc: 'Cuentas por Cobrar',
-            path: '/invoices',
-            color: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-            icon: 'receipt', // Changed from hammer_and_wrench
-            roles: ['admin', 'cajero'] // Expanded roles? User didn't specify, assuming admin/cashier needs access.
-        }, */
     ];
 
-    // Filter modules based on user role
     const visibleModules = allModules.filter(m => {
-        // Special restriction for 'oficinista' / 'office' / 'oficina'
-        // User requested: ONLY Clients and Billing.
-        // Even if the module config says they have access (like Reports?), we must hide others.
         const role = user?.role;
         const officeRoles = ['oficina', 'oficinista', 'office'];
 
         if (officeRoles.includes(role)) {
-            // Only allow specific paths
             const allowed = ['/clients', '/billing'];
             return allowed.includes(m.path);
         }
@@ -74,17 +61,9 @@ const MainMenu = () => {
     });
 
     return (
-        <div className="animate-entry" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', paddingBottom: '6rem' }}>
+        <div className="page-container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '6rem' }}>
             <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                <h1 style={{
-                    fontSize: '2rem',
-                    background: 'linear-gradient(90deg, #fff, #94a3b8)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    marginBottom: '0.5rem'
-                }}>
-                    Panel Principal
-                </h1>
+                <h1 style={{ marginBottom: '0.5rem' }}>Panel Principal</h1>
                 <p style={{ color: '#64748b' }}>Bienvenido, {user?.full_name?.split(' ')[0]}</p>
             </div>
 
@@ -100,21 +79,9 @@ const MainMenu = () => {
                             justifyContent: 'center',
                             textAlign: 'center',
                             padding: '1.5rem',
-                            transition: 'transform 0.2s, box-shadow 0.2s',
-                            cursor: 'pointer',
                             borderRadius: '24px',
                             background: 'rgba(30, 41, 59, 0.4)'
                         }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-5px)';
-                                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
-                                e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.2)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
                         >
                             <div style={{
                                 width: '60px',
@@ -129,7 +96,6 @@ const MainMenu = () => {
                                 color: 'white',
                                 boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)'
                             }}>
-                                {/* Using emoji or simple icons for PWA feel */}
                                 {mod.icon === 'busts_in_silhouette' ? '👥' :
                                     mod.icon === 'credit_card' ? '💳' :
                                         mod.icon === 'bar_chart' ? '📊' :

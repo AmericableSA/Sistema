@@ -21,19 +21,24 @@ import Billing from './pages/Billing';
 // @ts-ignore
 import Reports from './pages/Reports';
 // @ts-ignore
-import Invoices from './pages/Invoices'; // NEW
+import Invoices from './pages/Invoices';
 // @ts-ignore
 import Login from './pages/Login';
 // @ts-ignore
-import ClientMovements from './pages/ClientMovements'; // NEW
+import ClientMovements from './pages/ClientMovements';
 import './index.css';
 
-// Protected Route Component
 const ProtectedRoute = ({ children, roles }: { children: JSX.Element, roles?: string[] }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="spinner" style={{ marginTop: '20vh' }}></div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role)) return <div style={{ padding: '2rem', textAlign: 'center', color: 'white' }}>⛔ Sin Permisos</div>;
+  if (roles && !roles.includes(user.role)) return (
+    <div style={{ padding: '3rem', textAlign: 'center', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+      <span style={{ fontSize: '3rem' }}>⛔</span>
+      <h2 style={{ color: '#f87171', margin: 0 }}>Acceso Restringido</h2>
+      <p style={{ color: '#94a3b8', margin: 0 }}>No tienes permisos para ver esta sección.</p>
+    </div>
+  );
   return children;
 };
 
@@ -42,28 +47,23 @@ function App() {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Full page login
   if (location.pathname === '/login') {
     return <Routes><Route path="/login" element={<Login />} /></Routes>;
   }
 
-  // Redirect to login if no user
   if (!user) return <Routes><Route path="*" element={<Login />} /></Routes>;
 
   return (
     <div className="app-container">
-      {/* Mobile Sidebar Overlay */}
       <div
         className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`}
         onClick={() => setIsSidebarOpen(false)}
       />
 
-      {/* Sidebar with CSS Class Control */}
       <div className={`app-sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       </div>
 
-      {/* Main Content Area */}
       <div className="app-main">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
@@ -74,10 +74,8 @@ function App() {
             <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
             <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
             <Route path="/inventory/history" element={<ProtectedRoute><InventoryHistory /></ProtectedRoute>} />
-
             <Route path="/reports" element={<ProtectedRoute roles={['admin']}><Reports /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
-
             <Route path="/invoices" element={<ProtectedRoute roles={['admin', 'cajero']}><Invoices /></ProtectedRoute>} />
             <Route path="/movements" element={<ProtectedRoute><ClientMovements /></ProtectedRoute>} />
           </Routes>

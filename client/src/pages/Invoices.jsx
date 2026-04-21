@@ -138,14 +138,12 @@ const Invoices = () => {
     const [filter, setFilter] = useState('PENDIENTE');
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showProviderModal, setShowProviderModal] = useState(false);
     const [showPayModal, setShowPayModal] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [alertInfo, setAlertInfo] = useState({ show: false, title: '', message: '', type: 'info' });
 
-    // Forms
     const [formData, setFormData] = useState({ proveedor: '', numero_factura: '', fecha_emision: getTodayManaguaISO(), fecha_vencimiento: '', monto_total: '', notas: '' });
     const [provData, setProvData] = useState({ nombre: '', contacto: '', telefono: '', email: '', direccion: '' });
     const [payData, setPayData] = useState({ amount: '', reference: '' });
