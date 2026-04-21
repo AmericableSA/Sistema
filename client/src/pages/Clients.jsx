@@ -89,6 +89,10 @@ const Clients = () => {
         }
     };
 
+    useEffect(() => {
+        fetchClients(currentPage);
+    }, [currentPage, itemsPerPage, debouncedSearch, letterFilter, statusFilter, collectorFilter]);
+
     const handleDelete = (id) => {
         setConfirmDelete({ show: true, id });
     };
