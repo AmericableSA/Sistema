@@ -228,9 +228,9 @@ exports.getDailyClosing = async (req, res) => {
 
         pool = await db.getConnection();
 
-        // 1. Sales Income
+        // 1. Sales Income (Sólo comprobantes no anulados)
         const [salesRows] = await pool.query(
-            "SELECT SUM(amount) as total FROM transactions WHERE type != 'void' AND DATE(created_at) BETWEEN ? AND ?",
+            "SELECT SUM(amount) as total FROM transactions WHERE status = 'SUCCESS' AND type != 'void' AND DATE(created_at) BETWEEN ? AND ?",
             [sDate, eDate]
         );
         const salesTotal = parseFloat(salesRows[0].total || 0);
@@ -264,7 +264,7 @@ exports.getDailyClosing = async (req, res) => {
             SELECT COALESCE(u.username, 'Sistema') as username, SUM(t.amount) as total
             FROM transactions t
             LEFT JOIN users u ON t.collector_id = u.id
-            WHERE t.type != 'void' AND DATE(t.created_at) BETWEEN ? AND ?
+            WHERE t.status = 'SUCCESS' AND t.type != 'void' AND DATE(t.created_at) BETWEEN ? AND ?
             GROUP BY t.collector_id, u.username
         `, [sDate, eDate]);
 

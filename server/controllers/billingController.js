@@ -460,22 +460,23 @@ exports.cancelTransaction = async (req, res) => {
             return res.status(403).json({ msg: 'No hay ninguna caja abierta para registrar el reembolso. Abra caja primero.' });
         }
 
-        // 3. Register Refund (REFUND — NOT a gasto, shown separately in reports)
-        // Note: Using 'OUT' as fallback if 'REFUND' is not in ENUM yet, but preferring designated type.
-        // We attempt REFUND, and if it fails due to Enum, we use OUT with prefix.
-        try {
-            await conn.query(
-                `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
-                 VALUES (?, ?, ?, 'REFUND', NOW())`,
-                [sessions[0].id, tx.amount, `Reembolso Factura #${tx.reference_id || id}. Motivo: ${reason}`]
-            );
-        } catch (sqlErr) {
-            console.log("REFUND type failed, falling back to OUT. Error:", sqlErr.message);
-            await conn.query(
-                `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
-                 VALUES (?, ?, ?, 'OUT', NOW())`,
-                [sessions[0].id, tx.amount, `[REEMB] Factura #${tx.reference_id || id}. Motivo: ${reason}`]
-            );
+        // 3. Register Refund ONLY IF the transaction belongs to a DIFFERENT session.
+        // If it belongs to the CURRENT session, marking it CANCELLED is enough to exclude it from today's sales.
+        if (tx.session_id !== sessions[0].id) {
+            try {
+                await conn.query(
+                    `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
+                     VALUES (?, ?, ?, 'REFUND', NOW())`,
+                    [sessions[0].id, tx.amount, `Reembolso Factura #${tx.reference_id || id}. Motivo: ${reason}`]
+                );
+            } catch (sqlErr) {
+                console.log("REFUND type failed, falling back to OUT. Error:", sqlErr.message);
+                await conn.query(
+                    `INSERT INTO cash_movements (session_id, amount, description, type, created_at) 
+                     VALUES (?, ?, ?, 'OUT', NOW())`,
+                    [sessions[0].id, tx.amount, `[REEMB] Factura #${tx.reference_id || id}. Motivo: ${reason}`]
+                );
+            }
         }
 
         // 4. Update Transaction Status
@@ -494,29 +495,17 @@ exports.cancelTransaction = async (req, res) => {
             const monthsPaid = parseInt(details.months_paid, 10) || 0;
             const hadReconnection = details.include_reconnection || details.reconnection_fee > 0;
 
-            // 5a. Revert Mes Pagado
-            let [cRows] = await conn.query('SELECT last_paid_month, status FROM clients WHERE id = ?', [tx.client_id]);
+            // 5a. Revert Mes Pagado & Status
+            let [cRows] = await conn.query('SELECT status FROM clients WHERE id = ?', [tx.client_id]);
             if (cRows.length > 0) {
-                const client = cRows[0];
                 let updateFields = {};
 
-                // Revert Month
-                if (monthsPaid > 0 && client.last_paid_month) {
-                    const newDate = new Date(client.last_paid_month);
-                    newDate.setMonth(newDate.getMonth() - monthsPaid);
-                    const y = newDate.getFullYear();
-                    const m = newDate.getMonth() + 1;
-                    const d = newDate.getDate();
-                    updateFields.last_paid_month = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                }
-
                 // Revert Status if it was a reconnection
-                // If the payment was a reconnection, they were suspended before.
                 if (hadReconnection) {
                     updateFields.status = 'suspended';
                 }
 
-                // 5b. Revert Last Payment Date (Find previous successful payment)
+                // Revert Last Payment Date (Find previous successful payment)
                 const [prevTx] = await conn.query(
                     'SELECT created_at FROM transactions WHERE client_id = ? AND status = "SUCCESS" AND id != ? ORDER BY created_at DESC LIMIT 1',
                     [tx.client_id, id]
@@ -525,13 +514,18 @@ exports.cancelTransaction = async (req, res) => {
                 if (prevTx.length > 0) {
                     updateFields.last_payment_date = prevTx[0].created_at;
                 } else {
-                    updateFields.last_payment_date = null; // No previous payments
+                    updateFields.last_payment_date = null;
                 }
 
                 if (Object.keys(updateFields).length > 0) {
                     const setClause = Object.keys(updateFields).map(k => `${k} = ?`).join(', ');
                     const setValues = Object.values(updateFields);
                     await conn.query(`UPDATE clients SET ${setClause} WHERE id = ?`, [...setValues, tx.client_id]);
+                }
+
+                // Safely revert month using Database logic instead of JS Dates timezone parsing
+                if (monthsPaid > 0) {
+                    await conn.query('UPDATE clients SET last_paid_month = DATE_SUB(last_paid_month, INTERVAL ? MONTH) WHERE id = ?', [monthsPaid, tx.client_id]);
                 }
             }
         }

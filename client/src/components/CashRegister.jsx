@@ -100,6 +100,12 @@ const CashRegister = (props) => {
         if (session) fetchHistory();
     }, [page, session]);
 
+    useEffect(() => {
+        if (props.viewMode === 'HISTORY') {
+            fetchHistory(true); // Refrescar historial automáticamente al abrir la pestaña
+        }
+    }, [props.viewMode]);
+
     const fetchStatus = async () => {
         try {
             const res = await fetch(`/api/billing/status?type=${sessionType}`);
