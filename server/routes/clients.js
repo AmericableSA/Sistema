@@ -20,6 +20,7 @@ const materialController = require('../controllers/materialController');
 // Service Orders
 router.get('/:id/orders', clientController.getServiceOrders);
 router.put('/orders/:orderId', clientController.updateServiceOrder);
+router.delete('/orders/:orderId', clientController.deleteServiceOrder);
 router.post('/:id/manual-order', clientController.createManualServiceOrder);
 router.get('/technicians/list', clientController.getTechnicians);
 

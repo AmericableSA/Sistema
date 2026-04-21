@@ -252,6 +252,27 @@ const ClientMovements = () => {
         }
     };
 
+    const handleDeleteOrder = async (orderId) => {
+        if (!window.confirm("¿Está seguro de eliminar esta orden de servicio? Esta acción no se puede deshacer.")) return;
+        try {
+            const res = await fetch(`/api/clients/orders/${orderId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setAlert({ show: true, type: 'success', title: 'Eliminado', message: 'Orden eliminada correctamente.' });
+                if (selectedClient) {
+                    fetchOrders(selectedClient.id);
+                }
+                if (viewMode === 'LIST' || viewMode === 'PENDING' || viewMode === 'COMPLETED') {
+                    fetchDailyOrders();
+                }
+            } else {
+                setAlert({ show: true, type: 'error', title: 'Error', message: 'No se pudo eliminar.' });
+            }
+        } catch (e) {
+            console.error(e);
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.' });
+        }
+    };
+
     // List View State
     const [viewMode, setViewMode] = useState('SEARCH');
 
@@ -798,7 +819,20 @@ const ClientMovements = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <span style={{ fontSize: '0.8rem', color: '#475569' }}>{new Date(order.created_at).toLocaleDateString('es-NI')}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <span style={{ fontSize: '0.8rem', color: '#475569' }}>{new Date(order.created_at).toLocaleDateString('es-NI')}</span>
+                                                <button 
+                                                    onClick={() => handleDeleteOrder(order.id)}
+                                                    title="Eliminar orden"
+                                                    style={{ 
+                                                        background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.4)',
+                                                        color: '#f87171', borderRadius: '8px', cursor: 'pointer',
+                                                        padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: 600, transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </div>
 
                                         {/* Description */}

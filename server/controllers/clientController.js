@@ -415,6 +415,17 @@ exports.getServiceOrders = async (req, res) => {
         `, [req.params.id]);
         res.json(orders);
     } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: err.message });
+    }
+};
+
+exports.deleteServiceOrder = async (req, res) => {
+    try {
+        await db.query('DELETE FROM service_orders WHERE id = ?', [req.params.orderId]);
+        res.json({ msg: 'Orden eliminada' });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: err.message });
     }
 };
