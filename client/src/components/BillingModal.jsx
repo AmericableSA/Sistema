@@ -135,9 +135,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                 desc = `Mensualidad: ${range}`;
                 if (applyMora) desc += ` + Mora`;
             }
-        } else if (type === 'installation' && selectedPlanId) {
-            const plan = plans.find(p => p.id === parseInt(selectedPlanId));
-            if (plan) { total += parseFloat(plan.base_price); desc = `Instalación: ${plan.name}`; }
+        } else if (type === 'installation') {
+            total = 500;
+            desc = 'Instalación de Servicio - C$ 500.00';
         } else {
             total += cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         }
