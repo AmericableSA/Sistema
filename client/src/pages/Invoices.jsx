@@ -254,7 +254,7 @@ const Invoices = () => {
             <StatsGrid>
                 <StatCard color="#f59e0b">
                     <div className="icon-wrapper"><FaMoneyBillWave /></div>
-                    <div className="value">C$ {stats.totalDebt.toLocaleString()}</div>
+                    <div className="value">C$ {stats.totalDebt.toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</div>
                     <div className="label">Deuda Total Pendiente</div>
                 </StatCard>
                 <StatCard color="#3b82f6">
@@ -297,8 +297,8 @@ const Invoices = () => {
                                     <div className="row"><span>Vence</span> <span>{formatDateManagua(inv.fecha_vencimiento)}</span></div>
                                     <div style={{ marginTop: '1rem', textAlign: 'right' }}>
                                         <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Saldo Pendiente</div>
-                                        <div className="amount" style={{ color: balance > 0 ? '#ef4444' : '#22c55e' }}>C$ {balance.toLocaleString()}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Total: C$ {total.toLocaleString()}</div>
+                                        <div className="amount" style={{ color: balance > 0 ? '#ef4444' : '#22c55e' }}>C$ {balance.toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Total: C$ {total.toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</div>
                                     </div>
                                 </div>
                                 <div className="footer">

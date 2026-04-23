@@ -115,7 +115,7 @@ const ReceiptModal = ({ transaction, onClose, autoPrint }) => {
 
                                 {settings.receipt_header && <div style={{ textAlign: 'center', fontSize: '12px', margin: '10px 0', fontStyle: 'italic', borderBottom: '1px dashed #000', paddingBottom: '10px' }}>{settings.receipt_header}</div>}
 
-                                <div className="info-row"><span>Fecha:</span> <span>{new Date(transaction.created_at || new Date()).toLocaleString()}</span></div>
+                                <div className="info-row"><span>Fecha:</span> <span>{new Date(transaction.created_at || new Date()).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</span></div>
                                 <div className="info-row"><span>Recibo #:</span> <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{String(transaction.transactionId || transaction.id).padStart(6, '0')}</span></div>
                                 <div className="info-row"><span>Cliente:</span> <span style={{ textAlign: 'right', maxWidth: '140px' }}>{transaction.client_name}</span></div>
                                 <div className="info-row"><span>Atendió:</span> <span style={{ textTransform: 'uppercase' }}>{transaction.collector_name || transaction.collector_username || 'Cajero'}</span></div>
@@ -182,7 +182,7 @@ const ReceiptModal = ({ transaction, onClose, autoPrint }) => {
                                         <div style={{ background: '#f1f5f9', padding: '15px 30px', borderRadius: '8px' }}>
                                             <h2 style={{ margin: 0, fontSize: '24px', color: '#0f172a', textTransform: 'uppercase' }}>Recibo de Caja</h2>
                                             <div style={{ fontSize: '28px', color: '#ef4444', fontWeight: 'bold', margin: '5px 0' }}>#{String(transaction.transactionId || transaction.id).padStart(6, '0')}</div>
-                                            <div style={{ fontSize: '14px', color: '#64748b' }}>{new Date(transaction.created_at || new Date()).toLocaleString()}</div>
+                                            <div style={{ fontSize: '14px', color: '#64748b' }}>{new Date(transaction.created_at || new Date()).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</div>
                                         </div>
                                         <div style={{ fontSize: '14px', marginTop: '10px', color: '#475569', fontWeight: 'bold' }}>Le atendió: {transaction.collector_name || transaction.collector_username || 'Cajero'}</div>
                                     </div>

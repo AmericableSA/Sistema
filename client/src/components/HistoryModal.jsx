@@ -200,7 +200,7 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                                             <span style={{ color: 'white', fontWeight: 'bold' }}>{log.action}</span>
                                             {global && <span style={{ color: '#60a5fa', fontSize: '0.9rem', background: 'rgba(96, 165, 250, 0.1)', padding: '0.1rem 0.5rem', borderRadius: '4px' }}>{log.client_name}</span>}
                                         </div>
-                                        <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{new Date(log.timestamp).toLocaleString()}</span>
+                                        <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{new Date(log.timestamp).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</span>
                                     </div>
                                     <div style={{ color: '#cbd5e1', fontSize: '0.95rem', background: '#0f172a', padding: '0.75rem', borderRadius: '4px' }}>
                                         <LogContent content={log.details} />
@@ -237,7 +237,7 @@ const HistoryModal = ({ client, onClose, global = false, initialTab = 'logs' }) 
                                     return (
                                         <tr key={tx.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', opacity: isCancelled ? 0.6 : 1, textDecoration: isCancelled ? 'none' : 'none' }}>
                                             <td style={{ padding: '0.75rem' }}>
-                                                {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
+                                                {new Date(tx.created_at).toLocaleDateString('es-NI', { timeZone: 'America/Managua' })} {new Date(tx.created_at).toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true })}
                                                 {isCancelled && <div style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 'bold' }}>CANCELADA</div>}
                                             </td>
                                             <td style={{ padding: '0.75rem', color: isCancelled ? '#ef4444' : '#f59e0b', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>{tx.reference_id || 'S/N'}</td>

@@ -457,7 +457,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
                                         ) : (
                                             <div style={{ flex: 1 }}>
                                                 <p style={{ margin: 0, color: '#e2e8f0', fontSize: '0.95rem' }}>{note.note_content}</p>
-                                                <small style={{ color: '#64748b', fontSize: '0.75rem' }}>{new Date(note.created_at).toLocaleString()}</small>
+                                                <small style={{ color: '#64748b', fontSize: '0.75rem' }}>{new Date(note.created_at).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</small>
                                             </div>
                                         )}
 

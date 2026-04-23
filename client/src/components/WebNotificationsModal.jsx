@@ -249,7 +249,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                                 {loading ? <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Cargando...</td></tr> :
                                     averias.map(a => (
                                         <tr key={a.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <td style={{ padding: '1rem' }}>{new Date(a.fecha_reporte).toLocaleDateString()}</td>
+                                            <td style={{ padding: '1rem' }}>{new Date(a.fecha_reporte).toLocaleDateString('es-NI', { timeZone: 'America/Managua' })}</td>
                                             <td style={{ padding: '1rem', fontWeight: 'bold', color: 'white' }}>{a.nombre_completo}</td>
                                             <td style={{ padding: '1rem' }}>{a.telefono_contacto}</td>
                                             <td style={{ padding: '1rem' }}>{a.zona_barrio}</td>
@@ -316,7 +316,7 @@ const WebNotificationsModal = ({ onClose, onAssignClient }) => {
                                 {loading ? <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Cargando...</td></tr> :
                                     contactos.map(c => (
                                         <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <td style={{ padding: '1rem' }}>{new Date(c.fecha_contacto).toLocaleDateString()}</td>
+                                            <td style={{ padding: '1rem' }}>{new Date(c.fecha_contacto).toLocaleDateString('es-NI', { timeZone: 'America/Managua' })}</td>
                                             <td style={{ padding: '1rem', fontWeight: 'bold', color: 'white' }}>{c.nombre_completo}</td>
                                             <td style={{ padding: '1rem' }}>{c.telefono_whatsapp}</td>
                                             <td style={{ padding: '1rem', maxWidth: '250px' }}>{c.mensaje}</td>

@@ -504,7 +504,7 @@ const ClientMovements = () => {
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             <td style={{ padding: '1rem 1.2rem', fontSize: '0.85rem', color: '#475569' }}>{order.id}</td>
-                                            <td style={{ padding: '1rem 1.2rem', fontSize: '0.88rem' }}>{new Date(order.created_at).toLocaleDateString('es-NI')}</td>
+                                            <td style={{ padding: '1rem 1.2rem', fontSize: '0.88rem' }}>{new Date(order.created_at).toLocaleDateString('es-NI', { timeZone: 'America/Managua' })}</td>
                                             <td style={{ padding: '1rem 1.2rem', fontWeight: 700, color: 'white', fontSize: '0.9rem' }}>{order.type || order.action}</td>
                                             <td style={{ padding: '1rem 1.2rem' }}>
                                                 <div style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>{order.client_name || 'N/A'}</div>
@@ -820,7 +820,7 @@ const ClientMovements = () => {
                                                 )}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <span style={{ fontSize: '0.8rem', color: '#475569' }}>{new Date(order.created_at).toLocaleDateString('es-NI')}</span>
+                                                <span style={{ fontSize: '0.8rem', color: '#475569' }}>{new Date(order.created_at).toLocaleDateString('es-NI', { timeZone: 'America/Managua' })}</span>
                                                 <button 
                                                     onClick={() => handleDeleteOrder(order.id)}
                                                     title="Eliminar orden"

@@ -329,7 +329,7 @@ const Reports = () => {
                 "Total Cobrado (NIO)": c.total_cobrado,
                 "Total Recibos Emitidos": c.total_recibos,
                 "Promedio por Recibo (NIO)": c.promedio_recibo,
-                "Último Cobro Registrado": c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleString('es-NI') : 'Sin cobros'
+                "Último Cobro Registrado": c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true }) : 'Sin cobros'
             }));
             const wsCollectors = XLSX.utils.json_to_sheet(collectorData);
             XLSX.utils.book_append_sheet(wb, wsCollectors, "Rendimiento Cobradores");
@@ -641,6 +641,88 @@ const Reports = () => {
                 </Card>
             )}
 
+            {dailyClosing.sesiones && dailyClosing.sesiones.length > 0 && (
+                <Card style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%)', border: '1px solid #eab30855' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                        <Label style={{ color: '#fbbf24', fontSize: '1rem' }}>🛡️ Auditoría de Cierres de Cajas</Label>
+                        <ActionButton
+                            $variant="outline-warning"
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                            onClick={() => {
+                                try {
+                                    const sessionData = (dailyClosing?.sesiones || []).map(s => ({
+                                        "ID Sesión": s.id,
+                                        "Caja": s.session_type,
+                                        "Usuario": s.username,
+                                        "Apertura": new Date(s.start_time).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true }),
+                                        "Cierre": s.end_time ? new Date(s.end_time).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true }) : 'Abierta',
+                                        "Monto Sistema (NIO)": s.end_amount_system || 0,
+                                        "Monto Físico (NIO)": s.end_amount_physical || 0,
+                                        "Diferencia (NIO)": s.difference || 0,
+                                        "Justificación": s.closing_note || 'N/A'
+                                    }));
+                                    const wsSessions = XLSX.utils.json_to_sheet(sessionData);
+                                    const wb = XLSX.utils.book_new();
+                                    XLSX.utils.book_append_sheet(wb, wsSessions, "Auditoría de Cierres");
+                                    XLSX.writeFile(wb, `Auditoria_Cierres_${startDate}_al_${endDate}.xlsx`);
+                                } catch (error) {
+                                    console.error("Error al exportar a Excel:", error);
+                                    alert("Hubo un error al generar el archivo Excel.");
+                                }
+                            }}>
+                            📥 Exportar Auditoría
+                        </ActionButton>
+                    </div>
+                    <OverflowWrapper>
+                        <CashClosingTable>
+                            <thead>
+                                <tr>
+                                    <th>Caja / Usuario</th>
+                                    <th>Fecha y Hora</th>
+                                    <th className="text-right">Sistema</th>
+                                    <th className="text-right">Físico</th>
+                                    <th className="text-right">Diferencia</th>
+                                    <th>Justificación</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {dailyClosing.sesiones.map((s, i) => {
+                                    const diff = parseFloat(s.difference) || 0;
+                                    return (
+                                        <tr key={i} style={{ opacity: s.status === 'open' ? 0.6 : 1 }}>
+                                            <td>
+                                                <div style={{ fontWeight: 'bold', color: 'white' }}>{s.session_type}</div>
+                                                <small style={{ color: '#94a3b8' }}>@{s.username}</small>
+                                            </td>
+                                            <td>
+                                                <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}><span style={{ color: '#34d399' }}>A:</span> {new Date(s.start_time).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</div>
+                                                <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}><span style={{ color: '#f87171' }}>C:</span> {s.status === 'closed' ? new Date(s.end_time).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true }) : 'EN CURSO'}</div>
+                                            </td>
+                                            <td className="text-right" style={{ color: '#cbd5e1' }}>
+                                                {s.status === 'closed' ? formatCurrency(s.end_amount_system) : '-'}
+                                            </td>
+                                            <td className="text-right" style={{ color: 'white', fontWeight: 'bold' }}>
+                                                {s.status === 'closed' ? formatCurrency(s.end_amount_physical) : '-'}
+                                            </td>
+                                            <td className="text-right" style={{ fontWeight: 'bold', color: diff === 0 ? 'white' : (diff > 0 ? '#34d399' : '#f87171') }}>
+                                                {s.status === 'closed' ? (diff > 0 ? `+${formatCurrency(diff)}` : formatCurrency(diff)) : '-'}
+                                            </td>
+                                            <td style={{ maxWidth: '250px', whiteSpace: 'normal', fontSize: '0.85rem' }}>
+                                                {s.closing_note ? (
+                                                    <div style={{ background: 'rgba(234, 179, 8, 0.15)', borderLeft: '3px solid #eab308', padding: '6px 10px', color: '#fde047', borderRadius: '0 4px 4px 0' }}>
+                                                        {s.closing_note}
+                                                    </div>
+                                                ) : <span style={{ color: '#64748b', fontStyle: 'italic' }}>Sin observaciones</span>}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </CashClosingTable>
+                    </OverflowWrapper>
+                </Card>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <SectionTitle style={{ marginBottom: 0 }}>Rendimiento por Cobrador ({startDate} - {endDate})</SectionTitle>
                 <ActionButton
@@ -688,9 +770,9 @@ const Reports = () => {
                                         <td className="text-center">{c.total_recibos}</td>
                                         <td className="text-right">{formatCurrency(c.promedio_recibo)}</td>
                                         <td className="text-right">
-                                            {c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                            {c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit'  }) : '-'}
                                             <br />
-                                            <small className="text-muted">{c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleDateString() : ''}</small>
+                                            <small className="text-muted">{c.ultimo_cobro ? new Date(c.ultimo_cobro).toLocaleDateString('es-NI', { timeZone: 'America/Managua' }) : ''}</small>
                                         </td>
                                     </tr>
                                 ))
@@ -902,22 +984,28 @@ const Reports = () => {
             <SectionTitle>Estado de Cartera de Clientes</SectionTitle>
             <Grid>
                 {/* Clientes Activos - NUEVO */}
-                <Card>
-                    <Label style={{ color: '#22d3ee' }}><FaUserCheck /> Clientes Activos</Label>
-                    <Value style={{ color: '#22d3ee' }}>{cableStats.clientes_activos || 0}</Value>
-                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Total con servicio activo</div>
-                    <ActionButton
-                        $variant="outline-primary"
-                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', borderColor: 'rgba(34,211,238,0.3)', color: '#22d3ee' }}
-                        onClick={() => { fetch('/api/clients/export-xls?status=active').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Activos.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
-                    >
-                        📥 Exportar Excel
-                    </ActionButton>
+                {/* Clientes Activos */}
+                <Card style={{ gridColumn: '1 / -1', background: 'rgba(34, 211, 238, 0.05)', border: '1px solid rgba(34, 211, 238, 0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <Label style={{ color: '#22d3ee', fontSize: '1.2rem' }}><FaUserCheck /> TOTAL CLIENTES ACTIVOS</Label>
+                            <Value style={{ color: '#22d3ee', fontSize: '2.5rem' }}>{cableStats.clientes_activos || 0}</Value>
+                            <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Aquellos que actualmente reciben señal</div>
+                        </div>
+                        <ActionButton
+                            $variant="outline-primary"
+                            style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', borderColor: 'rgba(34,211,238,0.3)', color: '#22d3ee' }}
+                            onClick={() => { fetch('/api/clients/export-xls?status=active').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Activos.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                        >
+                            📥 Exportar Activos
+                        </ActionButton>
+                    </div>
                 </Card>
+
                 <Card>
-                    <Label style={{ color: '#10b981' }}><FaUserCheck /> Clientes al Día</Label>
+                    <Label style={{ color: '#10b981' }}><FaUserCheck /> Activos: Al Día</Label>
                     <Value style={{ color: '#10b981' }}>{cableStats.al_dia || 0}</Value>
-                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Sin pagos pendientes</div>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Activos sin pagos pendientes</div>
                     <ActionButton
                         $variant="outline-success"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
@@ -927,9 +1015,9 @@ const Reports = () => {
                     </ActionButton>
                 </Card>
                 <Card>
-                    <Label style={{ color: '#ef4444' }}><FaUserTimes /> Cortados por Mora</Label>
-                    <Value style={{ color: '#ef4444' }}>{cableStats.morosos.count}</Value>
-                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Deuda: <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(cableStats.morosos.deuda)}</span></div>
+                    <Label style={{ color: '#ef4444' }}><FaUserTimes /> Activos: En Mora</Label>
+                    <Value style={{ color: '#ef4444' }}>{cableStats.morosos?.count || 0}</Value>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Activos pero con deuda: <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(cableStats.morosos?.deuda || 0)}</span></div>
                     <ActionButton
                         $variant="outline-danger"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
@@ -940,9 +1028,9 @@ const Reports = () => {
                 </Card>
                 {/* Suspendidos = Cortado por Mora (status suspended) */}
                 <Card>
-                    <Label style={{ color: '#f59e0b' }}><FaUserTimes /> Servicio Suspendido (Mora)</Label>
+                    <Label style={{ color: '#f59e0b' }}><FaUserTimes /> Cortados (Mora)</Label>
                     <Value style={{ color: '#f59e0b' }}>{cableStats.suspendidos || 0}</Value>
-                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Cortado por falta de pago</div>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Conectores cortados por impago</div>
                     <ActionButton
                         $variant="outline-warning"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
@@ -953,9 +1041,9 @@ const Reports = () => {
                 </Card>
                 {/* Corte a Solicitud - diferente de suspenso por mora */}
                 <Card>
-                    <Label style={{ color: '#a78bfa' }}><FaUserTimes /> Corte a Solicitud</Label>
+                    <Label style={{ color: '#a78bfa' }}><FaUserTimes /> Cortados (Por Solicitud)</Label>
                     <Value style={{ color: '#a78bfa' }}>{cableStats.desconectados_solicitud || 0}</Value>
-                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Desconexiones voluntarias del cliente</div>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Bajas y desconexiones voluntarias</div>
                     <ActionButton
                         $variant="outline-purple"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
@@ -965,16 +1053,34 @@ const Reports = () => {
                     </ActionButton>
                 </Card>
                 <Card>
-                    <Label style={{ color: '#64748b' }}><FaUserCheck /> Total Clientes</Label>
-                    <Value style={{ color: 'white' }}>{cableStats.total_clientes}</Value>
-                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Base instalada total</div>
+                    <Label style={{ color: '#64748b' }}><FaBan /> Clientes Retirados</Label>
+                    <Value style={{ color: '#64748b' }}>{cableStats.retirados || 0}</Value>
+                    <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>Cables y equipos retirados físicamente</div>
                     <ActionButton
-                        $variant="outline-primary"
+                        $variant="outline-secondary"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', borderColor: 'rgba(148,163,184,0.3)', color: '#94a3b8' }}
-                        onClick={() => { fetch('/api/clients/export-xls?status=all').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Total_Clientes.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                        onClick={() => { fetch('/api/clients/export-xls?status=retired').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Clientes_Retirados.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
                     >
                         📥 Exportar Excel
                     </ActionButton>
+                </Card>
+                <Card style={{ background: 'rgba(255, 255, 255, 0.05)', gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <Label style={{ color: 'white', fontSize: '1.2rem' }}><FaUserCheck /> TOTAL BASE INSTALADA (Todos)</Label>
+                            <Value style={{ color: 'white', fontSize: '2.5rem' }}>{cableStats.total_clientes}</Value>
+                            <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
+                                Fila matemática exacta: Activos + Cortados (Mora) + Cortados (Solicitud) + Retirados
+                            </div>
+                        </div>
+                        <ActionButton
+                            $variant="outline-primary"
+                            style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}
+                            onClick={() => { fetch('/api/clients/export-xls?status=all').then(res => res.blob()).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Total_Clientes.xlsx'; document.body.appendChild(a); a.click(); a.remove(); }); }}
+                        >
+                            📥 Exportar BD Completa
+                        </ActionButton>
+                    </div>
                 </Card>
             </Grid>
             {showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} />}

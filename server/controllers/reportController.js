@@ -268,12 +268,24 @@ exports.getDailyClosing = async (req, res) => {
             GROUP BY t.collector_id, u.username
         `, [sDate, eDate]);
 
+        // 4. Session Closures (for Auditing)
+        const [sessionRows] = await pool.query(`
+            SELECT s.id, s.session_type, s.start_time, s.end_time, s.status, 
+                   s.start_amount, s.end_amount_system, s.end_amount_physical, 
+                   s.difference, s.closing_note, u.username
+            FROM cash_sessions s
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE DATE(s.start_time) BETWEEN ? AND ?
+            ORDER BY s.start_time DESC
+        `, [sDate, eDate]);
+
         res.json({
             ingresos: salesTotal + manualIn,
             egresos: manualOut,
             devoluciones: devoluciones,
             balance_dia: (salesTotal + manualIn) - manualOut - devoluciones,
-            por_usuario: userRows
+            por_usuario: userRows,
+            sesiones: sessionRows
         });
 
     } catch (err) {
@@ -302,7 +314,7 @@ exports.getDailyDetails = async (req, res) => {
         // 0. Fetch Sessions (To see who opened/closed)
         const [sessionRows] = await pool.query(`
             SELECT 
-                s.id, s.start_time, s.end_time, s.status, s.start_amount, s.end_amount_physical, s.closing_note,
+                s.id, s.start_time, s.end_time, s.status, s.start_amount, s.end_amount_physical, s.end_amount_system, s.difference, s.closing_note,
                 u.username, u.role, u.full_name
             FROM cash_sessions s
             JOIN users u ON s.user_id = u.id

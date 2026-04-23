@@ -208,11 +208,27 @@ const DailyReportModal = ({ onClose }) => {
                         <div style={{ fontSize: '0.85rem', color: '#cbd5e1', textAlign: 'right' }}>
                             <div>
                                 <span style={{ opacity: 0.7 }}>Iniciada por:</span> <strong style={{ color: 'white' }}>{mainSession.username}</strong>
-                                <span style={{ marginLeft: '10px', fontSize: '0.8rem', opacity: 0.5, backgroundColor: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>{new Date(mainSession.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span style={{ marginLeft: '10px', fontSize: '0.8rem', opacity: 0.5, backgroundColor: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>{new Date(mainSession.start_time).toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit'  })}</span>
                             </div>
                             {mainSession.status === 'closed' && (
-                                <div style={{ color: '#f87171' }}>
-                                    <span style={{ opacity: 0.6 }}>Cerrada con:</span> <strong>{formatMoney(mainSession.end_amount_physical)}</strong>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '0.5rem' }}>
+                                    <div style={{ color: '#f87171' }}>
+                                        <span style={{ opacity: 0.6 }}>Cerrada físico:</span> <strong>{formatMoney(mainSession.end_amount_physical)}</strong>
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                                        <span style={{ opacity: 0.6 }}>Esperado sistema:</span> <strong style={{ color: 'white' }}>{formatMoney(mainSession.end_amount_system)}</strong>
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                                        <span style={{ opacity: 0.8 }}>Diferencia:</span> <strong style={{ color: mainSession.difference > 0 ? '#34d399' : (mainSession.difference < 0 ? '#f87171' : 'white') }}>
+                                            {mainSession.difference > 0 ? '+' : ''}{formatMoney(mainSession.difference)}
+                                        </strong>
+                                    </div>
+                                    {mainSession.closing_note && (
+                                        <div style={{ marginTop: '0.5rem', background: 'rgba(234, 179, 8, 0.15)', borderLeft: '3px solid #eab308', padding: '6px 10px', color: '#fde047', fontSize: '0.75rem', maxWidth: '350px', textAlign: 'left', wordBreak: 'break-word', borderRadius: '0 4px 4px 0' }}>
+                                            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '2px' }}>⚠️ Justificación de descuadre: </span>
+                                            {mainSession.closing_note}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -247,7 +263,7 @@ const DailyReportModal = ({ onClose }) => {
                                             return (
                                                 <tr key={i}>
                                                     <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
-                                                        {new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {new Date(row.created_at).toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit'  })}
                                                     </td>
                                                     <td>
                                                         <Badge type={row.category === 'TRANSACTION' ? 'SALE' : row.type}>

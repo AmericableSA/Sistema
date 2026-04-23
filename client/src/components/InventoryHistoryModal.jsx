@@ -190,7 +190,7 @@ const InventoryHistoryModal = ({ onClose }) => {
                             ) : activeTab === 'detalles' ? (
                                 filteredHistory.map((item, i) => (
                                     <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <td style={{ padding: '1rem', color: '#cbd5e1' }}>{new Date(item.created_at).toLocaleString()}</td>
+                                        <td style={{ padding: '1rem', color: '#cbd5e1' }}>{new Date(item.created_at).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true })}</td>
                                         <td style={{ padding: '1rem', color: 'white', fontWeight: 500 }}>{item.product_name}</td>
                                         <td style={{ padding: '1rem', textAlign: 'center' }}>
                                             <span style={{

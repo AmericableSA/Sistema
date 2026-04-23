@@ -313,7 +313,7 @@ const Billing = () => {
                                         <span style={{ color: '#64748b' }}>📍 Zona:</span> <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{c.zone_name || 'Sin Zona'}</span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ color: '#64748b' }}>📅 Último Pago:</span> <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{c.last_paid_month ? new Date(c.last_paid_month).toLocaleDateString() : 'NUNCA'}</span>
+                                        <span style={{ color: '#64748b' }}>📅 Último Pago:</span> <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>{c.last_paid_month ? new Date(c.last_paid_month).toLocaleDateString('es-NI', { timeZone: 'America/Managua' }) : 'NUNCA'}</span>
                                     </div>
                                 </div>
 

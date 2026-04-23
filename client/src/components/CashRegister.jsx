@@ -614,8 +614,8 @@ const CashRegister = (props) => {
                                                         background: isCancelled ? 'rgba(15, 23, 42, 0.6)' : undefined
                                                     }}>
                                                         <td style={{ color: isCancelled ? '#94a3b8' : '#94a3b8', fontSize: '0.9rem' }}>
-                                                            <div style={{ fontWeight: 'bold', color: isCancelled ? '#cbd5e1' : '#e2e8f0', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                                            <div style={{ fontSize: '0.75rem', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleDateString()}</div>
+                                                            <div style={{ fontWeight: 'bold', color: isCancelled ? '#cbd5e1' : '#e2e8f0', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit'  })}</div>
+                                                            <div style={{ fontSize: '0.75rem', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleDateString('es-NI', { timeZone: 'America/Managua' })}</div>
                                                         </td>
                                                         <td style={{ color: isCancelled ? '#ef4444' : '#f59e0b', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>
                                                             {tx.reference_id || 'S/N'}
