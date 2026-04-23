@@ -5,6 +5,6 @@
 # Dependencies
 node_modules/
 
-# Build
-dist/
+# Build (allow client/dist so server doesn't need to build)
+# dist/
 build/

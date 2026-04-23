@@ -4,28 +4,34 @@ description: Sincronizar sistema y desplegar en DigitalOcean (Force Sync)
 
 Sigue estos pasos EXACTOS para desplegar.
 
+⚠️ IMPORTANTE: El build SIEMPRE se hace en tu PC local, NUNCA en el servidor (el servidor tiene poca RAM y se cae).
+
 ### 1. En tu PC Local (PowerShell)
-Ejecuta esto para forzar que el repositorio sea idéntico a tu local:
+Compila el frontend localmente y luego sube todo a GitHub:
 
 ```powershell
+# 1. Construir el frontend (aquí tienes suficiente RAM)
+Set-Location "$env:USERPROFILE\Desktop\AmericableS\client"
+npm run build
+
+# 2. Volver a la raíz y subir todo (código + dist compilado)
+Set-Location "$env:USERPROFILE\Desktop\AmericableS"
 git add .
-git commit -m "Despliegue: Sincronización forzada"
-git push origin main --force
+git commit -m "deploy: build local + sync"
+git push origin main
 ```
 
 ### 2. En tu Droplet (Consola SSH)
-Copia y pega este bloque COMPLETO para limpiar, configurar y reiniciar:
+Solo jala el código nuevo y reinicia el backend. NO hacer build aquí:
 
 ```bash
 cd /root/Sistema || exit
 
-# 1. Sincronización Forzada
+# 1. Jalar código (incluyendo el dist ya compilado desde tu PC)
 git fetch --all
 git reset --hard origin/main
-git clean -fd
 
-# 2. Configuración de Credenciales (.env Backend)
-# (Se sobrescribe con la configuración fija solicitada)
+# 2. Configuración del Backend
 cat <<EOF > server/.env
 DB_HOST=localhost
 DB_USER=admin_sistema
@@ -35,13 +41,22 @@ DB_PORT=3306
 PORT=3001
 EOF
 
-# 3. Instalación de dependencias (por si hubo cambios en package.json)
-cd server && npm install
-cd ../client && npm install
+# 3. Solo instalar dependencias del servidor (sin build)
+cd server && npm install --production
 
-# 4. Construcción del Frontend (Vite)
-npm run build
-
-# 5. Reinicio de Servicios
+# 4. Reiniciar servicios
 pm2 restart all --update-env
+pm2 save
 ```
+
+### 🚨 RESCATE RÁPIDO (servidor caído / 502)
+Si el servidor se cae y ves 502, corre SOLO esto en la consola SSH:
+
+```bash
+pm2 restart all
+```
+
+### ℹ️ Notas
+- El frontend compilado (carpeta `client/dist`) se sube junto con el código a GitHub
+- El servidor solo sirve esos archivos estáticos, no los construye
+- Esto evita que el Droplet se quede sin RAM
