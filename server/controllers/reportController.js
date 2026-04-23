@@ -159,7 +159,7 @@ exports.getCableStats = async (req, res) => {
 
         // 2. Cortes vs Retirados vs Solicitud
         const [sRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'suspended'"); // Cortado por mora
-        const [rRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status IN ('retired', 'inactive', 'disconnected')");
+        const [rRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status NOT IN ('active', 'suspended', 'disconnected_by_request')");
         const [discReqRows] = await pool.query("SELECT COUNT(*) as c FROM clients WHERE status = 'disconnected_by_request'"); // Corte a solicitud
 
         // NEW: Active Clients for Al Dia calculation
