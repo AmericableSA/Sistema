@@ -22,6 +22,37 @@ const Inventory = () => {
     const [showComboManager, setShowComboManager] = useState(false);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
 
+    // Quick-price modal state (for services)
+    const [quickPriceProduct, setQuickPriceProduct] = useState(null);
+    const [quickPriceValue, setQuickPriceValue] = useState('');
+    const [quickPriceSaving, setQuickPriceSaving] = useState(false);
+
+    const handleQuickPriceSave = async () => {
+        if (!quickPriceProduct || isNaN(parseFloat(quickPriceValue)) || parseFloat(quickPriceValue) < 0) {
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'Ingrese un precio válido mayor o igual a 0.' });
+            return;
+        }
+        setQuickPriceSaving(true);
+        try {
+            const payload = { ...quickPriceProduct, selling_price: parseFloat(quickPriceValue), reason: 'Actualización rápida de precio desde Inventario' };
+            const res = await fetch(`/api/products/${quickPriceProduct.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                setAlert({ show: true, type: 'success', title: '✅ Precio Actualizado', message: `"${quickPriceProduct.name}" ahora cuesta C$ ${parseFloat(quickPriceValue).toFixed(2)}` });
+                setQuickPriceProduct(null);
+                fetchProducts();
+            } else {
+                const err = await res.json();
+                setAlert({ show: true, type: 'error', title: 'Error', message: err.msg || 'No se pudo actualizar el precio.' });
+            }
+        } catch (e) {
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.' });
+        } finally { setQuickPriceSaving(false); }
+    };
+
     const fetchProducts = async () => {
         try {
             const response = await fetch('/api/products');
@@ -269,6 +300,23 @@ const Inventory = () => {
                                             <button onClick={() => handleEdit(product)} className="btn-icon btn-edit" title="Editar producto">
                                                 ✎
                                             </button>
+                                            {/* Quick-price button for services */}
+                                            {product.type === 'service' && (
+                                                <button
+                                                    onClick={() => { setQuickPriceProduct(product); setQuickPriceValue(product.selling_price); }}
+                                                    title="Cambiar precio rápidamente"
+                                                    style={{
+                                                        background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)',
+                                                        color: '#fbbf24', padding: '0.45rem 0.75rem', borderRadius: '8px',
+                                                        cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                                                        display: 'flex', alignItems: 'center', gap: '3px', transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.3)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                >
+                                                    💰 Precio
+                                                </button>
+                                            )}
                                             <button onClick={() => handleDeleteProduct(product)} className="btn-icon btn-delete" title="Eliminar producto">
                                                 ✕
                                             </button>
@@ -343,6 +391,96 @@ const Inventory = () => {
                 onClose={() => setConfirm({ ...confirm, show: false })}
                 onConfirm={confirm.action}
             />
+
+            {/* ===== QUICK PRICE MODAL ===== */}
+            {quickPriceProduct && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 2000, backdropFilter: 'blur(6px)'
+                }}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                        border: '1px solid rgba(245,158,11,0.4)',
+                        borderRadius: '20px', padding: '2rem', width: '420px', maxWidth: '95%',
+                        boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,158,11,0.15)'
+                    }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                            <span style={{ fontSize: '2rem' }}>💰</span>
+                            <div>
+                                <h3 style={{ margin: 0, color: 'white', fontWeight: 800, fontSize: '1.15rem' }}>
+                                    Cambiar Precio
+                                </h3>
+                                <p style={{ margin: 0, color: '#f59e0b', fontSize: '0.85rem', fontWeight: 600 }}>
+                                    {quickPriceProduct.name}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Current price info */}
+                        <div style={{
+                            background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+                            borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.25rem',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                        }}>
+                            <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Precio actual:</span>
+                            <span style={{ color: '#fbbf24', fontWeight: 800, fontSize: '1.1rem' }}>
+                                C$ {Number(quickPriceProduct.selling_price).toFixed(2)}
+                            </span>
+                        </div>
+
+                        {/* New price input */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ color: '#cbd5e1', fontSize: '0.9rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>
+                                Nuevo Precio (C$)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                autoFocus
+                                className="input-dark"
+                                value={quickPriceValue}
+                                onChange={e => setQuickPriceValue(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleQuickPriceSave(); if (e.key === 'Escape') setQuickPriceProduct(null); }}
+                                style={{ width: '100%', fontSize: '1.4rem', fontWeight: 700, textAlign: 'center', padding: '0.75rem', color: '#fbbf24' }}
+                            />
+                            <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                                Presiona Enter para guardar · Esc para cancelar
+                            </p>
+                        </div>
+
+                        {/* Buttons */}
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button
+                                onClick={() => setQuickPriceProduct(null)}
+                                style={{
+                                    flex: 1, padding: '0.8rem', borderRadius: '10px',
+                                    background: 'transparent', border: '1px solid #334155',
+                                    color: '#94a3b8', cursor: 'pointer', fontWeight: 600
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleQuickPriceSave}
+                                disabled={quickPriceSaving}
+                                style={{
+                                    flex: 2, padding: '0.8rem', borderRadius: '10px',
+                                    background: quickPriceSaving ? '#78350f' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                    border: 'none', color: 'white', cursor: quickPriceSaving ? 'not-allowed' : 'pointer',
+                                    fontWeight: 800, fontSize: '1rem',
+                                    boxShadow: quickPriceSaving ? 'none' : '0 4px 15px rgba(245,158,11,0.35)',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {quickPriceSaving ? '⏳ Guardando...' : '✅ Guardar Precio'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
