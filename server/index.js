@@ -107,6 +107,27 @@ db.getConnection()
                 await conn.query("ALTER TABLE products ADD COLUMN unit_of_measure VARCHAR(50) DEFAULT 'Unidad'");
                 log("🔄 Migration: Added 'unit_of_measure' to products");
             }
+            // 10. cash_sessions missing columns
+            const [sysAmt] = await conn.query("SHOW COLUMNS FROM cash_sessions LIKE 'end_amount_system'");
+            if (sysAmt.length === 0) {
+                await conn.query("ALTER TABLE cash_sessions ADD COLUMN end_amount_system DECIMAL(10,2) NULL");
+                log("🔄 Migration: Added 'end_amount_system' to cash_sessions");
+            }
+            const [diffCol] = await conn.query("SHOW COLUMNS FROM cash_sessions LIKE 'difference'");
+            if (diffCol.length === 0) {
+                await conn.query("ALTER TABLE cash_sessions ADD COLUMN difference DECIMAL(10,2) NULL");
+                log("🔄 Migration: Added 'difference' to cash_sessions");
+            }
+            const [noteCol] = await conn.query("SHOW COLUMNS FROM cash_sessions LIKE 'closing_note'");
+            if (noteCol.length === 0) {
+                await conn.query("ALTER TABLE cash_sessions ADD COLUMN closing_note TEXT NULL");
+                log("🔄 Migration: Added 'closing_note' to cash_sessions");
+            }
+            const [clsUserCol] = await conn.query("SHOW COLUMNS FROM cash_sessions LIKE 'closed_by_user_id'");
+            if (clsUserCol.length === 0) {
+                await conn.query("ALTER TABLE cash_sessions ADD COLUMN closed_by_user_id INT NULL");
+                log("🔄 Migration: Added 'closed_by_user_id' to cash_sessions");
+            }
         } catch (migErr) {
             log("⚠️ Migration Error: " + migErr.message);
         }
