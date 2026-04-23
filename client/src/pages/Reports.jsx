@@ -6,7 +6,7 @@ import {
 } from 'chart.js';
 import {
     FaCalendarAlt, FaChartBar, FaUserTimes, FaUserCheck,
-    FaMoneyBillWave, FaArrowLeft, FaSync, FaCashRegister, FaExchangeAlt, FaUndo
+    FaMoneyBillWave, FaArrowLeft, FaSync, FaCashRegister, FaExchangeAlt, FaUndo, FaBan
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import AlertModal from '../components/CustomAlert';
