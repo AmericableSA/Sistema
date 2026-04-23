@@ -139,6 +139,23 @@ db.getConnection()
                 await conn.query("ALTER TABLE products ADD COLUMN service_order_type VARCHAR(50) DEFAULT NULL");
                 log("🔄 Migration: Added 'service_order_type' to products");
             }
+            // 12. Seed permanent service products (Instalación & Traslado)
+            const [instExist] = await conn.query("SELECT id FROM products WHERE sku = 'SVC-INSTALACION' LIMIT 1");
+            if (instExist.length === 0) {
+                await conn.query(
+                    `INSERT INTO products (sku, name, description, type, selling_price, unit_cost, current_stock, min_stock_alert, unit_of_measure, creates_service_order, service_order_type, is_active)
+                     VALUES ('SVC-INSTALACION', 'Instalación de Servicio', 'Costo por instalación de cable y equipos en domicilio del cliente', 'service', 500.00, 0, 0, 0, 'Servicio', 1, 'INSTALLATION', 1)`
+                );
+                log("🌱 Seed: Inserted 'Instalación de Servicio' product");
+            }
+            const [trasExist] = await conn.query("SELECT id FROM products WHERE sku = 'SVC-TRASLADO' LIMIT 1");
+            if (trasExist.length === 0) {
+                await conn.query(
+                    `INSERT INTO products (sku, name, description, type, selling_price, unit_cost, current_stock, min_stock_alert, unit_of_measure, creates_service_order, service_order_type, is_active)
+                     VALUES ('SVC-TRASLADO', 'Traslado de Servicio', 'Costo por traslado o cambio de dirección del servicio instalado', 'service', 300.00, 0, 0, 0, 'Servicio', 1, 'CHANGE_ADDRESS', 1)`
+                );
+                log("🌱 Seed: Inserted 'Traslado de Servicio' product");
+            }
         } catch (migErr) {
             log("⚠️ Migration Error: " + migErr.message);
         }
