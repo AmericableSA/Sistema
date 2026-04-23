@@ -188,9 +188,16 @@ const Inventory = () => {
                                                 ✨ Combo
                                             </span>
                                         ) : product.type === 'service' ? (
-                                            <span style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
-                                                🛠️ Servicio
-                                            </span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <span style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
+                                                    🛠️ Servicio
+                                                </span>
+                                                {product.creates_service_order ? (
+                                                    <span style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', border: '1px solid rgba(16,185,129,0.3)' }}>
+                                                        ⚡ Auto-Trámite: {product.service_order_type}
+                                                    </span>
+                                                ) : null}
+                                            </div>
                                         ) : (
                                             <span style={{ background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
                                                 📦 Producto

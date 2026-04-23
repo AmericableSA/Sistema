@@ -128,6 +128,17 @@ db.getConnection()
                 await conn.query("ALTER TABLE cash_sessions ADD COLUMN closed_by_user_id INT NULL");
                 log("🔄 Migration: Added 'closed_by_user_id' to cash_sessions");
             }
+            // 11. Service order link in products
+            const [soCol] = await conn.query("SHOW COLUMNS FROM products LIKE 'creates_service_order'");
+            if (soCol.length === 0) {
+                await conn.query("ALTER TABLE products ADD COLUMN creates_service_order TINYINT(1) DEFAULT 0");
+                log("🔄 Migration: Added 'creates_service_order' to products");
+            }
+            const [soTypeCol] = await conn.query("SHOW COLUMNS FROM products LIKE 'service_order_type'");
+            if (soTypeCol.length === 0) {
+                await conn.query("ALTER TABLE products ADD COLUMN service_order_type VARCHAR(50) DEFAULT NULL");
+                log("🔄 Migration: Added 'service_order_type' to products");
+            }
         } catch (migErr) {
             log("⚠️ Migration Error: " + migErr.message);
         }

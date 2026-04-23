@@ -161,7 +161,7 @@ exports.createTransaction = async (req, res) => {
         if (items && items.length > 0) {
             for (const item of items) {
                 // 1. Check Product Type
-                const [pRows] = await conn.query('SELECT id, type, current_stock, name FROM products WHERE id = ?', [item.product_id]);
+                const [pRows] = await conn.query('SELECT id, type, current_stock, name, creates_service_order, service_order_type FROM products WHERE id = ?', [item.product_id]);
                 if (!pRows.length) throw new Error(`Producto ID ${item.product_id} no encontrado.`);
                 const product = pRows[0];
 
@@ -204,13 +204,14 @@ exports.createTransaction = async (req, res) => {
                     );
                 }
 
-                // CHECK FOR INSTALLATION (To create Service Order)
-                // Case-insensitive check for "instalaci" or type 'service'
-                if (product.name.toLowerCase().includes('instalaci')) {
+                // CHECK FOR AUTOMATIC SERVICE ORDER — driven by the product flag
+                if (product.creates_service_order) {
+                    const orderType = product.service_order_type || 'SERVICE';
+                    const orderDesc = `Auto-generado al facturar: ${product.name}`;
                     await conn.query(
-                        `INSERT INTO service_orders (client_id, type, status, created_by_user_id, created_at) 
-                         VALUES (?, 'INSTALLATION', 'PENDING', ?, NOW())`,
-                        [client_id || null, reqUserId]
+                        `INSERT INTO service_orders (client_id, type, status, description, created_by_user_id, created_at) 
+                         VALUES (?, ?, 'PENDING', ?, ?, NOW())`,
+                        [client_id || null, orderType, orderDesc, reqUserId]
                     );
                 }
             }

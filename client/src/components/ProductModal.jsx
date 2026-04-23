@@ -10,8 +10,10 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
         min_stock_alert: 5,
         selling_price: 0,
         unit_cost: 0,
-        type: 'product', // default
-        unit_of_measure: 'Unidad'
+        type: 'product',
+        unit_of_measure: 'Unidad',
+        creates_service_order: 0,
+        service_order_type: 'INSTALLATION'
     });
 
     const [bundleItems, setBundleItems] = useState([]);
@@ -52,8 +54,10 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                 sku: '', name: '', description: '',
                 current_stock: 0, min_stock_alert: 5,
                 selling_price: 0, unit_cost: 0, type: 'product',
-                unit_of_measure: 'Unidad', // Default
-                ...(product || {}) // Merge initial values if any
+                unit_of_measure: 'Unidad',
+                creates_service_order: 0,
+                service_order_type: 'INSTALLATION',
+                ...(product || {})
             });
             setBundleItems([]);
         }
@@ -296,6 +300,54 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                                     </tbody>
                                 </table>
                             ) : <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>No hay items en este combo.</p>}
+                        </div>
+                    )}
+
+                    {/* SERVICE ORDER AUTOMATION — shown only for services */}
+                    {formData.type === 'service' && (
+                        <div style={{
+                            background: 'rgba(59, 130, 246, 0.08)',
+                            border: '1px solid rgba(59,130,246,0.3)',
+                            borderRadius: '12px', padding: '1.25rem', marginTop: '0.5rem'
+                        }}>
+                            <h4 style={{ color: '#60a5fa', margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700 }}>
+                                🛠️ Automatización de Trámite al Facturar
+                            </h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                <label style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    cursor: 'pointer', color: '#cbd5e1', fontWeight: 600, fontSize: '0.9rem'
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!formData.creates_service_order}
+                                        onChange={e => setFormData(prev => ({ ...prev, creates_service_order: e.target.checked ? 1 : 0 }))}
+                                        style={{ width: '18px', height: '18px', accentColor: '#3b82f6', cursor: 'pointer' }}
+                                    />
+                                    Crear trámite automáticamente al facturar
+                                </label>
+                            </div>
+                            {!!formData.creates_service_order && (
+                                <div style={{ marginTop: '1rem' }}>
+                                    <label className="label-dark">Tipo de Trámite que se Generará</label>
+                                    <select
+                                        className="input-dark"
+                                        value={formData.service_order_type || 'INSTALLATION'}
+                                        onChange={e => setFormData(prev => ({ ...prev, service_order_type: e.target.value }))}
+                                        style={{ width: '100%' }}
+                                    >
+                                        <option value="INSTALLATION">📡 Instalación</option>
+                                        <option value="RECONNECTION">🔌 Reconexión</option>
+                                        <option value="REPAIR">🔧 Reparación / Avería</option>
+                                        <option value="CHANGE_ADDRESS">📍 Cambio de Dirección</option>
+                                        <option value="CHANGE_NAME">📝 Cambio de Nombre</option>
+                                        <option value="SERVICE">⚙️ Servicio General</option>
+                                    </select>
+                                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.5rem 0 0 0' }}>
+                                        Al momento de cobrar este servicio, se creará automáticamente una orden de tipo <strong style={{ color: '#60a5fa' }}>{formData.service_order_type}</strong> en Pendientes.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 

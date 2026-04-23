@@ -40,7 +40,7 @@ exports.getBundleDetails = async (req, res) => {
 
 // Create a new product
 exports.createProduct = async (req, res) => {
-    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, bundle_items, unit_of_measure } = req.body;
+    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, bundle_items, unit_of_measure, creates_service_order, service_order_type } = req.body;
 
     // Default to 'product' if not specified
     const prodType = type || 'product';
@@ -51,8 +51,8 @@ exports.createProduct = async (req, res) => {
         await connection.beginTransaction();
 
         const [result] = await connection.query(
-            'INSERT INTO products (sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, unit_of_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [sku, name, description, category_id, provider_id || null, initialStock, min_stock_alert || 5, unit_cost || 0, selling_price, prodType, unit_of_measure || 'Unidad']
+            'INSERT INTO products (sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, unit_of_measure, creates_service_order, service_order_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [sku, name, description, category_id, provider_id || null, initialStock, min_stock_alert || 5, unit_cost || 0, selling_price, prodType, unit_of_measure || 'Unidad', creates_service_order ? 1 : 0, service_order_type || null]
         );
         const newId = result.insertId;
 
@@ -88,7 +88,7 @@ exports.createProduct = async (req, res) => {
 // Update a product
 exports.updateProduct = async (req, res) => {
     const { id } = req.params;
-    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, user_id, reason, type, bundle_items, unit_of_measure } = req.body;
+    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, user_id, reason, type, bundle_items, unit_of_measure, creates_service_order, service_order_type } = req.body;
 
     if (!name || isNaN(selling_price)) {
         return res.status(400).json({ msg: 'Nombre y Precio de Venta son obligatorios.' });
@@ -126,8 +126,8 @@ exports.updateProduct = async (req, res) => {
 
         // 3. Update Product Main Data
         await connection.query(
-            'UPDATE products SET sku=?, name=?, description=?, category_id=?, provider_id=?, current_stock=?, min_stock_alert=?, unit_cost=?, selling_price=?, type=?, unit_of_measure=?, updated_at=NOW() WHERE id=?',
-            [sku, name, description, category_id, provider_id || null, newStock, min_stock_alert || 5, unit_cost || 0, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', id]
+            'UPDATE products SET sku=?, name=?, description=?, category_id=?, provider_id=?, current_stock=?, min_stock_alert=?, unit_cost=?, selling_price=?, type=?, unit_of_measure=?, creates_service_order=?, service_order_type=?, updated_at=NOW() WHERE id=?',
+            [sku, name, description, category_id, provider_id || null, newStock, min_stock_alert || 5, unit_cost || 0, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', creates_service_order ? 1 : 0, service_order_type || null, id]
         );
 
         // 4. Handle Bundle Items Update
