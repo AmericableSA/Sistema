@@ -39,7 +39,7 @@ exports.getSessionStats = async (req, res) => {
         const [payments] = await db.query(`
             SELECT payment_method, SUM(amount) as total, COUNT(*) as count 
             FROM transactions 
-            WHERE session_id = ? AND status = 'SUCCESS' AND type != 'void'
+            WHERE session_id = ? AND (status = 'SUCCESS' OR status = 'COMPLETED') AND type != 'void'
             GROUP BY payment_method
         `, [sessionId]);
 
@@ -166,7 +166,7 @@ exports.closeSession = async (req, res) => {
 
         // 2. Calculate Sales Income (Cash and Dollars) - Only SUCCESSFUL
         const [income] = await connection.query(
-            'SELECT payment_method, SUM(amount) as total FROM transactions WHERE session_id = ? AND status = "SUCCESS" AND type != "void" GROUP BY payment_method',
+            'SELECT payment_method, SUM(amount) as total FROM transactions WHERE session_id = ? AND (status = "SUCCESS" OR status = "COMPLETED") AND type != "void" GROUP BY payment_method',
             [session_id]
         );
 

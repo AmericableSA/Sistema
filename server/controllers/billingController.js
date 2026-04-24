@@ -151,8 +151,8 @@ exports.createTransaction = async (req, res) => {
 
         const [trxRes] = await conn.query(
             `INSERT INTO transactions 
-            (session_id, client_id, amount, type, payment_method, description, justification, service_plan_id, reference_id, exchange_rate, details_json, collector_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (session_id, client_id, amount, type, payment_method, description, justification, service_plan_id, reference_id, exchange_rate, details_json, collector_id, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SUCCESS')`,
             [sessionId, client_id || null, amount, type, payment_method, description, justification, service_plan_id, reference_id || null, currentRate, JSON.stringify({ ...details_json, items }), collector_id || reqUserId]
         );
         const transactionId = trxRes.insertId;

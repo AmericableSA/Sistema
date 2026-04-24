@@ -97,18 +97,23 @@ exports.registerPayment = async (req, res) => {
             [newBalance, newStatus, invoice_id]
         );
 
-        // 3. Register OUT Transaction (Expense)
+        // 3. Find Open Session (Usually OFICINA for provider payments)
+        const [sessions] = await connection.query('SELECT id FROM cash_sessions WHERE status = "open" AND session_type = "OFICINA" LIMIT 1');
+        const sessionId = sessions.length > 0 ? sessions[0].id : null;
+
+        // 4. Register OUT Transaction (Expense)
         await connection.query(
             `INSERT INTO transactions 
-            (invoice_id, amount, type, description, created_at, reference_number, notes, user_id) 
-            VALUES (?, ?, 'OUT', ?, NOW(), ?, ?, ?)`,
+            (invoice_id, amount, type, description, created_at, reference_id, justification, collector_id, session_id, status) 
+            VALUES (?, ?, 'OUT', ?, NOW(), ?, ?, ?, ?, 'SUCCESS')`,
             [
                 invoice_id, 
                 payAmount, 
                 `Pago a Factura Proveedor #${invoice_id} (${invoice.reference_number || 'Sin Ref'})`, 
                 reference_number || null, 
                 notes || null, 
-                userId
+                userId || 1,
+                sessionId,
             ]
         );
 

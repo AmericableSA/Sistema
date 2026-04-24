@@ -9,11 +9,10 @@ exports.getSalesSummary = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         pool = await db.getConnection();
-        const [rows] = await pool.query(`
             SELECT 
                 COALESCE(SUM(amount), 0) as ventas_brutas
             FROM transactions 
-            WHERE type != 'void' 
+            WHERE (status = 'SUCCESS' OR status = 'COMPLETED') AND type != 'void' 
             AND DATE(created_at) BETWEEN ? AND ?
         `, [startDate, endDate]);
 
@@ -58,7 +57,7 @@ exports.getSalesByUser = async (req, res) => {
                 COALESCE(u.full_name, 'Sin Asignar') as nombre_completo
             FROM transactions t
             LEFT JOIN users u ON t.collector_id = u.id
-            WHERE t.type != 'void'
+            WHERE (t.status = 'SUCCESS' OR t.status = 'COMPLETED') AND t.type != 'void'
             AND DATE(t.created_at) BETWEEN ? AND ?
             GROUP BY t.collector_id, u.username, u.full_name
             ORDER BY total_vendido DESC
@@ -116,7 +115,7 @@ exports.getSalesChart = async (req, res) => {
         const [rows] = await pool.query(`
             SELECT DATE(created_at) as dia, SUM(amount) as total_diario
             FROM transactions
-            WHERE type != 'void'
+            WHERE (status = 'SUCCESS' OR status = 'COMPLETED') AND type != 'void'
             AND DATE(created_at) BETWEEN ? AND ?
             GROUP BY DATE(created_at)
             ORDER BY dia ASC
@@ -228,9 +227,9 @@ exports.getDailyClosing = async (req, res) => {
 
         pool = await db.getConnection();
 
-        // 1. Sales Income (Sólo comprobantes no anulados)
+        // 1. Sales Income (Sólo comprobantes no anulados y con estado exitoso)
         const [salesRows] = await pool.query(
-            "SELECT SUM(amount) as total FROM transactions WHERE status = 'SUCCESS' AND type != 'void' AND DATE(created_at) BETWEEN ? AND ?",
+            "SELECT SUM(amount) as total FROM transactions WHERE (status = 'SUCCESS' OR status = 'COMPLETED') AND type != 'void' AND DATE(created_at) BETWEEN ? AND ?",
             [sDate, eDate]
         );
         const salesTotal = parseFloat(salesRows[0].total || 0);
@@ -264,7 +263,7 @@ exports.getDailyClosing = async (req, res) => {
             SELECT COALESCE(u.username, 'Sistema') as username, SUM(t.amount) as total
             FROM transactions t
             LEFT JOIN users u ON t.collector_id = u.id
-            WHERE t.status = 'SUCCESS' AND t.type != 'void' AND DATE(t.created_at) BETWEEN ? AND ?
+            WHERE (t.status = 'SUCCESS' OR t.status = 'COMPLETED') AND t.type != 'void' AND DATE(t.created_at) BETWEEN ? AND ?
             GROUP BY t.collector_id, u.username
         `, [sDate, eDate]);
 
@@ -395,11 +394,16 @@ exports.getDailyDetails = async (req, res) => {
         const calcSum = (list) => {
             let sales = 0, manualIn = 0, manualOut = 0, refunds = 0;
             list.forEach(item => {
-                const val = parseFloat(item.amount);
-                if (item.category === 'TRANSACTION') sales += val;
-                else if (item.type === 'IN') manualIn += val;
-                else if (item.type === 'REFUND') refunds += val; // Facturas anuladas
-                else if (item.type === 'OUT') {
+                const val = parseFloat(item.amount) || 0;
+                const isCancelled = item.status === 'CANCELLED';
+                
+                if (item.category === 'TRANSACTION') {
+                    if (!isCancelled) sales += val;
+                } else if (item.type === 'IN') {
+                    manualIn += val;
+                } else if (item.type === 'REFUND') {
+                    refunds += val;
+                } else if (item.type === 'OUT') {
                     if (item.description && item.description.includes('[REEMB]')) {
                         refunds += val;
                     } else {
@@ -504,7 +508,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         ];
 
         combined.forEach(row => {
-            const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
+            const isIncome = (row.type !== 'OUT' && row.type !== 'REFUND' && row.type !== 'void');
             const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' 
                 : row.type === 'IN' ? 'INGRESO' 
                 : row.type === 'REFUND' ? 'DEVOLUCIÓN' 

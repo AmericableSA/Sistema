@@ -54,7 +54,7 @@ db.getConnection()
             // 1. Status
             const [cols] = await conn.query("SHOW COLUMNS FROM transactions LIKE 'status'");
             if (cols.length === 0) {
-                await conn.query("ALTER TABLE transactions ADD COLUMN status VARCHAR(20) DEFAULT 'COMPLETED'");
+                await conn.query("ALTER TABLE transactions ADD COLUMN status VARCHAR(20) DEFAULT 'SUCCESS'");
                 log("🔄 Migration: Added 'status' to transactions");
             }
             // 2. Cancellation Reason
@@ -155,6 +155,11 @@ db.getConnection()
                      VALUES ('SVC-TRASLADO', 'Traslado de Servicio', 'Costo por traslado o cambio de dirección del servicio instalado', 'service', 300.00, 0, 0, 0, 'Servicio', 1, 'CHANGE_ADDRESS', 1)`
                 );
                 log("🌱 Seed: Inserted 'Traslado de Servicio' product");
+            }
+            // 13. Data Fix: Standardize statuses for existing transactions
+            const [updateRes] = await conn.query("UPDATE transactions SET status = 'SUCCESS' WHERE status = 'COMPLETED' OR status IS NULL");
+            if (updateRes.affectedRows > 0) {
+                log(`🔄 Data Fix: Standardized ${updateRes.affectedRows} old transactions to 'SUCCESS'`);
             }
         } catch (migErr) {
             log("⚠️ Migration Error: " + migErr.message);
