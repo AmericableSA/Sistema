@@ -9,6 +9,7 @@ exports.getSalesSummary = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         pool = await db.getConnection();
+        const [rows] = await pool.query(`
             SELECT 
                 COALESCE(SUM(amount), 0) as ventas_brutas
             FROM transactions 
