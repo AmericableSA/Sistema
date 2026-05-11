@@ -265,67 +265,69 @@ exports.createTransaction = async (req, res) => {
     } finally {
         conn.release();
     }
-};
-
-// 3. Get History (Filtered)
+};// 3. Get History (Filtered) — Timezone-safe: Nicaragua CST (UTC-6)
 exports.getDailyTransactions = async (req, res) => {
     try {
-        const { startDate, endDate, search, limit } = req.query;
+        const { startDate, endDate, search, limit, collector } = req.query;
 
-        // Base Query
+        // ── Zona horaria Nicaragua: convertimos created_at a UTC-6 para filtrar por fecha local ──
+        // Esto evita el error clásico de "el día empieza 6 horas tarde" cuando MySQL está en UTC
+        const TZ_FROM = '+00:00';
+        const TZ_NI   = '-06:00';
+
+        // Base Queries — usamos CONVERT_TZ para que DATE() aplique en hora de Nicaragua
         let querySales = `
-            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type, c.full_name as client_name, t.status, t.cancellation_reason, COALESCE(NULLIF(t.reference_id, ''), '⚠️ SIN NUMERO ⚠️') as reference_id
-            FROM transactions t 
+            SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type,
+                   c.full_name as client_name, t.status, t.cancellation_reason,
+                   COALESCE(NULLIF(t.reference_id, ''), '⚠️ SIN NUMERO ⚠️') as reference_id
+            FROM transactions t
             LEFT JOIN clients c ON t.client_id = c.id
             WHERE 1=1
         `;
         let queryMoves = `
-            SELECT id, amount, description, created_at, type, NULL as client_name, 'COMPLETED' as status, NULL as cancellation_reason, NULL as reference_id
+            SELECT id, amount, description, created_at, type,
+                   NULL as client_name, 'COMPLETED' as status, NULL as cancellation_reason, NULL as reference_id
             FROM cash_movements
             WHERE 1=1
         `;
         const paramsSales = [];
         const paramsMoves = [];
 
-        // Filter Logic
+        // ── Filtros de fecha usando DATE en zona Nicaragua ──
         if (startDate) {
-            querySales += ' AND t.created_at >= ?';
-            queryMoves += ' AND created_at >= ?';
-            paramsSales.push(`${startDate} 00:00:00`);
-            paramsMoves.push(`${startDate} 00:00:00`);
+            querySales += ` AND DATE(CONVERT_TZ(t.created_at, '${TZ_FROM}', '${TZ_NI}')) >= ?`;
+            queryMoves += ` AND DATE(CONVERT_TZ(created_at, '${TZ_FROM}', '${TZ_NI}')) >= ?`;
+            paramsSales.push(startDate);
+            paramsMoves.push(startDate);
         }
         if (endDate) {
-            querySales += ' AND t.created_at <= ?';
-            queryMoves += ' AND created_at <= ?';
-            paramsSales.push(`${endDate} 23:59:59`);
-            paramsMoves.push(`${endDate} 23:59:59`);
+            querySales += ` AND DATE(CONVERT_TZ(t.created_at, '${TZ_FROM}', '${TZ_NI}')) <= ?`;
+            queryMoves += ` AND DATE(CONVERT_TZ(created_at, '${TZ_FROM}', '${TZ_NI}')) <= ?`;
+            paramsSales.push(endDate);
+            paramsMoves.push(endDate);
         }
 
-        // Search (Client Name or Description)
+        // ── Filtro por cobrador (desde la caja) ──
+        if (collector && collector !== '') {
+            querySales += ` AND t.collector_id = ?`;
+            paramsSales.push(collector);
+            // Los movimientos de caja no tienen collector directo, se excluyen si se filtra por cobrador
+            queryMoves += ` AND 1=0`;
+        }
+
+        // ── Búsqueda de texto ──
         if (search) {
             const likeTerm = `%${search}%`;
             querySales += ' AND (t.description LIKE ? OR c.full_name LIKE ? OR c.id LIKE ? OR t.reference_id LIKE ?)';
-            queryMoves += ' AND (description LIKE ? OR id LIKE ?)'; // Moves don't have client name
-            // Add params twice for sales (desc, name) - wait, query uses 3 ?
+            queryMoves += ' AND (description LIKE ? OR id LIKE ?)';
             paramsSales.push(likeTerm, likeTerm, likeTerm, likeTerm);
             paramsMoves.push(likeTerm, likeTerm);
         }
 
-        // Pagination
-        const pageNum = parseInt(limit === 'all' ? 1 : req.query.page) || 1;
-        const pageSize = parseInt(limit === 'all' ? 1000000 : limit) || 10; // Default 10 rows
-        const offset = (pageNum - 1) * pageSize;
-
-        // Count Queries (for Pagination UI) - Simplified: Just fetch rows and slice? 
-        // No, effective pagination needs LIMIT/OFFSET in SQL or accurate Total Count.
-        // Complex with Union. Let's execute separate count queries or just one big query?
-        // With Union, it's easier to fetch filtered rows then paginate in JS if dataset is small, 
-        // but explicit SQL pagination is better for scale.
-
-        // Let's stick to: Fetch ALL matching IDs (lightweight), then slice ids, then fetch details?
-        // Or simple: Just apply limit to the combined UNION? 
-        // MySQL doesn't easily support LIMIT on UNION without wrapping.
-        // Wrapper: SELECT * FROM (QuerySales UNION ALL QueryMoves) as combined ORDER BY created_at DESC LIMIT ? OFFSET ?
+        // ── Paginación ──
+        const pageNum  = parseInt(limit === 'all' ? 1 : req.query.page) || 1;
+        const pageSize = parseInt(limit === 'all' ? 1000000 : limit) || 10;
+        const offset   = (pageNum - 1) * pageSize;
 
         const finalQuery = `
             SELECT * FROM (
@@ -338,10 +340,9 @@ exports.getDailyTransactions = async (req, res) => {
         `;
 
         const finalParams = [...paramsSales, ...paramsMoves, pageSize, offset];
-
         const [rows] = await db.query(finalQuery, finalParams);
 
-        // Get Total Count for Pagination
+        // ── Conteo total para paginación ──
         const countQuery = `
             SELECT COUNT(*) as total FROM (
                 ${querySales}
@@ -349,7 +350,6 @@ exports.getDailyTransactions = async (req, res) => {
                 ${queryMoves}
             ) as combined_count
         `;
-        // Re-use params excluding limit/offset
         const [countRes] = await db.query(countQuery, [...paramsSales, ...paramsMoves]);
         const total = countRes[0].total;
 
@@ -364,15 +364,13 @@ exports.getDailyTransactions = async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('getDailyTransactions Error:', err);
         res.status(500).send(err);
     }
 };
 
-
-
-
 // 4. Get Single Transaction (For Reprint)
+
 exports.getTransactionById = async (req, res) => {
     try {
         const [rows] = await db.query(`

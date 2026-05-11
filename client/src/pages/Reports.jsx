@@ -222,6 +222,85 @@ const ActionButton = styled.button`
   `}
 `;
 
+// ─── Facturas por Cobrador: Styled Components extras ─────────────────────────
+const InvFilterPanel = styled.div`
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+`;
+
+const InvFilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  label { font-size: 0.78rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  input, select {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #f1f5f9;
+    padding: 0.65rem 0.9rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+    &:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    option { background: #1e293b; }
+  }
+`;
+
+const InvTable = styled.table`
+  width: 100%; border-collapse: separate; border-spacing: 0; min-width: 900px;
+  th {
+    padding: 0.9rem 1rem; text-align: left; color: #64748b;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+    background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  th:first-child { border-radius: 10px 0 0 0; }
+  th:last-child { border-radius: 0 10px 0 0; }
+  td {
+    padding: 0.95rem 1rem; color: #cbd5e1; font-size: 0.88rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background 0.15s; }
+  tbody tr:hover td { background: rgba(255,255,255,0.03); }
+`;
+
+const InvPagination = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+`;
+
+const PageBtn = styled.button`
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid;
+  font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+  background: ${p => p.$active ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.04)'};
+  color: ${p => p.$active ? '#60a5fa' : '#94a3b8'};
+  border-color: ${p => p.$active ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.07)'};
+  &:hover:not(:disabled) { background: rgba(59,130,246,0.2); color: #60a5fa; border-color: rgba(59,130,246,0.4); }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+`;
+
+const InvSummaryBadge = styled.div`
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.85rem; font-weight: 700;
+  background: ${p => p.$bg || 'rgba(59,130,246,0.1)'};
+  color: ${p => p.$color || '#60a5fa'};
+  border: 1px solid ${p => p.$border || 'rgba(59,130,246,0.2)'};
+`;
+// ─────────────────────────────────────────────────────────────────────────────
+
 const Reports = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -236,6 +315,23 @@ const Reports = () => {
 
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // ── Estado: Facturas por Cobrador ────────────────────────────────────────
+    const [invData, setInvData] = useState([]);
+    const [invPagination, setInvPagination] = useState({ total: 0, page: 1, limit: 25, totalPages: 1 });
+    const [invSummary, setInvSummary] = useState({ totalMonto: 0, totalCanceladas: 0, montoCancelado: 0, totalFacturas: 0 });
+    const [invLoading, setInvLoading] = useState(false);
+    const [invSearched, setInvSearched] = useState(false);
+    const [usersList, setUsersList] = useState([]);
+    const [invFilters, setInvFilters] = useState({
+        collectorId: '',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        invoiceNumber: '',
+        clientSearch: '',
+        limit: '25'
+    });
+    // ─────────────────────────────────────────────────────────────────────────
     const formatCurrency = (val) => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO' }).format(val || 0);
 
     const fetchData = useCallback(async () => {
@@ -270,6 +366,87 @@ const Reports = () => {
     }, [refresh, startDate, endDate]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    // ── Cargar lista de cobradores/usuarios ──────────────────────────────────
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setUsersList(Array.isArray(data) ? data : []))
+            .catch(() => {});
+    }, []);
+
+    // ── Función: buscar facturas paginadas ───────────────────────────────────
+    const fetchInvoices = useCallback(async (pageOverride = null) => {
+        setInvLoading(true);
+        setInvSearched(true);
+        const token = localStorage.getItem('token');
+        const apiBase = (import.meta.env.VITE_API_URL || '/api') + '/reports';
+        const page = pageOverride !== null ? pageOverride : invPagination.page;
+        const params = new URLSearchParams({
+            ...(invFilters.collectorId ? { collectorId: invFilters.collectorId } : {}),
+            ...(invFilters.startDate ? { startDate: invFilters.startDate } : {}),
+            ...(invFilters.endDate ? { endDate: invFilters.endDate } : {}),
+            ...(invFilters.invoiceNumber ? { invoiceNumber: invFilters.invoiceNumber } : {}),
+            ...(invFilters.clientSearch ? { clientSearch: invFilters.clientSearch } : {}),
+            page: String(page),
+            limit: invFilters.limit || '25'
+        });
+        try {
+            const res = await fetch(`${apiBase}/invoices-by-collector?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json();
+            setInvData(json.data || []);
+            setInvPagination(json.pagination || { total: 0, page: 1, limit: 25, totalPages: 1 });
+            setInvSummary(json.summary || { totalMonto: 0, totalCanceladas: 0, montoCancelado: 0, totalFacturas: 0 });
+        } catch (e) {
+            console.error('Facturas report error:', e);
+        } finally {
+            setInvLoading(false);
+        }
+    }, [invFilters, invPagination.page]);
+
+    const handleInvSearch = () => fetchInvoices(1);
+    const handleInvPageChange = (newPage) => {
+        setInvPagination(prev => ({ ...prev, page: newPage }));
+        fetchInvoices(newPage);
+    };
+    const handleInvReset = () => {
+        setInvFilters({ collectorId: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], invoiceNumber: '', clientSearch: '', limit: '25' });
+        setInvData([]);
+        setInvSearched(false);
+        setInvPagination({ total: 0, page: 1, limit: 25, totalPages: 1 });
+        setInvSummary({ totalMonto: 0, totalCanceladas: 0, montoCancelado: 0, totalFacturas: 0 });
+    };
+    const handleInvExportXLS = () => {
+        import('xlsx').then(XLSX => {
+            const rows = invData.map(r => ({
+                'N° Factura': r.numero_factura,
+                'Fecha': new Date(r.fecha).toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true }),
+                'Cliente': r.cliente,
+                'Contrato': r.contrato,
+                'Cobrador': r.cobrador,
+                'Usuario': `@${r.usuario_cobrador}`,
+                'Método Pago': r.metodo_pago,
+                'Monto (NIO)': parseFloat(r.monto),
+                'Estado': r.estado === 'CANCELLED' ? 'CANCELADO' : r.estado === 'SUCCESS' ? 'EXITOSO' : r.estado,
+                'Motivo Cancelación': r.cancellation_reason || ''
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
+            const collector = usersList.find(u => String(u.id) === String(invFilters.collectorId));
+            const cName = collector ? `_${collector.username}` : '';
+            XLSX.writeFile(wb, `Facturas${cName}_${invFilters.startDate || 'todo'}_${invFilters.endDate || ''}.xlsx`);
+        });
+    };
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const invFormatDate = (iso) => {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleString('es-NI', { timeZone: 'America/Managua', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    };
 
     const exportToExcelBI = () => {
         try {
@@ -1083,6 +1260,273 @@ const Reports = () => {
                     </div>
                 </Card>
             </Grid>
+            {showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} />}
+
+            {/* ══════════════════════════════════════════════════════════════════
+                SECCIÓN: FACTURAS POR COBRADOR — Búsqueda Avanzada
+            ══════════════════════════════════════════════════════════════════ */}
+            <div style={{ margin: '3rem 0 1rem 0', borderTop: '2px solid rgba(99,102,241,0.25)', paddingTop: '2.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <SectionTitle style={{ marginBottom: 0, borderLeftColor: '#6366f1' }}>
+                        🔍 Consulta de Facturas por Cobrador
+                    </SectionTitle>
+                    {invSearched && invData.length > 0 && (
+                        <ActionButton $variant="outline-success" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={handleInvExportXLS}>
+                            📥 Exportar Excel ({invPagination.total} registros)
+                        </ActionButton>
+                    )}
+                </div>
+
+                {/* ── Panel de filtros ── */}
+                <InvFilterPanel>
+                    <InvFilterGroup>
+                        <label>Cobrador (Usuario)</label>
+                        <select
+                            value={invFilters.collectorId}
+                            onChange={e => setInvFilters(f => ({ ...f, collectorId: e.target.value }))}
+                        >
+                            <option value="">— Todos los cobradores —</option>
+                            {usersList.map(u => (
+                                <option key={u.id} value={u.id}>
+                                    {u.full_name || u.username} (@{u.username})
+                                </option>
+                            ))}
+                        </select>
+                    </InvFilterGroup>
+
+                    <InvFilterGroup>
+                        <label>Fecha Desde</label>
+                        <input
+                            type="date"
+                            value={invFilters.startDate}
+                            onChange={e => setInvFilters(f => ({ ...f, startDate: e.target.value }))}
+                        />
+                    </InvFilterGroup>
+
+                    <InvFilterGroup>
+                        <label>Fecha Hasta</label>
+                        <input
+                            type="date"
+                            value={invFilters.endDate}
+                            onChange={e => setInvFilters(f => ({ ...f, endDate: e.target.value }))}
+                        />
+                    </InvFilterGroup>
+
+                    <InvFilterGroup>
+                        <label>N° Factura</label>
+                        <input
+                            type="text"
+                            placeholder="Ej: 00123"
+                            value={invFilters.invoiceNumber}
+                            onChange={e => setInvFilters(f => ({ ...f, invoiceNumber: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && handleInvSearch()}
+                        />
+                    </InvFilterGroup>
+
+                    <InvFilterGroup>
+                        <label>Cliente o Contrato</label>
+                        <input
+                            type="text"
+                            placeholder="Nombre o N° contrato"
+                            value={invFilters.clientSearch}
+                            onChange={e => setInvFilters(f => ({ ...f, clientSearch: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && handleInvSearch()}
+                        />
+                    </InvFilterGroup>
+
+                    <InvFilterGroup>
+                        <label>Filas por Página</label>
+                        <select
+                            value={invFilters.limit}
+                            onChange={e => setInvFilters(f => ({ ...f, limit: e.target.value }))}
+                        >
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </InvFilterGroup>
+
+                    <InvFilterGroup style={{ justifyContent: 'flex-end' }}>
+                        <label style={{ visibility: 'hidden' }}>Acción</label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <ActionButton
+                                $variant="primary"
+                                style={{ flex: 1, justifyContent: 'center', padding: '0.65rem 1.2rem' }}
+                                onClick={handleInvSearch}
+                                disabled={invLoading}
+                            >
+                                {invLoading ? '⏳' : '🔍'} Buscar
+                            </ActionButton>
+                            <ActionButton
+                                $variant="outline-danger"
+                                style={{ padding: '0.65rem 0.9rem' }}
+                                onClick={handleInvReset}
+                                title="Limpiar filtros"
+                            >
+                                ✕
+                            </ActionButton>
+                        </div>
+                    </InvFilterGroup>
+                </InvFilterPanel>
+
+                {/* ── Badges de resumen ── */}
+                {invSearched && !invLoading && (
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                        <InvSummaryBadge $bg="rgba(99,102,241,0.1)" $color="#818cf8" $border="rgba(99,102,241,0.25)">
+                            📋 {invSummary.totalFacturas} facturas encontradas
+                        </InvSummaryBadge>
+                        <InvSummaryBadge $bg="rgba(16,185,129,0.1)" $color="#34d399" $border="rgba(16,185,129,0.25)">
+                            💵 Total cobrado: {formatCurrency(invSummary.totalMonto)}
+                        </InvSummaryBadge>
+                        {invSummary.totalCanceladas > 0 && (
+                            <InvSummaryBadge $bg="rgba(239,68,68,0.1)" $color="#f87171" $border="rgba(239,68,68,0.25)">
+                                🚫 {invSummary.totalCanceladas} canceladas ({formatCurrency(invSummary.montoCancelado)})
+                            </InvSummaryBadge>
+                        )}
+                        <InvSummaryBadge $bg="rgba(148,163,184,0.07)" $color="#94a3b8" $border="rgba(148,163,184,0.15)">
+                            📄 Pág. {invPagination.page} / {invPagination.totalPages || 1}
+                        </InvSummaryBadge>
+                    </div>
+                )}
+
+                {/* ── Tabla de resultados ── */}
+                {invLoading ? (
+                    <Card style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
+                        Consultando facturas...
+                    </Card>
+                ) : invSearched && invData.length === 0 ? (
+                    <Card style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔎</div>
+                        <div style={{ color: '#94a3b8', fontWeight: 600 }}>No se encontraron facturas con los filtros aplicados.</div>
+                        <div style={{ color: '#475569', fontSize: '0.85rem', marginTop: '0.5rem' }}>Intenta ampliar el rango de fechas o ajustar los filtros.</div>
+                    </Card>
+                ) : invData.length > 0 ? (
+                    <Card style={{ padding: '0', overflow: 'hidden' }}>
+                        <OverflowWrapper>
+                            <InvTable>
+                                <thead>
+                                    <tr>
+                                        <th>N° Factura</th>
+                                        <th>Fecha y Hora</th>
+                                        <th>Cliente</th>
+                                        <th>Contrato</th>
+                                        <th>Cobrador</th>
+                                        <th>Método</th>
+                                        <th style={{ textAlign: 'right' }}>Monto</th>
+                                        <th style={{ textAlign: 'center' }}>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {invData.map((row, i) => {
+                                        const cancelled = row.estado === 'CANCELLED';
+                                        return (
+                                            <tr key={row.id || i}>
+                                                <td>
+                                                    <span style={{ color: '#a5b4fc', fontWeight: 700, fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                                                        {row.numero_factura}
+                                                    </span>
+                                                </td>
+                                                <td style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                                                    {invFormatDate(row.fecha)}
+                                                </td>
+                                                <td>
+                                                    <div style={{ fontWeight: 600, color: cancelled ? '#64748b' : '#e2e8f0' }}>
+                                                        {row.cliente}
+                                                    </div>
+                                                </td>
+                                                <td style={{ color: '#64748b', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                                                    {row.contrato}
+                                                </td>
+                                                <td>
+                                                    <div style={{ fontWeight: 600, color: '#c4b5fd' }}>{row.cobrador}</div>
+                                                    <small style={{ color: '#64748b' }}>@{row.usuario_cobrador}</small>
+                                                </td>
+                                                <td>
+                                                    <span style={{
+                                                        padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700,
+                                                        background: row.metodo_pago === 'cash' ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)',
+                                                        color: row.metodo_pago === 'cash' ? '#34d399' : '#60a5fa'
+                                                    }}>
+                                                        {row.metodo_pago === 'cash' ? '💵 Efectivo' : row.metodo_pago === 'transfer' ? '🏦 Transferencia' : row.metodo_pago || '—'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ textAlign: 'right', fontWeight: 700, color: cancelled ? '#64748b' : '#4ade80', textDecoration: cancelled ? 'line-through' : 'none' }}>
+                                                    {formatCurrency(row.monto)}
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <span style={{
+                                                        padding: '0.25rem 0.7rem', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 700,
+                                                        background: cancelled ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
+                                                        color: cancelled ? '#f87171' : '#34d399'
+                                                    }}>
+                                                        {cancelled ? '🚫 Cancelado' : '✅ Exitoso'}
+                                                    </span>
+                                                    {cancelled && row.cancellation_reason && (
+                                                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.3rem', maxWidth: '140px' }}>
+                                                            {row.cancellation_reason}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </InvTable>
+                        </OverflowWrapper>
+
+                        {/* ── Paginación ── */}
+                        <InvPagination style={{ padding: '1rem 1.5rem' }}>
+                            <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                Mostrando <strong style={{ color: '#94a3b8' }}>
+                                    {((invPagination.page - 1) * invPagination.limit) + 1}–{Math.min(invPagination.page * invPagination.limit, invPagination.total)}
+                                </strong> de <strong style={{ color: '#94a3b8' }}>{invPagination.total}</strong> facturas
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <PageBtn
+                                    onClick={() => handleInvPageChange(1)}
+                                    disabled={invPagination.page <= 1 || invLoading}
+                                    title="Primera página"
+                                >«</PageBtn>
+                                <PageBtn
+                                    onClick={() => handleInvPageChange(invPagination.page - 1)}
+                                    disabled={invPagination.page <= 1 || invLoading}
+                                    title="Anterior"
+                                >‹</PageBtn>
+
+                                {/* Números de páginas */}
+                                {Array.from({ length: Math.min(5, invPagination.totalPages) }, (_, i) => {
+                                    const start = Math.max(1, Math.min(invPagination.page - 2, invPagination.totalPages - 4));
+                                    const p = start + i;
+                                    if (p < 1 || p > invPagination.totalPages) return null;
+                                    return (
+                                        <PageBtn
+                                            key={p}
+                                            $active={p === invPagination.page}
+                                            onClick={() => handleInvPageChange(p)}
+                                            disabled={invLoading}
+                                        >{p}</PageBtn>
+                                    );
+                                })}
+
+                                <PageBtn
+                                    onClick={() => handleInvPageChange(invPagination.page + 1)}
+                                    disabled={invPagination.page >= invPagination.totalPages || invLoading}
+                                    title="Siguiente"
+                                >›</PageBtn>
+                                <PageBtn
+                                    onClick={() => handleInvPageChange(invPagination.totalPages)}
+                                    disabled={invPagination.page >= invPagination.totalPages || invLoading}
+                                    title="Última página"
+                                >»</PageBtn>
+                            </div>
+                        </InvPagination>
+                    </Card>
+                ) : null}
+            </div>
+            {/* ══════════════════════════════════════════════════════════════════ */}
+
             {showDailyReport && <DailyReportModal onClose={() => setShowDailyReport(false)} />}
         </PageWrapper >
     );

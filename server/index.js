@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ZONA HORARIA: Nicaragua (CST = UTC-6) — DEBE ir PRIMERO
+// ═══════════════════════════════════════════════════════════════
+process.env.TZ = 'America/Managua';
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');

@@ -26,4 +26,7 @@ router.get('/movements', reportController.getMovementsReport);
 router.get('/orders', reportController.getServiceOrdersReport);
 router.get('/orders/export', reportController.exportServiceOrdersXLS);
 
+// Facturas por Cobrador — búsqueda avanzada paginada
+router.get('/invoices-by-collector', reportController.getInvoicesByCollector);
+
 module.exports = router;
