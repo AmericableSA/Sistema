@@ -1,4 +1,4 @@
-﻿const db = require('../config/db');
+const db = require('../config/db');
 
 // --- NEW ENDPOINTS FOR FINANCIAL DASHBOARD ---
 
@@ -228,7 +228,7 @@ exports.getDailyClosing = async (req, res) => {
 
         pool = await db.getConnection();
 
-        // 1. Sales Income (SÃ³lo comprobantes no anulados y con estado exitoso)
+        // 1. Sales Income (S├│lo comprobantes no anulados y con estado exitoso)
         const [salesRows] = await pool.query(
             "SELECT SUM(amount) as total FROM transactions WHERE (status = 'SUCCESS' OR status = 'COMPLETED') AND type != 'void' AND DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) BETWEEN ? AND ?",
             [sDate, eDate]
@@ -237,7 +237,7 @@ exports.getDailyClosing = async (req, res) => {
 
         // 2. Manual Cash Movements (Detecting Refunds by type or prefix)
         const [moveRows] = await pool.query(
-            "SELECT type, amount, description FROM cash_movements WHERE DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) BETWEEN ? AND ?",
+            "SELECT type, amount, description FROM cash_movements WHERE DATE(created_at) BETWEEN ? AND ?",
             [sDate, eDate]
         );
 
@@ -490,29 +490,29 @@ exports.exportDailyDetailsXLS = async (req, res) => {
 
         const ExcelJS = require('exceljs');
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('BitÃ¡cora Diaria');
+        const sheet = workbook.addWorksheet('Bit├ícora Diaria');
 
         sheet.columns = [
             { header: 'Fecha/Hora', key: 'time', width: 20 },
             { header: 'Caja (Origen)', key: 'box', width: 15 },
             { header: 'Tipo', key: 'type', width: 15 },
-            { header: 'Cliente / DescripciÃ³n', key: 'desc', width: 40 },
+            { header: 'Cliente / Descripci├│n', key: 'desc', width: 40 },
             { header: 'Estado Cliente', key: 'client_status', width: 15 },
             { header: 'Fecha Corte', key: 'cutoff_date', width: 15 },
-            { header: 'Ãšltimo Pago', key: 'last_payment_date', width: 15 },
-            { header: 'Fecha InstalaciÃ³n', key: 'installation_date', width: 18 },
+            { header: '├Ültimo Pago', key: 'last_payment_date', width: 15 },
+            { header: 'Fecha Instalaci├│n', key: 'installation_date', width: 18 },
             { header: 'Responsable', key: 'collector', width: 15 },
-            { header: 'MÃ©todo', key: 'method', width: 10 },
+            { header: 'M├®todo', key: 'method', width: 10 },
             { header: 'Monto', key: 'amount', width: 15 },
             { header: 'Estado', key: 'status', width: 15 },
-            { header: 'Motivo CancelaciÃ³n', key: 'reason', width: 30 },
+            { header: 'Motivo Cancelaci├│n', key: 'reason', width: 30 },
         ];
 
         combined.forEach(row => {
             const isIncome = (row.type !== 'OUT' && row.type !== 'REFUND' && row.type !== 'void');
             const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' 
                 : row.type === 'IN' ? 'INGRESO' 
-                : row.type === 'REFUND' ? 'DEVOLUCIÃ“N' 
+                : row.type === 'REFUND' ? 'DEVOLUCI├ôN' 
                 : 'SALIDA';
             const boxLabel = row.collector_role === 'collector' ? 'COLECTORES' : 'OFICINA';
             
@@ -526,7 +526,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             const statusMap = {
                 'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
                 'pending_install': 'Pendiente', 'disconnected_by_request': 'Desc. Solicitud',
-                'promotions': 'Promociones', 'courtesy': 'CortesÃ­a', 'provider': 'Proveedor', 'office': 'Oficina'
+                'promotions': 'Promociones', 'courtesy': 'Cortes├¡a', 'provider': 'Proveedor', 'office': 'Oficina'
             };
 
             sheet.addRow({
@@ -575,8 +575,8 @@ exports.exportDailyDetailsXLS = async (req, res) => {
 
 // --- NEW BLOCKS FOR MOVEMENTS & SERVICE ORDERS ---
 
-// 6. Movements (TrÃ¡mites) Report
-// 6. Movements (TrÃ¡mites) Report
+// 6. Movements (Tr├ímites) Report
+// 6. Movements (Tr├ímites) Report
 exports.getMovementsReport = async (req, res) => {
     let pool;
     try {
@@ -692,7 +692,7 @@ exports.getServiceOrdersReport = async (req, res) => {
                 status: a.status === 'Revisado' ? 'FINALIZADO' : 'COMPLETED'
             }));
 
-            // 3. Fetch Client Logs (TrÃ¡mites: Changes, Disconnects, etc.)
+            // 3. Fetch Client Logs (Tr├ímites: Changes, Disconnects, etc.)
             let logRows = [];
             // Logs are inherently "completed" actions.
             // Only show them in ALL or COMPLETED
@@ -706,7 +706,7 @@ exports.getServiceOrdersReport = async (req, res) => {
                 }
 
                 // Only fetch specific Tramite actions
-                // Note: RECONNECT is excluded â€” it's tracked as a service_order (PENDING/IN_PROGRESS)
+                // Note: RECONNECT is excluded ÔÇö it's tracked as a service_order (PENDING/IN_PROGRESS)
                 // including it here would confuse users seeing it as FINALIZADO when order is still pending
                 logConditions.push(`l.action IN ('CHANGE_NAME', 'CHANGE_ADDRESS', 'DISCONNECT_REQ', 'DISCONNECT_MORA', 'REPAIR')`);
 
@@ -732,8 +732,8 @@ exports.getServiceOrdersReport = async (req, res) => {
                     if (type === 'CHANGE_ADDRESS') type = 'TRASLADO';
                     if (type === 'DISCONNECT_REQ') type = 'SOLICITUD BAJA';
                     if (type === 'DISCONNECT_MORA') type = 'CORTE MORA';
-                    if (type === 'RECONNECT') type = 'RECONEXIÃ“N';
-                    if (type === 'REPAIR') type = 'REPORTE AVERÃA';
+                    if (type === 'RECONNECT') type = 'RECONEXI├ôN';
+                    if (type === 'REPAIR') type = 'REPORTE AVER├ìA';
 
                     return {
                         id: `LOG-${l.id}`,
@@ -805,7 +805,7 @@ exports.getServiceOrdersReport = async (req, res) => {
         const [typeRows] = await pool.query(`
             SELECT type, COUNT(*) as total 
             FROM service_orders 
-            WHERE DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) BETWEEN ? AND ?
+            WHERE DATE(created_at) BETWEEN ? AND ?
             GROUP BY type
         `, [sDate, eDate]);
 
@@ -813,7 +813,7 @@ exports.getServiceOrdersReport = async (req, res) => {
         const [statusRows] = await pool.query(`
             SELECT status, COUNT(*) as total 
             FROM service_orders 
-            WHERE DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) BETWEEN ? AND ?
+            WHERE DATE(created_at) BETWEEN ? AND ?
             GROUP BY status
         `, [sDate, eDate]);
 
@@ -874,7 +874,7 @@ exports.exportServiceOrdersXLS = async (req, res) => {
 
         const ExcelJS = require('exceljs');
         const workbook = new ExcelJS.Workbook();
-        const sheetName = type ? type : 'TrÃ¡mites';
+        const sheetName = type ? type : 'Tr├ímites';
         const worksheet = workbook.addWorksheet(sheetName);
 
         worksheet.columns = [
@@ -884,15 +884,15 @@ exports.exportServiceOrdersXLS = async (req, res) => {
             { header: 'Cliente', key: 'client_name', width: 30 },
             { header: 'Contrato', key: 'contract_number', width: 15 },
             { header: 'Estado Cliente', key: 'client_status', width: 15 },
-            { header: 'TelÃ©fono', key: 'phone_primary', width: 15 },
-            { header: 'DirecciÃ³n', key: 'address_street', width: 30 },
+            { header: 'Tel├®fono', key: 'phone_primary', width: 15 },
+            { header: 'Direcci├│n', key: 'address_street', width: 30 },
             { header: 'Barrio', key: 'neighborhood_name', width: 20 },
             { header: 'Zona', key: 'zone_name', width: 15 },
-            { header: 'TÃ©cnico', key: 'technician_name', width: 20 },
+            { header: 'T├®cnico', key: 'technician_name', width: 20 },
             { header: 'Estado Orden', key: 'status', width: 15 },
             { header: 'Fecha Corte', key: 'cutoff_date', width: 15 },
-            { header: 'Ãšltimo Pago', key: 'last_payment_date', width: 15 },
-            { header: 'Fecha InstalaciÃ³n', key: 'installation_date', width: 18 },
+            { header: '├Ültimo Pago', key: 'last_payment_date', width: 15 },
+            { header: 'Fecha Instalaci├│n', key: 'installation_date', width: 18 },
             { header: 'Detalles / Notas', key: 'description', width: 40 }
         ];
 
@@ -908,7 +908,7 @@ exports.exportServiceOrdersXLS = async (req, res) => {
         const statusMap = {
             'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
             'pending_install': 'Pendiente', 'disconnected_by_request': 'Desc. Solicitud',
-            'promotions': 'Promociones', 'courtesy': 'CortesÃ­a', 'provider': 'Proveedor', 'office': 'Oficina'
+            'promotions': 'Promociones', 'courtesy': 'Cortes├¡a', 'provider': 'Proveedor', 'office': 'Oficina'
         };
 
         rows.forEach(r => {
@@ -938,125 +938,6 @@ exports.exportServiceOrdersXLS = async (req, res) => {
         res.status(500).send('Error exportando excel');
     }
 };
-// =====================================================================
-// FACTURAS POR COBRADOR â€” BÃºsqueda avanzada con filtros y paginaciÃ³n
-// =====================================================================
-exports.getInvoicesByCollector = async (req, res) => {
-    let pool;
-    try {
-        const {
-            collectorId,
-            startDate,
-            endDate,
-            invoiceNumber,
-            clientSearch,
-            page = 1,
-            limit = 25
-        } = req.query;
-
-        pool = await db.getConnection();
-
-        const conditions = ["t.type != 'void'"];
-        const params = [];
-
-        if (collectorId && collectorId !== '') {
-            conditions.push('t.collector_id = ?');
-            params.push(collectorId);
-        }
-        if (startDate && startDate !== '') {
-            conditions.push('DATE(CONVERT_TZ(t.created_at, '+00:00', '-06:00')) >= ?');
-            params.push(startDate);
-        }
-        if (endDate && endDate !== '') {
-            conditions.push('DATE(t.created_at) <= ?');
-            params.push(endDate);
-        }
-        if (invoiceNumber && invoiceNumber !== '') {
-            conditions.push('t.reference_id LIKE ?');
-            params.push(`%${invoiceNumber}%`);
-        }
-        if (clientSearch && clientSearch !== '') {
-            conditions.push('(c.full_name LIKE ? OR c.contract_number LIKE ? OR c.full_name LIKE ?)');
-            params.push(`%${clientSearch}%`, `%${clientSearch}%`, `%${clientSearch}%`);
-        }
-
-        const whereClause = `WHERE ${conditions.join(' AND ')}`;
-
-        const pageNum = Math.max(1, parseInt(page) || 1);
-        const pageSize = Math.min(100, Math.max(10, parseInt(limit) || 25));
-        const offset = (pageNum - 1) * pageSize;
-
-        // --- Main query ---
-        const dataQuery = `
-            SELECT
-                t.id,
-                COALESCE(NULLIF(TRIM(t.reference_id), ''), CONCAT('#', t.id)) AS numero_factura,
-                t.created_at AS fecha,
-                t.amount AS monto,
-                t.payment_method AS metodo_pago,
-                t.status AS estado,
-                t.type AS tipo,
-                t.description AS descripcion,
-                t.cancellation_reason,
-                COALESCE(c.full_name, 'â€”') AS cliente,
-                COALESCE(c.contract_number, 'â€”') AS contrato,
-                COALESCE(u.full_name, 'Sin Asignar') AS cobrador,
-                COALESCE(u.username, 'sistema') AS usuario_cobrador,
-                u.id AS cobrador_id,
-                u.role AS cobrador_rol
-            FROM transactions t
-            LEFT JOIN clients c ON t.client_id = c.id
-            LEFT JOIN users u ON t.collector_id = u.id
-            ${whereClause}
-            ORDER BY t.created_at DESC
-            LIMIT ? OFFSET ?
-        `;
-
-        // --- Count + totals query ---
-        const countQuery = `
-            SELECT
-                COUNT(*) AS total,
-                SUM(CASE WHEN t.status != 'CANCELLED' THEN t.amount ELSE 0 END) AS total_monto,
-                SUM(CASE WHEN t.status = 'CANCELLED' THEN 1 ELSE 0 END) AS total_canceladas,
-                SUM(CASE WHEN t.status = 'CANCELLED' THEN t.amount ELSE 0 END) AS monto_cancelado
-            FROM transactions t
-            LEFT JOIN clients c ON t.client_id = c.id
-            LEFT JOIN users u ON t.collector_id = u.id
-            ${whereClause}
-        `;
-
-        const [rows] = await pool.query(dataQuery, [...params, pageSize, offset]);
-        const [countRes] = await pool.query(countQuery, params);
-
-        const totalRows = countRes[0].total || 0;
-        const totalMonto = parseFloat(countRes[0].total_monto || 0);
-        const totalCanceladas = parseInt(countRes[0].total_canceladas || 0);
-        const montoCancelado = parseFloat(countRes[0].monto_cancelado || 0);
-
-        res.json({
-            data: rows,
-            pagination: {
-                total: totalRows,
-                page: pageNum,
-                limit: pageSize,
-                totalPages: Math.ceil(totalRows / pageSize)
-            },
-            summary: {
-                totalMonto,
-                totalCanceladas,
-                montoCancelado,
-                totalFacturas: totalRows
-            }
-        });
-
-    } catch (err) {
-        console.error('InvoicesByCollector Error:', err);
-        res.status(500).json({ error: 'Error al consultar facturas' });
-    } finally {
-        if (pool) pool.release();
-    }
-};
-
 exports.exportCollectorPerformanceXLS = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
@@ -1091,7 +972,7 @@ exports.exportCollectorPerformanceXLS = async (req, res) => {
             { header: 'Cant. Recibos', key: 'total_recibos', width: 15 },
             { header: 'Total Cobrado', key: 'total_cobrado', width: 20 },
             { header: 'Promedio', key: 'promedio_recibo', width: 15 },
-            { header: 'Ãšltimo Cobro', key: 'ultimo_cobro', width: 25 },
+            { header: '├Ültimo Cobro', key: 'ultimo_cobro', width: 25 },
         ];
 
         worksheet.getRow(1).font = { bold: true };
@@ -1114,3 +995,113 @@ exports.exportCollectorPerformanceXLS = async (req, res) => {
     }
 };
 
+// =====================================================================
+// FACTURAS POR COBRADOR - Busqueda avanzada con filtros y paginacion
+// =====================================================================
+exports.getInvoicesByCollector = async (req, res) => {
+    let conn;
+    try {
+        const {
+            collectorId,
+            startDate,
+            endDate,
+            invoiceNumber,
+            clientSearch,
+            page = 1,
+            limit = 25
+        } = req.query;
+
+        conn = await db.getConnection();
+
+        const conditions = ["t.type != 'void'"];
+        const params = [];
+
+        if (collectorId && collectorId !== '') {
+            conditions.push('t.collector_id = ?');
+            params.push(collectorId);
+        }
+        if (startDate && startDate !== '') {
+            conditions.push("DATE(CONVERT_TZ(t.created_at, '+00:00', '-06:00')) >= ?");
+            params.push(startDate);
+        }
+        if (endDate && endDate !== '') {
+            conditions.push("DATE(CONVERT_TZ(t.created_at, '+00:00', '-06:00')) <= ?");
+            params.push(endDate);
+        }
+        if (invoiceNumber && invoiceNumber !== '') {
+            conditions.push('t.reference_id LIKE ?');
+            params.push('%' + invoiceNumber + '%');
+        }
+        if (clientSearch && clientSearch !== '') {
+            conditions.push('(c.full_name LIKE ? OR c.contract_number LIKE ?)');
+            params.push('%' + clientSearch + '%', '%' + clientSearch + '%');
+        }
+
+        const whereClause = 'WHERE ' + conditions.join(' AND ');
+        const pageNum  = Math.max(1, parseInt(page) || 1);
+        const pageSize = Math.min(100, Math.max(10, parseInt(limit) || 25));
+        const offset   = (pageNum - 1) * pageSize;
+
+        const dataQuery = `
+            SELECT
+                t.id,
+                COALESCE(NULLIF(TRIM(t.reference_id), ''), CONCAT('#', t.id)) AS numero_factura,
+                t.created_at AS fecha,
+                t.amount AS monto,
+                t.payment_method AS metodo_pago,
+                t.status AS estado,
+                t.type AS tipo,
+                t.description AS descripcion,
+                t.cancellation_reason,
+                COALESCE(c.full_name, '—') AS cliente,
+                COALESCE(c.contract_number, '—') AS contrato,
+                COALESCE(u.full_name, 'Sin Asignar') AS cobrador,
+                COALESCE(u.username, 'sistema') AS usuario_cobrador,
+                u.id AS cobrador_id,
+                u.role AS cobrador_rol
+            FROM transactions t
+            LEFT JOIN clients c ON t.client_id = c.id
+            LEFT JOIN users u ON t.collector_id = u.id
+            ${whereClause}
+            ORDER BY t.created_at DESC
+            LIMIT ? OFFSET ?
+        `;
+
+        const countQuery = `
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN t.status != 'CANCELLED' THEN t.amount ELSE 0 END) AS total_monto,
+                SUM(CASE WHEN t.status = 'CANCELLED' THEN 1 ELSE 0 END) AS total_canceladas,
+                SUM(CASE WHEN t.status = 'CANCELLED' THEN t.amount ELSE 0 END) AS monto_cancelado
+            FROM transactions t
+            LEFT JOIN clients c ON t.client_id = c.id
+            LEFT JOIN users u ON t.collector_id = u.id
+            ${whereClause}
+        `;
+
+        const [rows]     = await conn.query(dataQuery, [...params, pageSize, offset]);
+        const [countRes] = await conn.query(countQuery, params);
+
+        const totalRows      = countRes[0].total || 0;
+        const totalMonto     = parseFloat(countRes[0].total_monto || 0);
+        const totalCanceladas = parseInt(countRes[0].total_canceladas || 0);
+        const montoCancelado = parseFloat(countRes[0].monto_cancelado || 0);
+
+        res.json({
+            data: rows,
+            pagination: {
+                total: totalRows,
+                page: pageNum,
+                limit: pageSize,
+                totalPages: Math.ceil(totalRows / pageSize)
+            },
+            summary: { totalMonto, totalCanceladas, montoCancelado, totalFacturas: totalRows }
+        });
+
+    } catch (err) {
+        console.error('InvoicesByCollector Error:', err);
+        res.status(500).json({ error: 'Error al consultar facturas' });
+    } finally {
+        if (conn) conn.release();
+    }
+};
