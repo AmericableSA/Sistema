@@ -1,5 +1,39 @@
 const db = require('../config/db');
 
+// Helper timezone-safe para formatear fechas a DD/MM/YYYY sin corrimientos de huso horario
+const formatDateDMY = (date) => {
+    if (!date) return 'N/A';
+    try {
+        let dateStr;
+        if (typeof date === 'string') {
+            dateStr = date.split('T')[0];
+        } else if (date instanceof Date) {
+            dateStr = date.toISOString().split('T')[0];
+        } else {
+            dateStr = new Date(date).toISOString().split('T')[0];
+        }
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateStr;
+    } catch (e) {
+        return String(date);
+    }
+};
+
+// Helper timezone-safe para formatear fechas y horas en la zona horaria de Nicaragua
+const formatDateTimeManagua = (date) => {
+    if (!date) return 'N/A';
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return String(date);
+        return d.toLocaleString('es-NI', { timeZone: 'America/Managua', hour12: true });
+    } catch (e) {
+        return String(date);
+    }
+};
+
 // --- NEW ENDPOINTS FOR FINANCIAL DASHBOARD ---
 
 // 1. Sales Summary (Ventas Brutas & Ganancia)
@@ -516,13 +550,6 @@ exports.exportDailyDetailsXLS = async (req, res) => {
                 : 'SALIDA';
             const boxLabel = row.collector_role === 'collector' ? 'COLECTORES' : 'OFICINA';
             
-            const formatDate = (date) => {
-                if (!date) return 'N/A';
-                const d = new Date(date);
-                if (!isNaN(d.getTime())) return d.toLocaleDateString('es-NI');
-                return String(date);
-            };
-
             const statusMap = {
                 'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
                 'pending_install': 'Pendiente', 'disconnected_by_request': 'Desc. Solicitud',
@@ -530,14 +557,14 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             };
 
             sheet.addRow({
-                time: new Date(row.created_at).toLocaleString('es-NI'),
+                time: formatDateTimeManagua(row.created_at),
                 box: boxLabel,
                 type: typeLabel,
                 desc: (row.client_name || row.description) + (row.contract_number ? ` (#${row.contract_number})` : ''),
                 client_status: statusMap[row.client_status] || row.client_status || 'N/A',
-                cutoff_date: formatDate(row.cutoff_date),
-                last_payment_date: formatDate(row.last_payment_date),
-                installation_date: formatDate(row.installation_date),
+                cutoff_date: formatDateDMY(row.cutoff_date),
+                last_payment_date: formatDateDMY(row.last_payment_date),
+                installation_date: formatDateDMY(row.installation_date),
                 collector: row.collector,
                 method: row.payment_method,
                 amount: (isIncome ? 1 : -1) * parseFloat(row.amount),
@@ -623,7 +650,11 @@ exports.getServiceOrdersReport = async (req, res) => {
             let dateCondition = '';
 
             if (startDate && endDate) {
-                dateCondition = ` DATE(so.created_at) BETWEEN ? AND ? `;
+                if (status === 'COMPLETED') {
+                    dateCondition = ` DATE(COALESCE(so.completion_date, so.created_at)) BETWEEN ? AND ? `;
+                } else {
+                    dateCondition = ` DATE(so.created_at) BETWEEN ? AND ? `;
+                }
                 params.push(sDate, eDate);
             }
 
@@ -654,7 +685,21 @@ exports.getServiceOrdersReport = async (req, res) => {
 
             querySO += ` ORDER BY so.created_at DESC LIMIT 200`;
 
-            const [soRows] = await pool.query(querySO, params);
+            const [rawSoRows] = await pool.query(querySO, params);
+
+            const typeMap = {
+                'INSTALLATION': 'NUEVA INSTALACIÓN',
+                'RECONNECTION': 'RECONEXIÓN',
+                'CUTOFF': 'CORTE MORA',
+                'TRANSFER': 'TRASLADO',
+                'REMOVAL': 'SOLICITUD BAJA',
+                'REPAIR': 'REPARACIÓN / AVERÍA'
+            };
+
+            const soRows = rawSoRows.map(r => ({
+                ...r,
+                type: typeMap[r.type] || r.type
+            }));
 
             // 2. Fetch Web Averias
             let averiaRows = [];
@@ -844,18 +889,24 @@ exports.exportServiceOrdersXLS = async (req, res) => {
                    c.full_name as client_name, c.contract_number, c.address_street,
                    c.phone_primary, n.name as neighborhood_name, z.name as zone_name,
                    u.full_name as technician_name,
+                   COALESCE(u_creator.full_name, u_creator.username, 'Sistema') as creator_name,
                    c.status as client_status, c.last_paid_month, c.last_payment_date, c.installation_date, c.cutoff_date
             FROM service_orders so
             LEFT JOIN clients c ON so.client_id = c.id
             LEFT JOIN neighborhoods n ON c.neighborhood_id = n.id
             LEFT JOIN zones z ON c.zone_id = z.id
             LEFT JOIN users u ON so.assigned_tech_id = u.id
+            LEFT JOIN users u_creator ON so.created_by_user_id = u_creator.id
         `;
         let conditions = [];
         let params = [];
 
         if (status === 'PENDING') {
-            conditions.push(`so.status = 'PENDING'`);
+            conditions.push(`so.status IN ('PENDING', 'IN_PROGRESS')`);
+        } else if (status === 'COMPLETED') {
+            conditions.push(`so.status IN ('COMPLETED', 'FINALIZADO')`);
+            conditions.push(`DATE(COALESCE(so.completion_date, so.created_at)) BETWEEN ? AND ?`);
+            params.push(sDate, eDate);
         } else {
             conditions.push(`DATE(so.created_at) BETWEEN ? AND ?`);
             params.push(sDate, eDate);
@@ -874,55 +925,68 @@ exports.exportServiceOrdersXLS = async (req, res) => {
 
         const ExcelJS = require('exceljs');
         const workbook = new ExcelJS.Workbook();
-        const sheetName = type ? type : 'Tr├ímites';
+        const sheetName = type ? type : 'Trámites';
         const worksheet = workbook.addWorksheet(sheetName);
 
         worksheet.columns = [
             { header: 'ID', key: 'id', width: 10 },
             { header: 'Fecha', key: 'created_at', width: 20 },
             { header: 'Tipo', key: 'type', width: 20 },
+            { header: 'Creado Por', key: 'creator_name', width: 20 },
             { header: 'Cliente', key: 'client_name', width: 30 },
             { header: 'Contrato', key: 'contract_number', width: 15 },
             { header: 'Estado Cliente', key: 'client_status', width: 15 },
-            { header: 'Tel├®fono', key: 'phone_primary', width: 15 },
-            { header: 'Direcci├│n', key: 'address_street', width: 30 },
+            { header: 'Teléfono', key: 'phone_primary', width: 15 },
+            { header: 'Dirección', key: 'address_street', width: 30 },
             { header: 'Barrio', key: 'neighborhood_name', width: 20 },
             { header: 'Zona', key: 'zone_name', width: 15 },
-            { header: 'T├®cnico', key: 'technician_name', width: 20 },
+            { header: 'Técnico', key: 'technician_name', width: 20 },
             { header: 'Estado Orden', key: 'status', width: 15 },
             { header: 'Fecha Corte', key: 'cutoff_date', width: 15 },
-            { header: '├Ültimo Pago', key: 'last_payment_date', width: 15 },
-            { header: 'Fecha Instalaci├│n', key: 'installation_date', width: 18 },
+            { header: 'Último Pago', key: 'last_payment_date', width: 15 },
+            { header: 'Fecha Instalación', key: 'installation_date', width: 18 },
             { header: 'Detalles / Notas', key: 'description', width: 40 }
         ];
 
         worksheet.getRow(1).font = { bold: true };
 
-        const formatDate = (date) => {
-            if (!date) return 'N/A';
-            const d = new Date(date);
-            if (!isNaN(d.getTime())) return d.toLocaleDateString('es-NI');
-            return String(date);
-        };
-
         const statusMap = {
             'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
             'pending_install': 'Pendiente', 'disconnected_by_request': 'Desc. Solicitud',
-            'promotions': 'Promociones', 'courtesy': 'Cortes├¡a', 'provider': 'Proveedor', 'office': 'Oficina'
+            'promotions': 'Promociones', 'courtesy': 'Cortesía', 'provider': 'Proveedor', 'office': 'Oficina'
+        };
+
+        const orderStatusMap = {
+            'PENDING': 'PENDIENTE',
+            'IN_PROGRESS': 'EN PROCESO',
+            'COMPLETED': 'FINALIZADO',
+            'FINALIZADO': 'FINALIZADO',
+            'CANCELLED': 'CANCELADO'
+        };
+
+        const typeMap = {
+            'INSTALLATION': 'NUEVA INSTALACIÓN',
+            'RECONNECTION': 'RECONEXIÓN',
+            'CUTOFF': 'CORTE MORA',
+            'TRANSFER': 'TRASLADO',
+            'REMOVAL': 'SOLICITUD BAJA',
+            'REPAIR': 'REPARACIÓN / AVERÍA'
         };
 
         rows.forEach(r => {
             worksheet.addRow({
                 ...r,
+                type: typeMap[r.type] || r.type,
+                status: orderStatusMap[r.status] || r.status,
                 client_status: statusMap[r.client_status] || r.client_status || 'N/A',
                 neighborhood_name: r.neighborhood_name || '',
                 zone_name: r.zone_name || '',
                 technician_name: r.technician_name || '',
                 phone_primary: r.phone_primary || '',
-                cutoff_date: formatDate(r.cutoff_date),
-                last_payment_date: formatDate(r.last_payment_date),
-                installation_date: formatDate(r.installation_date),
-                created_at: new Date(r.created_at).toLocaleString()
+                cutoff_date: formatDateDMY(r.cutoff_date),
+                last_payment_date: formatDateDMY(r.last_payment_date),
+                installation_date: formatDateDMY(r.installation_date),
+                created_at: formatDateTimeManagua(r.created_at)
             });
         });
 

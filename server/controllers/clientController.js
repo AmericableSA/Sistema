@@ -1,5 +1,27 @@
 const db = require('../config/db');
 
+// Helper timezone-safe para formatear fechas a DD/MM/YYYY sin corrimientos de horas/días
+const formatDateDMY = (date) => {
+    if (!date) return 'N/A';
+    try {
+        let dateStr;
+        if (typeof date === 'string') {
+            dateStr = date.split('T')[0];
+        } else if (date instanceof Date) {
+            dateStr = date.toISOString().split('T')[0];
+        } else {
+            dateStr = new Date(date).toISOString().split('T')[0];
+        }
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateStr;
+    } catch (e) {
+        return String(date);
+    }
+};
+
 // --- List Clients (with Pagination) ---
 exports.getClients = async (req, res) => {
     try {
@@ -481,7 +503,8 @@ exports.updateServiceOrder = async (req, res) => {
     try {
         await db.query(`
             UPDATE service_orders 
-            SET assigned_tech_id = ?, status = ?, technician_notes = ?
+            SET assigned_tech_id = ?, status = ?, technician_notes = ?,
+                completion_date = ${status === 'COMPLETED' ? 'NOW()' : 'NULL'}
             WHERE id = ?
         `, [assigned_tech_id || null, status, notes || null, orderId]);
 
@@ -707,65 +730,10 @@ exports.exportClientsXLS = async (req, res) => {
 
         // DATA
         rows.forEach(c => {
-            let lastPaid = 'N/A';
-            try {
-                if (c.last_paid_month) {
-                    const d = new Date(c.last_paid_month);
-                    if (!isNaN(d.getTime())) {
-                        const day = String(d.getUTCDate()).padStart(2, '0');
-                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-                        const year = d.getUTCFullYear();
-                        lastPaid = `${day}/${month}/${year}`;
-                    } else {
-                        lastPaid = String(c.last_paid_month);
-                    }
-                }
-            } catch (e) { lastPaid = 'Error Fecha'; }
-
-            let cutoffDateStr = 'N/A';
-            try {
-                if (c.cutoff_date) {
-                    const d = new Date(c.cutoff_date);
-                    if (!isNaN(d.getTime())) {
-                        const day = String(d.getUTCDate()).padStart(2, '0');
-                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-                        const year = d.getUTCFullYear();
-                        cutoffDateStr = `${day}/${month}/${year}`;
-                    } else {
-                        cutoffDateStr = String(c.cutoff_date);
-                    }
-                }
-            } catch (e) { cutoffDateStr = 'Error Fecha'; }
-
-            let installationDateStr = 'N/A';
-            try {
-                if (c.installation_date) {
-                    const d = new Date(c.installation_date);
-                    if (!isNaN(d.getTime())) {
-                        const day = String(d.getUTCDate()).padStart(2, '0');
-                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-                        const year = d.getUTCFullYear();
-                        installationDateStr = `${day}/${month}/${year}`;
-                    } else {
-                        installationDateStr = String(c.installation_date);
-                    }
-                }
-            } catch (e) { installationDateStr = 'Error Fecha'; }
-
-            let lastPaymentDateStr = 'N/A';
-            try {
-                if (c.last_payment_date) {
-                    const d = new Date(c.last_payment_date);
-                    if (!isNaN(d.getTime())) {
-                        const day = String(d.getUTCDate()).padStart(2, '0');
-                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-                        const year = d.getUTCFullYear();
-                        lastPaymentDateStr = `${day}/${month}/${year}`;
-                    } else {
-                        lastPaymentDateStr = String(c.last_payment_date);
-                    }
-                }
-            } catch (e) { lastPaymentDateStr = 'Error Fecha'; }
+            const lastPaid = formatDateDMY(c.last_paid_month);
+            const cutoffDateStr = formatDateDMY(c.cutoff_date);
+            const installationDateStr = formatDateDMY(c.installation_date);
+            const lastPaymentDateStr = formatDateDMY(c.last_payment_date);
 
             const statusMap = {
                 'active': 'Activo',
@@ -892,32 +860,27 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                 let debt = 0;
                 let monthsList = '';
                 let lastPaidStr = 'N/A';
-                let lastPaymentDateStr = 'N/A';
-
-                // Format Last Paid Month
+                // Format Last Paid Month timezone-safely
                 if (c.last_paid_month) {
-                    const lp = new Date(c.last_paid_month);
-                    if (!isNaN(lp.getTime())) {
-                        lastPaidStr = `${monthNames[lp.getUTCMonth()]} ${lp.getUTCFullYear()}`;
+                    try {
+                        let dateStr;
+                        if (typeof c.last_paid_month === 'string') {
+                            dateStr = c.last_paid_month.split('T')[0];
+                        } else {
+                            dateStr = c.last_paid_month.toISOString().split('T')[0];
+                        }
+                        const parts = dateStr.split('-');
+                        const monthIdx = parseInt(parts[1], 10) - 1;
+                        const year = parts[0];
+                        lastPaidStr = `${monthNames[monthIdx]} ${year}`;
 
-                        // Calculate Pending Months
-                        // Logic: Start from Next Month until Current Month
-                        // Note: DATE_FORMAT in SQL usually gave us YYYY-MM-DD.
-
+                        // Calculate Pending Months using the timezone-safe values
                         const now = new Date();
-                        // Normalize 'now' to start of month
                         const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
-                        // Next due month is month after last_paid
-                        let iterator = new Date(lp.getUTCFullYear(), lp.getUTCMonth() + 1, 1);
-                        // We iterate until iterator matches currentMonthDate (inclusive, so if now is Jan and last paid Nov, we want Dec, Jan)
-
+                        let iterator = new Date(parseInt(year, 10), monthIdx + 1, 1);
                         let pendingArr = [];
                         let safety = 0;
-
-                        // Calculate up to current month. 
-                        // If they paid Jan, lp is Jan. iterator is Feb. Feb > Jan (Current). Loop doesn't run. Correct.
-                        // If they paid Dec, lp is Dec. iterator is Jan. Jan <= Jan. Loop runs. Pushes Jan. Correct.
 
                         while (iterator <= currentMonthDate && safety < 60) {
                             const mStr = `${monthNames[iterator.getMonth()]} '${String(iterator.getFullYear()).slice(2)}`;
@@ -930,40 +893,19 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                             monthsList = pendingArr.join(', ');
                             monthsMora = pendingArr.length;
                         }
+                    } catch (e) {
+                        console.error(e);
                     }
                 }
 
-                // Format Last Payment Date (Lagi?)
-                if (c.last_payment_date) {
-                    const lpd = new Date(c.last_payment_date);
-                    if (!isNaN(lpd.getTime())) {
-                        lastPaymentDateStr = lpd.toLocaleDateString('es-NI');
-                    }
-                }
+                const lastPaymentDateStr = formatDateDMY(c.last_payment_date);
+                const cutoffDateStr = formatDateDMY(c.cutoff_date);
+                const installationDateStr = formatDateDMY(c.installation_date);
 
                 if (monthsMora > 0) {
                     debt = monthsMora * (c.tariff || 0) * 1.05; // Assuming 5% mora fee
                 }
-
                 totalDebt += debt;
-
-                let cutoffDateStr = 'N/A';
-                if (c.cutoff_date) {
-                    const cd = new Date(c.cutoff_date);
-                    if (!isNaN(cd.getTime())) cd.setMinutes(cd.getMinutes() + cd.getTimezoneOffset());
-                    if (!isNaN(cd.getTime())) {
-                        cutoffDateStr = cd.toLocaleDateString('es-NI');
-                    }
-                }
-
-                let installationDateStr = 'N/A';
-                if (c.installation_date) {
-                    const idate = new Date(c.installation_date);
-                    if (!isNaN(idate.getTime())) idate.setMinutes(idate.getMinutes() + idate.getTimezoneOffset());
-                    if (!isNaN(idate.getTime())) {
-                        installationDateStr = idate.toLocaleDateString('es-NI');
-                    }
-                }
 
                 const statusMap = { 'active': 'Activo' }; // Query already filters for active
 
