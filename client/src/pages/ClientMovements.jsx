@@ -752,8 +752,16 @@ const ClientMovements = () => {
                                                 padding: '0.8rem 1.5rem', borderRadius: '10px', background: 'transparent',
                                                 border: '1px solid #334155', color: '#94a3b8', cursor: 'pointer', fontWeight: 600
                                             }}>Cancelar</button>
-                                            {selectedAction === 'REPAIR' || selectedAction === 'INSTALLATION' ? (
-                                                <button type="button" onClick={() => handleCreateOrder(selectedAction)} disabled={actionLoading} style={{
+                                            {['REPAIR', 'INSTALLATION', 'RECONNECT', 'CHANGE_ADDRESS', 'DISCONNECT_REQ', 'DISCONNECT_MORA'].includes(selectedAction) ? (
+                                                <button type="button" onClick={() => {
+                                                    const mappedType = {
+                                                        'RECONNECT': 'RECONNECTION',
+                                                        'CHANGE_ADDRESS': 'TRANSFER',
+                                                        'DISCONNECT_REQ': 'REMOVAL',
+                                                        'DISCONNECT_MORA': 'CUTOFF'
+                                                    }[selectedAction] || selectedAction;
+                                                    handleCreateOrder(mappedType);
+                                                }} disabled={actionLoading} style={{
                                                     padding: '0.8rem 2rem', borderRadius: '10px',
                                                     background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                                                     border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', minWidth: '160px',
