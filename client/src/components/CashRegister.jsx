@@ -252,7 +252,6 @@ const CashRegister = (props) => {
                         style={{
                             padding: '1.25rem 2.5rem',
                             borderRadius: '20px',
-                            border: 'none',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -263,7 +262,7 @@ const CashRegister = (props) => {
                             background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'rgba(255,255,255,0.05)',
                             color: sessionType === 'OFICINA' ? '#fff' : '#94a3b8',
                             boxShadow: sessionType === 'OFICINA' ? '0 15px 35px rgba(37, 99, 235, 0.4)' : 'none',
-                            border: '1px solid rgba(255,255,255,0.1)'
+                            border: sessionType === 'OFICINA' ? '1px solid rgba(255,255,255,0.1)' : 'none'
                         }}
                     >
                         <FaBuilding style={{ fontSize: '1.4rem' }} />
@@ -275,7 +274,6 @@ const CashRegister = (props) => {
                         style={{
                             padding: '1.25rem 2.5rem',
                             borderRadius: '20px',
-                            border: 'none',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -286,7 +284,7 @@ const CashRegister = (props) => {
                             background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)' : 'rgba(255,255,255,0.05)',
                             color: sessionType === 'COBRADOR' ? '#fff' : '#94a3b8',
                             boxShadow: sessionType === 'COBRADOR' ? '0 15px 35px rgba(124, 58, 237, 0.4)' : 'none',
-                            border: '1px solid rgba(255,255,255,0.1)'
+                            border: sessionType === 'COBRADOR' ? '1px solid rgba(255,255,255,0.1)' : 'none'
                         }}
                     >
                         <FaMotorcycle style={{ fontSize: '1.4rem' }} />
