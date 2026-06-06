@@ -47,7 +47,7 @@ exports.getBillingDetails = async (req, res) => {
 
         const refDateObj = client.last_paid_month || client.created_at;
         if (refDateObj) {
-            const dStr = new Date(refDateObj).toLocaleDateString('en-CA', { timeZone: 'America/Managua' }); 
+            const dStr = new Date(refDateObj).toLocaleDateString('en-CA', { timeZone: 'America/Managua' });
             const parts = dStr.split('-');
             lastPaidYear = parseInt(parts[0], 10);
             lastPaidMonth = parseInt(parts[1], 10) - 1; // JS months 0-11
@@ -273,7 +273,7 @@ exports.getDailyTransactions = async (req, res) => {
         // ── Zona horaria Nicaragua: convertimos created_at a UTC-6 para filtrar por fecha local ──
         // Esto evita el error clásico de "el día empieza 6 horas tarde" cuando MySQL está en UTC
         const TZ_FROM = '+00:00';
-        const TZ_NI   = '-06:00';
+        const TZ_NI = '-06:00';
 
         // Base Queries — usamos CONVERT_TZ para que DATE() aplique en hora de Nicaragua
         let querySales = `
@@ -325,9 +325,9 @@ exports.getDailyTransactions = async (req, res) => {
         }
 
         // ── Paginación ──
-        const pageNum  = parseInt(limit === 'all' ? 1 : req.query.page) || 1;
+        const pageNum = parseInt(limit === 'all' ? 1 : req.query.page) || 1;
         const pageSize = parseInt(limit === 'all' ? 1000000 : limit) || 10;
-        const offset   = (pageNum - 1) * pageSize;
+        const offset = (pageNum - 1) * pageSize;
 
         const finalQuery = `
             SELECT * FROM (
@@ -491,7 +491,7 @@ exports.cancelTransaction = async (req, res) => {
                     'SELECT created_at FROM transactions WHERE client_id = ? AND status = "SUCCESS" AND id != ? ORDER BY created_at DESC LIMIT 1',
                     [tx.client_id, id]
                 );
-                
+
                 if (prevTx.length > 0) {
                     updateFields.last_payment_date = prevTx[0].created_at;
                 } else {

@@ -51,6 +51,27 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
     const [showReceipt, setShowReceipt] = useState(false);
     const [lastTransaction, setLastTransaction] = useState(null);
 
+    const [boxStats, setBoxStats] = useState(null);
+
+    const fetchBoxStats = async () => {
+        try {
+            const res = await fetch(`/api/billing/stats?type=${targetBox}`);
+            if (res.ok) {
+                const data = await res.json();
+                setBoxStats(data || null);
+            } else {
+                setBoxStats(null);
+            }
+        } catch (e) {
+            console.error("Error fetching box stats:", e);
+            setBoxStats(null);
+        }
+    };
+
+    useEffect(() => {
+        fetchBoxStats();
+    }, [targetBox]);
+
     // 1. Initial Load (Products, Plans, Client Details)
     useEffect(() => {
         Promise.all([
@@ -218,6 +239,10 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
 
     const handlePay = async () => {
         if (isSubmitting) return;
+
+        if (!boxStats) {
+            return setAlert({ show: true, type: 'error', title: 'Caja Cerrada', message: `La caja de destino (${targetBox}) está cerrada. Debe abrirla antes de poder registrar cobros.` });
+        }
 
         const amt = parseFloat(enteredAmount || 0);
         if (amt <= 0) return setAlert({ show: true, type: 'error', title: 'Monto Inválido', message: 'El monto debe ser > 0.' });
@@ -435,7 +460,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                         {/* Target Box Selection (For Admins/Cajeros) */}
                         <div style={{ marginTop: '1rem', background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
                             <label className="text-white" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>🛒 Caja de Destino</label>
-                            <div className="flex-center" style={{ gap: '0.5rem' }}>
+                            <div className="flex-center" style={{ gap: '0.5rem', marginBottom: '0.75rem' }}>
                                 <button
                                     type="button"
                                     onClick={() => setTargetBox('OFICINA')}
@@ -446,7 +471,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                                         fontSize: '0.85rem',
                                         background: targetBox === 'OFICINA' ? '#3b82f6' : 'rgba(30, 41, 59, 0.6)',
                                         border: 'none',
-                                        borderRadius: '8px'
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        cursor: 'pointer'
                                     }}
                                 >🏢 Oficina</button>
                                 <button
@@ -459,10 +486,29 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                                         fontSize: '0.85rem',
                                         background: targetBox === 'COBRADOR' ? '#8b5cf6' : 'rgba(30, 41, 59, 0.6)',
                                         border: 'none',
-                                        borderRadius: '8px'
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        cursor: 'pointer'
                                     }}
                                 >🛵 Cobrador</button>
                             </div>
+                            
+                            {boxStats ? (
+                                <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                    <div className="flex-between" style={{ marginBottom: '0.3rem' }}>
+                                        <span className="text-muted">Total Cobrado (Lleva):</span>
+                                        <span style={{ color: '#10b981', fontWeight: 'bold' }}>C$ {parseFloat(boxStats.total_collected || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between">
+                                        <span className="text-muted">Efectivo en Gaveta (Debe):</span>
+                                        <span style={{ color: '#eab308', fontWeight: 'bold' }}>C$ {parseFloat(boxStats.cash_in_drawer || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.9rem', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                    <span>⚠️</span> <span>Caja {targetBox === 'OFICINA' ? 'Oficina' : 'Cobrador'} CERRADA</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Collector Selection */}
@@ -546,9 +592,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                             onClick={handlePay}
                             disabled={isSubmitting}
                             className={`btn-primary-glow ${isSubmitting ? 'loading' : ''}`}
-                            style={{ 
-                                marginTop: 'auto', 
-                                padding: '1.2rem', 
+                            style={{
+                                marginTop: 'auto',
+                                padding: '1.2rem',
                                 fontSize: '1.1rem',
                                 opacity: isSubmitting ? 0.6 : 1,
                                 cursor: isSubmitting ? 'not-allowed' : 'pointer',

@@ -4,9 +4,9 @@ import CustomAlert from './CustomAlert';
 import ConfirmModal from './ConfirmModal';
 import ReceiptSettingsModal from './ReceiptSettingsModal';
 import ReceiptModal from './ReceiptModal';
-import { 
-    FaCashRegister, FaHandHoldingUsd, FaHistory, FaLock, 
-    FaArrowUp, FaArrowDown, FaBuilding, FaMotorcycle, FaSyncAlt 
+import {
+    FaCashRegister, FaHandHoldingUsd, FaHistory, FaLock,
+    FaArrowUp, FaArrowDown, FaBuilding, FaMotorcycle, FaSyncAlt
 } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
 import eventBus from '../utils/eventBus';
@@ -57,6 +57,12 @@ const CashRegister = (props) => {
         fetchHistory();
         fetchUsers();
         if (props.onTypeChange) props.onTypeChange(sessionType);
+
+        const unsubscribe = eventBus.subscribe('GLOBAL_REFRESH', () => {
+            fetchStatus();
+            fetchHistory();
+        });
+        return () => unsubscribe();
     }, [sessionType]);
 
     const handleSearchHistory = () => {
@@ -107,6 +113,21 @@ const CashRegister = (props) => {
         }
     }, [props.viewMode]);
 
+    const fetchStats = async () => {
+        try {
+            const res = await fetch(`/api/billing/stats?type=${sessionType}`);
+            if (res.ok) {
+                const data = await res.json();
+                setStats(data);
+            } else {
+                setStats(null);
+            }
+        } catch (e) {
+            console.error("Error fetching stats:", e);
+            setStats(null);
+        }
+    };
+
     const fetchStatus = async () => {
         try {
             const res = await fetch(`/api/billing/status?type=${sessionType}`);
@@ -114,6 +135,11 @@ const CashRegister = (props) => {
             setSession(data || null);
             setLoading(false);
             if (props.onSessionChange) props.onSessionChange(!!data);
+            if (data) {
+                fetchStats();
+            } else {
+                setStats(null);
+            }
         } catch (e) { console.error(e); setLoading(false); }
     };
 
@@ -327,7 +353,7 @@ const CashRegister = (props) => {
                                 fontSize: '2rem',
                                 boxShadow: `0 10px 30px ${sessionType === 'OFICINA' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`
                             }}>
-                                    {sessionType === 'OFICINA' ? <FaBuilding /> : <FaMotorcycle />}
+                                {sessionType === 'OFICINA' ? <FaBuilding /> : <FaMotorcycle />}
                             </div>
                             <div>
                                 <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: '800', color: 'white', letterSpacing: '-0.5px' }}>
@@ -336,32 +362,182 @@ const CashRegister = (props) => {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.4rem' }}>
                                     <span className="badge" style={{ background: '#10b98122', color: '#10b981', border: '1px solid #10b98133', padding: '0.3rem 0.8rem' }}>EN LÍNEA</span>
                                     <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>• {session.opener_name}</span>
+                                    <button 
+                                        onClick={() => { fetchStatus(); fetchHistory(); }}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#64748b',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            fontSize: '0.9rem',
+                                            padding: '0.2rem',
+                                            borderRadius: '6px',
+                                            transition: 'color 0.2s'
+                                        }}
+                                        onMouseEnter={e => e.target.style.color = '#fff'}
+                                        onMouseLeave={e => e.target.style.color = '#64748b'}
+                                        title="Actualizar Estadísticas"
+                                    >
+                                        <FaSyncAlt />
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ 
-                            background: 'rgba(0,0,0,0.3)', 
-                            padding: '1.25rem 2rem', 
-                            borderRadius: '24px', 
+                        <div style={{
+                            background: 'rgba(0,0,0,0.3)',
+                            padding: '1.25rem 2rem',
+                            borderRadius: '24px',
                             border: '1px solid rgba(255,255,255,0.05)',
                             textAlign: 'right',
                             minWidth: '220px'
                         }}>
-                            <small style={{ color: '#64748b', display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '1px', marginBottom: '0.5rem' }}>FONDO ACTUAL EN CAJA</small>
-                            <span style={{ fontSize: '2.25rem', fontWeight: '900', color: '#10b981', display: 'block' }}>
+                            <small style={{ color: '#64748b', display: 'block', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '1px', marginBottom: '0.5rem' }}>FONDO INICIAL</small>
+                            <span style={{ fontSize: '2.25rem', fontWeight: '900', color: '#fbbf24', display: 'block' }}>
                                 <small style={{ fontSize: '1rem', marginRight: '5px' }}>C$</small>
                                 {parseFloat(session.start_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </span>
                         </div>
                     </div>
 
+                    {/* Stats Breakdown Section */}
+                    {stats && (
+                        <div style={{ padding: '0 2.5rem 1rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {/* Highlights Row */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                gap: '1.5rem'
+                            }}>
+                                {/* Card 1: Efectivo Esperado en Gaveta */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%)',
+                                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                                    padding: '1.5rem',
+                                    borderRadius: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '1rem',
+                                    boxShadow: '0 10px 20px rgba(0,0,0,0.15)'
+                                }}>
+                                    <div style={{ fontSize: '2.5rem' }}>💵</div>
+                                    <div>
+                                        <small style={{ color: '#a7f3d0', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Efectivo en Gaveta (Debe Haber)</small>
+                                        <span style={{ display: 'block', fontSize: '1.8rem', fontWeight: '900', color: '#34d399', marginTop: '0.25rem' }}>
+                                            C$ {Number(stats.cash_in_drawer || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Card 2: Total General Cobrado */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%)',
+                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                    padding: '1.5rem',
+                                    borderRadius: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '1rem',
+                                    boxShadow: '0 10px 20px rgba(0,0,0,0.15)'
+                                }}>
+                                    <div style={{ fontSize: '2.5rem' }}>📈</div>
+                                    <div>
+                                        <small style={{ color: '#93c5fd', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total General Cobrado</small>
+                                        <span style={{ display: 'block', fontSize: '1.8rem', fontWeight: '900', color: '#60a5fa', marginTop: '0.25rem' }}>
+                                            C$ {Number(stats.total_collected || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Card 3: Tasa de Cambio */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%)',
+                                    border: '1px solid rgba(245, 158, 11, 0.2)',
+                                    padding: '1.5rem',
+                                    borderRadius: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '1rem',
+                                    boxShadow: '0 10px 20px rgba(0,0,0,0.15)'
+                                }}>
+                                    <div style={{ fontSize: '2.5rem' }}>🔑</div>
+                                    <div>
+                                        <small style={{ color: '#fde047', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tasa de Cambio</small>
+                                        <span style={{ display: 'block', fontSize: '1.8rem', fontWeight: '900', color: '#fbbf24', marginTop: '0.25rem' }}>
+                                            C$ {Number(stats.exchange_rate || 37).toFixed(4)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detailed Breakdown Grid */}
+                            <div style={{
+                                background: 'rgba(30, 41, 59, 0.3)',
+                                border: '1px solid rgba(255,255,255,0.04)',
+                                borderRadius: '24px',
+                                padding: '1.5rem',
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                gap: '1.25rem',
+                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                            }}>
+                                <div>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>💵 Cobros Efectivo (C$)</small>
+                                    <span style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        C$ {Number(stats.sales_cash || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>💵 Cobros Dólares (U$)</small>
+                                    <span style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        $ {Number(stats.sales_dollars || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        <small style={{ fontSize: '0.8rem', color: '#10b981', marginLeft: '5px' }}>
+                                            (C$ {Number(stats.dollars_in_cordobas || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                                        </small>
+                                    </span>
+                                </div>
+                                <div>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>💳 Cobros Tarjeta (C$)</small>
+                                    <span style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        C$ {Number(stats.sales_card || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div>
+                                    <small style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>🏦 Cobros Transferencias (C$)</small>
+                                    <span style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        C$ {Number(stats.sales_transfer || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div>
+                                    <small style={{ color: '#10b981', fontSize: '0.75rem', display: 'block' }}>📥 Entradas Manuales</small>
+                                    <span style={{ color: '#34d399', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        + C$ {Number(stats.manual_in || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div>
+                                    <small style={{ color: '#f87171', fontSize: '0.75rem', display: 'block' }}>📤 Salidas Manuales</small>
+                                    <span style={{ color: '#f87171', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        - C$ {Number(stats.manual_out || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div>
+                                    <small style={{ color: '#fca5a5', fontSize: '0.75rem', display: 'block' }}>🚫 Devoluciones / Anulaciones</small>
+                                    <span style={{ color: '#fca5a5', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                        - C$ {Number(stats.refunds || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Botones de Acción Estilo Tarjeta */}
-                    <div style={{ 
-                        padding: '2.5rem', 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-                        gap: '1.5rem' 
+                    <div style={{
+                        padding: '2.5rem',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                        gap: '1.5rem'
                     }}>
                         <button
                             onClick={() => { setMovementType('IN'); props.setViewMode('MOVEMENT_IN'); }}
@@ -420,7 +596,255 @@ const CashRegister = (props) => {
                 </div>
 
                 {/* MODALS */}
-                <ConfirmModal isOpen={showClosePrompt} title="Cierre de Turno" message="Cuente todo el dinero y digite el total:" type="prompt" inputPlaceholder="Total Efectivo (C$)" onConfirm={(val) => attemptClose(val)} onCancel={() => setShowClosePrompt(false)} />
+                {/* Custom closing modal with stats breakdown and live physical-vs-system comparison */}
+                {showClosePrompt && stats && (
+                    <div className="modal-overlay" style={{
+                        position: 'fixed',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                        backdropFilter: 'blur(10px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        padding: '1rem'
+                    }}>
+                        <div className="glass-card" style={{
+                            width: '100%',
+                            maxWidth: '650px',
+                            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '24px',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                            padding: '2.5rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1.5rem',
+                            color: 'white',
+                            maxHeight: '95vh',
+                            overflowY: 'auto'
+                        }}>
+                            {/* Modal Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    🔒 Cierre de Turno — Caja {sessionType === 'OFICINA' ? 'Oficina' : 'Cobradores'}
+                                </h3>
+                                <button
+                                    onClick={() => { setShowClosePrompt(false); setPhysicalInput(''); setClosingNote(''); }}
+                                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '1.8rem', cursor: 'pointer' }}
+                                >×</button>
+                            </div>
+
+                            {/* Session Summary Info */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '1rem',
+                                background: 'rgba(255,255,255,0.02)',
+                                padding: '1rem',
+                                borderRadius: '14px',
+                                fontSize: '0.9rem',
+                                border: '1px solid rgba(255,255,255,0.03)'
+                            }}>
+                                <div>
+                                    <span className="text-muted" style={{ display: 'block', fontSize: '0.85rem' }}>Apertura por:</span>
+                                    <strong>{session.opener_name}</strong>
+                                </div>
+                                <div>
+                                    <span className="text-muted" style={{ display: 'block', fontSize: '0.85rem' }}>Hora de Inicio:</span>
+                                    <strong>{new Date(session.start_time).toLocaleString('es-NI', { timeZone: 'America/Managua' })}</strong>
+                                </div>
+                            </div>
+
+                            {/* System Balance breakdown */}
+                            <div>
+                                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '1.05rem', color: '#60a5fa', fontWeight: '700' }}>📊 Desglose de Caja en Sistema</h4>
+                                <div style={{
+                                    background: 'rgba(0,0,0,0.25)',
+                                    borderRadius: '16px',
+                                    padding: '1.25rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.6rem',
+                                    fontSize: '0.9rem'
+                                }}>
+                                    <div className="flex-between">
+                                        <span className="text-muted">Fondo Inicial:</span>
+                                        <span>C$ {parseFloat(stats.start_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between">
+                                        <span className="text-muted">Cobros en Efectivo (C$):</span>
+                                        <span>+ C$ {parseFloat(stats.sales_cash || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between">
+                                        <span className="text-muted">Cobros en Dólares ($):</span>
+                                        <span>
+                                            + $ {parseFloat(stats.sales_dollars || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} 
+                                            <span style={{ color: '#10b981', marginLeft: '5px' }}>
+                                                (C$ {parseFloat(stats.dollars_in_cordobas || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div className="flex-between">
+                                        <span className="text-muted">Movimientos de Entrada:</span>
+                                        <span style={{ color: '#34d399' }}>+ C$ {parseFloat(stats.manual_in || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between">
+                                        <span className="text-muted">Movimientos de Salida:</span>
+                                        <span style={{ color: '#f87171' }}>- C$ {parseFloat(stats.manual_out || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between">
+                                        <span className="text-muted">Anulaciones / Devoluciones:</span>
+                                        <span style={{ color: '#fca5a5' }}>- C$ {parseFloat(stats.refunds || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.6rem', fontWeight: 'bold' }}>
+                                        <span className="text-white">EFECTIVO ESPERADO EN GAVETA:</span>
+                                        <span style={{ color: '#eab308', fontSize: '1.2rem' }}>C$ {parseFloat(stats.cash_in_drawer || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.6rem', fontSize: '0.85rem' }}>
+                                        <span className="text-muted">Cobros Tarjeta (Banco):</span>
+                                        <span style={{ color: '#cbd5e1' }}>C$ {parseFloat(stats.sales_card || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between" style={{ fontSize: '0.85rem' }}>
+                                        <span className="text-muted">Cobros Transferencias (Banco):</span>
+                                        <span style={{ color: '#cbd5e1' }}>C$ {parseFloat(stats.sales_transfer || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex-between" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.6rem', fontWeight: '800' }}>
+                                        <span style={{ color: '#60a5fa' }}>TOTAL GENERAL COBRADO (Lleva):</span>
+                                        <span style={{ color: '#60a5fa', fontSize: '1.2rem' }}>C$ {parseFloat(stats.total_collected || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* User Input Section */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#cbd5e1' }}>
+                                        💵 Efectivo Físico Contado (C$)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="input-dark"
+                                        value={physicalInput}
+                                        onChange={e => setPhysicalInput(e.target.value)}
+                                        placeholder="Digite el monto total contado..."
+                                        autoFocus
+                                        style={{
+                                            fontSize: '1.75rem',
+                                            fontWeight: '800',
+                                            textAlign: 'center',
+                                            color: '#34d399',
+                                            border: '1px solid rgba(52, 211, 153, 0.4)',
+                                            height: '60px',
+                                            borderRadius: '12px',
+                                            background: 'rgba(52, 211, 153, 0.05)'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Live Difference Display */}
+                                {physicalInput !== '' && (() => {
+                                    const diff = parseFloat(physicalInput) - stats.cash_in_drawer;
+                                    const absDiff = Math.abs(diff);
+                                    const isMismatched = absDiff > 0.99;
+                                    
+                                    return (
+                                        <div style={{
+                                            padding: '1rem',
+                                            borderRadius: '12px',
+                                            border: '1px solid ' + (isMismatched ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'),
+                                            background: isMismatched ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.25rem',
+                                            alignItems: 'center'
+                                        }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Diferencia calculada:</div>
+                                            <div style={{
+                                                fontSize: '1.5rem',
+                                                fontWeight: '900',
+                                                color: isMismatched ? (diff > 0 ? '#38bdf8' : '#f87171') : '#34d399'
+                                            }}>
+                                                {diff === 0 ? 'C$ 0.00 (Cuadrado)' : (diff > 0 ? '+ C$ ' : '- C$ ') + absDiff.toFixed(2)}
+                                            </div>
+                                            {isMismatched && (
+                                                <div style={{ fontSize: '0.85rem', color: '#fca5a5', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span>⚠️</span>
+                                                    <span>
+                                                        {diff > 0 
+                                                            ? 'Sobrante detectado en caja. Justificación requerida.' 
+                                                            : 'Faltante detectado en caja. Justificación requerida.'
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Justification Text Area (shows up if difference exists) */}
+                                {physicalInput !== '' && Math.abs(parseFloat(physicalInput) - stats.cash_in_drawer) > 0.99 && (
+                                    <div className="animate-slide-up">
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#fbbf24' }}>
+                                            📝 Nota de Justificación (Obligatoria)
+                                        </label>
+                                        <textarea
+                                            className="input-dark"
+                                            rows="3"
+                                            value={closingNote}
+                                            onChange={e => setClosingNote(e.target.value)}
+                                            placeholder="Describa la razón de la diferencia..."
+                                            style={{
+                                                borderColor: 'rgba(251, 191, 36, 0.4)',
+                                                fontSize: '0.95rem',
+                                                padding: '0.75rem',
+                                                borderRadius: '10px'
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Modal Action Buttons */}
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: '1rem',
+                                marginTop: '1rem',
+                                borderTop: '1px solid rgba(255,255,255,0.06)',
+                                paddingTop: '1.25rem'
+                            }}>
+                                <button
+                                    onClick={() => { setShowClosePrompt(false); setPhysicalInput(''); setClosingNote(''); }}
+                                    className="btn-secondary"
+                                    style={{ padding: '0.75rem 1.5rem', borderRadius: '10px' }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => attemptClose(parseFloat(physicalInput), closingNote)}
+                                    disabled={
+                                        physicalInput === '' || 
+                                        isNaN(parseFloat(physicalInput)) || 
+                                        (Math.abs(parseFloat(physicalInput) - stats.cash_in_drawer) > 0.99 && !closingNote.trim())
+                                    }
+                                    className="btn-dark-glow"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                        color: '#000',
+                                        fontWeight: '800',
+                                        padding: '0.75rem 2rem',
+                                        borderRadius: '10px',
+                                        cursor: 'pointer',
+                                        opacity: (physicalInput === '' || isNaN(parseFloat(physicalInput)) || (Math.abs(parseFloat(physicalInput) - stats.cash_in_drawer) > 0.99 && !closingNote.trim())) ? 0.5 : 1
+                                    }}
+                                >
+                                    PROCESAR CIERRE DE CAJA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <ConfirmModal
                     isOpen={!!cancelTxId}
                     title="Cancelar Transacción"
@@ -612,7 +1036,7 @@ const CashRegister = (props) => {
                                                         background: isCancelled ? 'rgba(15, 23, 42, 0.6)' : undefined
                                                     }}>
                                                         <td style={{ color: isCancelled ? '#94a3b8' : '#94a3b8', fontSize: '0.9rem' }}>
-                                                            <div style={{ fontWeight: 'bold', color: isCancelled ? '#cbd5e1' : '#e2e8f0', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit'  })}</div>
+                                                            <div style={{ fontWeight: 'bold', color: isCancelled ? '#cbd5e1' : '#e2e8f0', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit' })}</div>
                                                             <div style={{ fontSize: '0.75rem', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleDateString('es-NI', { timeZone: 'America/Managua' })}</div>
                                                         </td>
                                                         <td style={{ color: isCancelled ? '#ef4444' : '#f59e0b', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>

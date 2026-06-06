@@ -232,9 +232,9 @@ exports.closeSession = async (req, res) => {
         );
 
         await connection.commit();
-        res.json({ 
-            msg: 'Caja Cerrada Correctamente', 
-            stats: { systemTotal, end_amount_physical, difference } 
+        res.json({
+            msg: 'Caja Cerrada Correctamente',
+            stats: { systemTotal, end_amount_physical, difference }
         });
 
     } catch (err) {
