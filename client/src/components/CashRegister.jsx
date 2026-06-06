@@ -31,6 +31,7 @@ const CashRegister = (props) => {
 
     const [closingData, setClosingData] = useState({ physical: '', diff: 0, system: 0 });
     const [closingNote, setClosingNote] = useState('');
+    const [physicalInput, setPhysicalInput] = useState('');
 
     const [alertInfo, setAlertInfo] = useState({ show: false, title: '', message: '', type: 'info' });
 
