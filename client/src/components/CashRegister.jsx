@@ -14,6 +14,7 @@ import eventBus from '../utils/eventBus';
 const CashRegister = (props) => {
     const { hasRole, user } = useAuth();
     const [session, setSession] = useState(null);
+    const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(false);
 
     // Open State
