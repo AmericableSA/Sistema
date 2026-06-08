@@ -317,7 +317,7 @@ const DailyReportModal = ({ onClose }) => {
                 <Header>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', width: '100%' }}>
                         <h2 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'clamp(1.2rem, 3vw, 1.5rem)', flex: '1 1 100%' }}>
-                            <span>📜</span> Bitácora Diaria (2 Cajas)
+                            <span>📜</span> Bitácora Diaria (Caja Global)
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
                             <InputGroup>
@@ -344,11 +344,8 @@ const DailyReportModal = ({ onClose }) => {
                         <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>Cargando cajas...</div>
                     ) : (
                         <>
-                            {/* CAJA OFICINA */}
-                            {renderSection('Caja Oficina', '🏢', data.office, '#3b82f6')}
-
-                            {/* CAJA COLECTORES */}
-                            {renderSection('Caja Colectores', '🏍️', data.collectors, '#f59e0b')}
+                            {/* CAJA GLOBAL */}
+                            {renderSection('Caja Global', '💵', data.globalBox || data.office, '#3b82f6')}
                         </>
                     )}
                 </Content>
@@ -359,7 +356,7 @@ const DailyReportModal = ({ onClose }) => {
                             <span style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>💰</span>
                             <div style={{ lineHeight: '1.2' }}>
                                 <div style={{ fontWeight: '800', color: 'white', fontSize: '1.1rem' }}>Llevar Todo</div>
-                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>Suma de ambas cajas</div>
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>Resumen de caja global</div>
                             </div>
                         </div>
                     </div>

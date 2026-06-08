@@ -97,8 +97,8 @@ exports.registerPayment = async (req, res) => {
             [newBalance, newStatus, invoice_id]
         );
 
-        // 3. Find Open Session (Usually OFICINA for provider payments)
-        const [sessions] = await connection.query('SELECT id FROM cash_sessions WHERE status = "open" AND session_type = "OFICINA" LIMIT 1');
+        // 3. Find Open Session (Unified Global Box)
+        const [sessions] = await connection.query('SELECT id FROM cash_sessions WHERE status = "open" LIMIT 1');
         const sessionId = sessions.length > 0 ? sessions[0].id : null;
 
         // 4. Register OUT Transaction (Expense)

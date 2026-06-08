@@ -21,7 +21,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
     // Collector Logic
     const [collectors, setCollectors] = useState([]);
     const [selectedCollector, setSelectedCollector] = useState('');
-    const [targetBox, setTargetBox] = useState(defaultTargetBox || 'OFICINA'); // New: Target Box selection (OFICINA/COBRADOR)
+    const [targetBox, setTargetBox] = useState('GLOBAL'); // Unified global box
 
     // Billing Period Logic
     const [monthsToPay, setMonthsToPay] = useState(1); // Default to 1 month
@@ -457,41 +457,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                             </div>
                         )}
 
-                        {/* Target Box Selection (For Admins/Cajeros) */}
+                        {/* Box Status & Info (Unified Global Box) */}
                         <div style={{ marginTop: '1rem', background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                            <label className="text-white" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>🛒 Caja de Destino</label>
-                            <div className="flex-center" style={{ gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setTargetBox('OFICINA')}
-                                    className={`btn-tab-premium ${targetBox === 'OFICINA' ? 'active' : ''}`}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.5rem',
-                                        fontSize: '0.85rem',
-                                        background: targetBox === 'OFICINA' ? '#3b82f6' : 'rgba(30, 41, 59, 0.6)',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        color: 'white',
-                                        cursor: 'pointer'
-                                    }}
-                                >🏢 Oficina</button>
-                                <button
-                                    type="button"
-                                    onClick={() => setTargetBox('COBRADOR')}
-                                    className={`btn-tab-premium ${targetBox === 'COBRADOR' ? 'active' : ''}`}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.5rem',
-                                        fontSize: '0.85rem',
-                                        background: targetBox === 'COBRADOR' ? '#8b5cf6' : 'rgba(30, 41, 59, 0.6)',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        color: 'white',
-                                        cursor: 'pointer'
-                                    }}
-                                >🛵 Cobrador</button>
-                            </div>
+                            <label className="text-white" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>🛒 Caja Global</label>
                             
                             {boxStats ? (
                                 <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.9rem' }}>
@@ -506,7 +474,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                                 </div>
                             ) : (
                                 <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.9rem', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                    <span>⚠️</span> <span>Caja {targetBox === 'OFICINA' ? 'Oficina' : 'Cobrador'} CERRADA</span>
+                                    <span>⚠️</span> <span>Caja Global CERRADA</span>
                                 </div>
                             )}
                         </div>

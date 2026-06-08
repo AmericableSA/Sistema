@@ -52,7 +52,7 @@ const CashRegister = (props) => {
 
     // Users for Filter
     const [users, setUsers] = useState([]);
-    const [sessionType, setSessionType] = useState('OFICINA'); // 'OFICINA' or 'COBRADOR'
+    const [sessionType, setSessionType] = useState('GLOBAL'); // 'GLOBAL'
 
     useEffect(() => {
         fetchStatus();
@@ -260,66 +260,6 @@ const CashRegister = (props) => {
     if (session) {
         return (
             <div className="animate-slide-up" style={{ marginBottom: '2rem' }}>
-                {/* High-End Session Selector Tabs */}
-                <div style={{
-                    display: 'flex',
-                    gap: '1rem',
-                    marginBottom: '2rem',
-                    justifyContent: 'center',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    padding: '0.6rem',
-                    borderRadius: '20px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    width: 'fit-content',
-                    margin: '0 auto 2rem auto'
-                }}>
-                    <button
-                        onClick={() => setSessionType('OFICINA')}
-                        className={`btn-session-tab ${sessionType === 'OFICINA' ? 'active office' : ''}`}
-                        style={{
-                            padding: '1.25rem 2.5rem',
-                            borderRadius: '20px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '1rem',
-                            fontSize: '1.1rem',
-                            fontWeight: '900',
-                            transition: 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
-                            background: sessionType === 'OFICINA' ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'rgba(255,255,255,0.05)',
-                            color: sessionType === 'OFICINA' ? '#fff' : '#94a3b8',
-                            boxShadow: sessionType === 'OFICINA' ? '0 15px 35px rgba(37, 99, 235, 0.4)' : 'none',
-                            border: sessionType === 'OFICINA' ? '1px solid rgba(255,255,255,0.1)' : 'none'
-                        }}
-                    >
-                        <FaBuilding style={{ fontSize: '1.4rem' }} />
-                        <span>OFICINA CENTRAL</span>
-                    </button>
-                    <button
-                        onClick={() => setSessionType('COBRADOR')}
-                        className={`btn-session-tab ${sessionType === 'COBRADOR' ? 'active collectors' : ''}`}
-                        style={{
-                            padding: '1.25rem 2.5rem',
-                            borderRadius: '20px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '1rem',
-                            fontSize: '1.1rem',
-                            fontWeight: '900',
-                            transition: 'all 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
-                            background: sessionType === 'COBRADOR' ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)' : 'rgba(255,255,255,0.05)',
-                            color: sessionType === 'COBRADOR' ? '#fff' : '#94a3b8',
-                            boxShadow: sessionType === 'COBRADOR' ? '0 15px 35px rgba(124, 58, 237, 0.4)' : 'none',
-                            border: sessionType === 'COBRADOR' ? '1px solid rgba(255,255,255,0.1)' : 'none'
-                        }}
-                    >
-                        <FaMotorcycle style={{ fontSize: '1.4rem' }} />
-                        <span>COBRADORES / RUTA</span>
-                    </button>
-                </div>
-
                 {/* Premium Dashboard Card */}
                 <div className="premium-glass-card" style={{
                     padding: 0,
@@ -333,9 +273,7 @@ const CashRegister = (props) => {
                     {/* Header con Stats Rápidos */}
                     <div style={{
                         padding: '2.5rem',
-                        background: sessionType === 'OFICINA'
-                            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0) 100%)'
-                            : 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(30, 41, 59, 0) 100%)',
+                        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0) 100%)',
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -348,18 +286,18 @@ const CashRegister = (props) => {
                                 width: '70px',
                                 height: '70px',
                                 borderRadius: '22px',
-                                background: sessionType === 'OFICINA' ? '#3b82f6' : '#8b5cf6',
+                                background: '#3b82f6',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '2rem',
-                                boxShadow: `0 10px 30px ${sessionType === 'OFICINA' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'}`
+                                boxShadow: '0 10px 30px rgba(59, 130, 246, 0.5)'
                             }}>
-                                {sessionType === 'OFICINA' ? <FaBuilding /> : <FaMotorcycle />}
+                                <FaCashRegister />
                             </div>
                             <div>
                                 <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: '800', color: 'white', letterSpacing: '-0.5px' }}>
-                                    Caja {sessionType === 'OFICINA' ? 'Oficina' : 'Ruta'}
+                                    Caja Global
                                 </h2>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.4rem' }}>
                                     <span className="badge" style={{ background: '#10b98122', color: '#10b981', border: '1px solid #10b98133', padding: '0.3rem 0.8rem' }}>EN LÍNEA</span>
@@ -387,7 +325,7 @@ const CashRegister = (props) => {
                                 </div>
                             </div>
                         </div>
-
+ 
                         <div style={{
                             background: 'rgba(0,0,0,0.3)',
                             padding: '1.25rem 2rem',
@@ -629,7 +567,7 @@ const CashRegister = (props) => {
                             {/* Modal Header */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
                                 <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    🔒 Cierre de Turno — Caja {sessionType === 'OFICINA' ? 'Oficina' : 'Cobradores'}
+                                    🔒 Cierre de Turno — Caja Global
                                 </h3>
                                 <button
                                     onClick={() => { setShowClosePrompt(false); setPhysicalInput(''); setClosingNote(''); }}

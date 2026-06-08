@@ -113,32 +113,11 @@ exports.createTransaction = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Determine Correct Cash Session
-        // Priority: 1. Explicit cash_session_type from body, 2. Role-based fallback
-        const { cash_session_type } = req.body;
-
-        let targetType;
-        if (cash_session_type) {
-            targetType = cash_session_type;
-        } else {
-            const [userData] = await conn.query('SELECT role FROM users WHERE id = ?', [reqUserId]);
-            const userRole = userData[0]?.role || 'cobrador';
-            targetType = (userRole === 'cobrador') ? 'COBRADOR' : 'OFICINA';
-        }
-
-        console.log(`Routing transaction to session type: ${targetType} (Requested: ${cash_session_type || 'None'})`);
-
-        // Find globally open session of the appropriate type
+        // 1. Determine Correct Cash Session (Unified Global Box)
+        // Since there is only a single global cash register, we query the currently open session.
         let [sessions] = await conn.query(
-            'SELECT id, exchange_rate FROM cash_sessions WHERE session_type = ? AND status = "open" LIMIT 1',
-            [targetType]
+            'SELECT id, exchange_rate FROM cash_sessions WHERE status = "open" LIMIT 1'
         );
-
-        // FALLBACK: If requested type isn't open, try to find ANY open session as last resort
-        if (sessions.length === 0) {
-            console.log(`Target session ${targetType} NOT OPEN. Falling back to any open session...`);
-            [sessions] = await conn.query('SELECT id, exchange_rate, session_type FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
-        }
 
         if (sessions.length === 0) {
             await conn.rollback();
@@ -438,14 +417,10 @@ exports.cancelTransaction = async (req, res) => {
             return res.status(400).json({ msg: 'Esta transacción ya está cancelada' });
         }
 
-        // 2. Find Open Session
+        // 2. Find Open Session (Unified Global Box)
         let [sessions] = await conn.query(
-            'SELECT id FROM cash_sessions WHERE user_id = ? AND status = "open" LIMIT 1',
-            [validUserId]
+            'SELECT id FROM cash_sessions WHERE status = "open" LIMIT 1'
         );
-        if (sessions.length === 0) {
-            [sessions] = await conn.query('SELECT id FROM cash_sessions WHERE status = "open" ORDER BY id DESC LIMIT 1');
-        }
 
         if (sessions.length === 0) {
             await conn.rollback();

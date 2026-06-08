@@ -410,22 +410,7 @@ exports.getDailyDetails = async (req, res) => {
         // "Colectores" = role 'collector'
         // "Oficina" = role 'admin', 'office', 'cashier' (or null)
 
-        const office = [];
-        const collectors = [];
-
-        combined.forEach(item => {
-            if (item.collector_role === 'collector') {
-                collectors.push(item);
-            } else {
-                office.push(item);
-            }
-        });
-
-        // Filter Sessions
-        const officeSessions = sessionRows.filter(s => s.role !== 'collector');
-        const collectorSessions = sessionRows.filter(s => s.role === 'collector');
-
-        // Helper to sum
+        // Since we unified into Caja Global, we calculate the sum on the combined list.
         const calcSum = (list) => {
             let sales = 0, manualIn = 0, manualOut = 0, refunds = 0;
             list.forEach(item => {
@@ -449,28 +434,23 @@ exports.getDailyDetails = async (req, res) => {
             return { totalSales: sales, totalManualIn: manualIn, totalManualOut: manualOut, totalRefunds: refunds, net: (sales + manualIn) - manualOut - refunds };
         };
 
-        const officeSummary = calcSum(office);
-        const collectorsSummary = calcSum(collectors);
-
-        // Grand Total
-        const grandTotal = {
-            net: officeSummary.net + collectorsSummary.net,
-            entries: officeSummary.totalManualIn + collectorsSummary.totalManualIn,
-            exits: officeSummary.totalManualOut + collectorsSummary.totalManualOut,
-            sales: officeSummary.totalSales + collectorsSummary.totalSales,
-            refunds: (officeSummary.totalRefunds || 0) + (collectorsSummary.totalRefunds || 0)
-        };
+        const grandTotal = calcSum(combined);
 
         res.json({
+            globalBox: {
+                data: combined,
+                sessions: sessionRows,
+                summary: grandTotal
+            },
             office: {
-                data: office,
-                sessions: officeSessions,
-                summary: officeSummary
+                data: combined,
+                sessions: sessionRows,
+                summary: grandTotal
             },
             collectors: {
-                data: collectors,
-                sessions: collectorSessions,
-                summary: collectorsSummary
+                data: [],
+                sessions: [],
+                summary: { totalSales: 0, totalManualIn: 0, totalManualOut: 0, totalRefunds: 0, net: 0 }
             },
             grandTotal
         });
@@ -548,7 +528,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
                 : row.type === 'IN' ? 'INGRESO' 
                 : row.type === 'REFUND' ? 'DEVOLUCI├ôN' 
                 : 'SALIDA';
-            const boxLabel = row.collector_role === 'collector' ? 'COLECTORES' : 'OFICINA';
+            const boxLabel = 'GLOBAL';
             
             const statusMap = {
                 'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
