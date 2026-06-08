@@ -42,8 +42,14 @@ exports.getBillingDetails = async (req, res) => {
         // NEW: Individual Cutoff based on "Mes Pagado" (Vencimiento)
         // Extract directly from string to avoid timezone offsets: "YYYY-MM-DD"
         let cutoffDay = 15;
-        let lastPaidYear = new Date().getFullYear();
-        let lastPaidMonth = new Date().getMonth();
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Managua' });
+        const todayParts = todayStr.split('-');
+        const todayYear = parseInt(todayParts[0], 10);
+        const todayMonth = parseInt(todayParts[1], 10) - 1;
+        const currentDay = parseInt(todayParts[2], 10);
+
+        let lastPaidYear = todayYear;
+        let lastPaidMonth = todayMonth;
 
         const refDateObj = client.last_paid_month || client.created_at;
         if (refDateObj) {
@@ -53,12 +59,6 @@ exports.getBillingDetails = async (req, res) => {
             lastPaidMonth = parseInt(parts[1], 10) - 1; // JS months 0-11
             cutoffDay = parseInt(parts[2], 10);
         }
-
-        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Managua' });
-        const todayParts = todayStr.split('-');
-        const todayYear = parseInt(todayParts[0], 10);
-        const todayMonth = parseInt(todayParts[1], 10) - 1;
-        const currentDay = parseInt(todayParts[2], 10);
 
         // Months diff interaction:
         let monthsOwedCount = (todayYear - lastPaidYear) * 12 + (todayMonth - lastPaidMonth);

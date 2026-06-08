@@ -128,7 +128,7 @@ const ActionButton = styled.button`
 
 const DailyReportModal = ({ onClose }) => {
     // Default to today
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' }));
     // Initialize structure for new split
     const [data, setData] = useState({
         office: { data: [], sessions: [], summary: {} },

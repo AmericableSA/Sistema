@@ -313,8 +313,8 @@ const Reports = () => {
     const [showDailyReport, setShowDailyReport] = useState(false);
     const [refresh, setRefresh] = useState(0);
 
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState(getTodayISO());
+    const [endDate, setEndDate] = useState(getTodayISO());
 
     // ── Estado: Facturas por Cobrador ────────────────────────────────────────
     const [invData, setInvData] = useState([]);
@@ -325,8 +325,8 @@ const Reports = () => {
     const [usersList, setUsersList] = useState([]);
     const [invFilters, setInvFilters] = useState({
         collectorId: '',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
+        startDate: getTodayISO(),
+        endDate: getTodayISO(),
         invoiceNumber: '',
         clientSearch: '',
         limit: '25'
@@ -342,8 +342,8 @@ const Reports = () => {
 
         // Dates for Month Range (for cable stats context if needed, though mostly unused now)
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
 
         try {
             const [statsRes, closingRes, topRes, performanceRes, moveRes, ordersRes] = await Promise.all([
@@ -413,7 +413,7 @@ const Reports = () => {
         fetchInvoices(newPage);
     };
     const handleInvReset = () => {
-        setInvFilters({ collectorId: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], invoiceNumber: '', clientSearch: '', limit: '25' });
+        setInvFilters({ collectorId: '', startDate: getTodayISO(), endDate: getTodayISO(), invoiceNumber: '', clientSearch: '', limit: '25' });
         setInvData([]);
         setInvSearched(false);
         setInvPagination({ total: 0, page: 1, limit: 25, totalPages: 1 });

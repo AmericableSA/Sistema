@@ -20,6 +20,15 @@ const pool = mysql.createPool({
     timezone: '-06:00',   // mysql2: interpreta DATETIME en UTC-6 (Nicaragua)
 });
 
+// Configurar zona horaria -06:00 (Nicaragua) para todas las conexiones del pool
+pool.on('connection', (connection) => {
+    connection.query("SET time_zone = '-06:00'", (err) => {
+        if (err) {
+            console.error('❌ Error configurando time_zone en la conexión del pool:', err.message);
+        }
+    });
+});
+
 // Prueba de conexión + verificación de zona horaria
 (async () => {
     try {

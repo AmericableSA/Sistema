@@ -8,9 +8,9 @@ const formatDateDMY = (date) => {
         if (typeof date === 'string') {
             dateStr = date.split('T')[0];
         } else if (date instanceof Date) {
-            dateStr = date.toISOString().split('T')[0];
+            dateStr = date.toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
         } else {
-            dateStr = new Date(date).toISOString().split('T')[0];
+            dateStr = new Date(date).toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
         }
         const parts = dateStr.split('-');
         if (parts.length === 3) {
@@ -287,7 +287,7 @@ exports.updateClient = async (req, res) => {
             if (!d) return null;
             const dateObj = new Date(d);
             if (isNaN(dateObj.getTime())) return null;
-            return dateObj.toISOString().split('T')[0];
+            return dateObj.toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
         };
 
         let changes = [];
@@ -867,7 +867,7 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                         if (typeof c.last_paid_month === 'string') {
                             dateStr = c.last_paid_month.split('T')[0];
                         } else {
-                            dateStr = c.last_paid_month.toISOString().split('T')[0];
+                            dateStr = c.last_paid_month.toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
                         }
                         const parts = dateStr.split('-');
                         const monthIdx = parseInt(parts[1], 10) - 1;
@@ -875,8 +875,11 @@ exports.exportCollectorRoutesXLS = async (req, res) => {
                         lastPaidStr = `${monthNames[monthIdx]} ${year}`;
 
                         // Calculate Pending Months using the timezone-safe values
-                        const now = new Date();
-                        const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const managuaStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
+                        const managuaParts = managuaStr.split('-');
+                        const currentYear = parseInt(managuaParts[0], 10);
+                        const currentMonthIdx = parseInt(managuaParts[1], 10) - 1; // 0-11
+                        const currentMonthDate = new Date(currentYear, currentMonthIdx, 1);
 
                         let iterator = new Date(parseInt(year, 10), monthIdx + 1, 1);
                         let pendingArr = [];

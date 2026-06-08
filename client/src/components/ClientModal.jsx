@@ -60,7 +60,7 @@ const ClientModal = ({ client, onClose, onSave }) => {
             const formatDate = (d) => {
                 if (!d) return '';
                 if (typeof d === 'string') return d.split('T')[0];
-                return new Date(d).toISOString().split('T')[0];
+                return new Date(d).toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
             };
 
             setFormData({

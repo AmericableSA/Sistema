@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+// Helper timezone-safe para obtener la fecha de hoy en Nicaragua (formato YYYY-MM-DD)
+const getTodayManagua = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
+
 // Helper timezone-safe para formatear fechas a DD/MM/YYYY sin corrimientos de huso horario
 const formatDateDMY = (date) => {
     if (!date) return 'N/A';
@@ -8,9 +11,9 @@ const formatDateDMY = (date) => {
         if (typeof date === 'string') {
             dateStr = date.split('T')[0];
         } else if (date instanceof Date) {
-            dateStr = date.toISOString().split('T')[0];
+            dateStr = date.toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
         } else {
-            dateStr = new Date(date).toISOString().split('T')[0];
+            dateStr = new Date(date).toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
         }
         const parts = dateStr.split('-');
         if (parts.length === 3) {
@@ -175,7 +178,7 @@ exports.getCableStats = async (req, res) => {
         // Let's use provided dates or default to 'all time' for attended to avoid confusion? 
         // No, 'de la fecha' implies date filter.
 
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
         pool = await db.getConnection();
@@ -257,7 +260,7 @@ exports.getDailyClosing = async (req, res) => {
     let pool;
     try {
         const { startDate, endDate } = req.query;
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
         pool = await db.getConnection();
@@ -340,7 +343,7 @@ exports.getDailyDetails = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         // Default to today if not provided
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
         pool = await db.getConnection();
@@ -467,7 +470,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
     let pool;
     try {
         const { startDate, endDate } = req.query;
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
         pool = await db.getConnection();
@@ -588,7 +591,7 @@ exports.getMovementsReport = async (req, res) => {
     let pool;
     try {
         const { startDate, endDate } = req.query;
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
         pool = await db.getConnection();
@@ -620,7 +623,7 @@ exports.getMovementsReport = async (req, res) => {
 exports.getServiceOrdersReport = async (req, res) => {
     try {
         const { startDate, endDate, list, status } = req.query;
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
         const pool = await db.getConnection();
 
@@ -858,7 +861,7 @@ exports.getServiceOrdersReport = async (req, res) => {
 exports.exportServiceOrdersXLS = async (req, res) => {
     try {
         const { startDate, endDate, status, type } = req.query;
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
         const db = require('../config/db');
@@ -985,7 +988,7 @@ exports.exportServiceOrdersXLS = async (req, res) => {
 exports.exportCollectorPerformanceXLS = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        const sDate = startDate || new Date().toISOString().split('T')[0];
+        const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
         const pool = await db.getConnection();

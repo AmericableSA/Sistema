@@ -75,8 +75,8 @@ const ClientMovements = () => {
     const [loadingDaily, setLoadingDaily] = useState(false);
 
     // Optional Date Filters
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState(new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' }));
+    const [endDate, setEndDate] = useState(new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' }));
 
     // History Modal State
     const [showHistory, setShowHistory] = useState(false);
@@ -304,7 +304,7 @@ const ClientMovements = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Reporte_Tramites_${new Date().toISOString().split('T')[0]}.xlsx`;
+            a.download = `Reporte_Tramites_${new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' })}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -319,7 +319,7 @@ const ClientMovements = () => {
     const handleTabChange = (mode) => {
         setViewMode(mode);
         if (mode === 'LIST') {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
             setStartDate(today);
             setEndDate(today);
         } else if (mode === 'PENDING' || mode === 'COMPLETED') {

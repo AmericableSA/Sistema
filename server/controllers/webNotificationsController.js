@@ -96,7 +96,7 @@ exports.exportAveriasXLS = async (req, res) => {
         rows.forEach(r => {
             worksheet.addRow({
                 ...r,
-                fecha_reporte: new Date(r.fecha_reporte).toLocaleString()
+                fecha_reporte: new Date(r.fecha_reporte).toLocaleString('es-NI', { timeZone: 'America/Managua' })
             });
         });
 
@@ -257,7 +257,7 @@ exports.exportContactosXLS = async (req, res) => {
         rows.forEach(r => {
             worksheet.addRow({
                 ...r,
-                fecha_contacto: new Date(r.fecha_contacto).toLocaleString(),
+                fecha_contacto: new Date(r.fecha_contacto).toLocaleString('es-NI', { timeZone: 'America/Managua' }),
                 status_text: r.atendido ? 'Atendido' : 'Pendiente',
                 assigned_user: r.assigned_user || 'Sin Asignar'
             });

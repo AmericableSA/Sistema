@@ -12,7 +12,7 @@ exports.createInvoice = async (req, res) => {
 
         const [result] = await db.query(
             "INSERT INTO invoices (provider_id, amount, balance, description, due_date, reference_number, issue_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [provider_id, amount, amount, description, due_date, reference_number, issue_date || new Date()]
+            [provider_id, amount, amount, description, due_date, reference_number, issue_date || new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Managua' })]
         );
 
         res.status(201).json({ id: result.insertId, msg: 'Factura de proveedor registrada exitosamente' });

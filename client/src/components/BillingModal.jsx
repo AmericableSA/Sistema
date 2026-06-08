@@ -144,13 +144,17 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
             total += (billableMonths * rate);
 
             if (clientStatus.client.last_paid_month) {
-                const startParams = new Date(clientStatus.client.last_paid_month);
+                const dStr = clientStatus.client.last_paid_month.split('T')[0];
+                
+                // Construct timezone-safe date for Managua (noon to prevent offsets)
+                const startParams = new Date(`${dStr}T12:00:00`);
                 startParams.setMonth(startParams.getMonth() + 1);
+                
                 const endParams = new Date(startParams);
                 endParams.setMonth(endParams.getMonth() + (monthsToPay - 1));
 
-                const startStr = startParams.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
-                const endStr = endParams.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                const startStr = startParams.toLocaleString('es-NI', { timeZone: 'America/Managua', month: 'long', year: 'numeric' });
+                const endStr = endParams.toLocaleString('es-NI', { timeZone: 'America/Managua', month: 'long', year: 'numeric' });
                 const range = monthsToPay === 1 ? startStr : `${startStr} - ${endStr}`;
                 setCoverageText(range);
                 desc = `Mensualidad: ${range}`;
