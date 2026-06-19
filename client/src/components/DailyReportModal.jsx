@@ -259,28 +259,36 @@ const DailyReportModal = ({ onClose }) => {
                                     </thead>
                                     <tbody>
                                         {rows.map((row, i) => {
+                                            const isCancelled = row.status === 'CANCELLED';
                                             const isIncome = row.type === 'SALE' || row.type === 'IN' || row.category === 'TRANSACTION';
                                             return (
-                                                <tr key={i}>
+                                                <tr key={i} style={{ opacity: isCancelled ? 0.55 : 1 }}>
                                                     <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
                                                         {new Date(row.created_at).toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit'  })}
                                                     </td>
                                                     <td>
-                                                        <Badge type={row.category === 'TRANSACTION' ? 'SALE' : row.type}>
-                                                            {row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA')}
-                                                        </Badge>
+                                                        {isCancelled ? (
+                                                            <span style={{ padding: '0.35rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', letterSpacing: '0.05em', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}>ANULADO</span>
+                                                        ) : (
+                                                            <Badge type={row.category === 'TRANSACTION' ? 'SALE' : row.type}>
+                                                                {row.category === 'TRANSACTION' ? 'COBRO' : (row.type === 'IN' ? 'INGRESO' : 'SALIDA')}
+                                                            </Badge>
+                                                        )}
                                                     </td>
                                                     <td>
-                                                        <div style={{ fontWeight: '500', color: 'white' }}>{row.client_name || row.description}</div>
+                                                        <div style={{ fontWeight: '500', color: 'white', textDecoration: isCancelled ? 'line-through' : 'none' }}>{row.client_name || row.description}</div>
                                                         {row.client_name && row.description && row.client_name !== row.description && (
                                                             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{row.description}</div>
                                                         )}
                                                         {row.contract_number && <div style={{ fontSize: '0.75rem', color: '#3b82f6' }}>#{row.contract_number}</div>}
+                                                        {isCancelled && row.cancellation_reason && (
+                                                            <div style={{ fontSize: '0.8rem', color: '#f87171', marginTop: '4px' }}>Motivo: {row.cancellation_reason}</div>
+                                                        )}
                                                     </td>
                                                     <td>{row.collector}</td>
                                                     <td style={{ textTransform: 'capitalize' }}>{row.payment_method}</td>
-                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', color: isIncome ? '#34d399' : '#f87171' }}>
-                                                        {isIncome ? '+' : '-'} {Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', color: isCancelled ? '#94a3b8' : (isIncome ? '#34d399' : '#f87171'), textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                                                        {isCancelled ? '' : (isIncome ? '+' : '-')} {Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                     </td>
                                                 </tr>
                                             );

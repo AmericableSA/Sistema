@@ -134,7 +134,8 @@ exports.closeSession = async (req, res) => {
     const { session_id, end_amount_physical, closing_note, current_user_id } = req.body;
     const closerId = await getValidUser(current_user_id || req.user?.id);
 
-    if (end_amount_physical === undefined || isNaN(end_amount_physical)) {
+    const physicalAmount = parseFloat(end_amount_physical);
+    if (end_amount_physical === undefined || end_amount_physical === '' || isNaN(physicalAmount)) {
         return res.status(400).json({ msg: 'El monto físico final es requerido y debe ser un número.' });
     }
 
@@ -196,14 +197,14 @@ exports.closeSession = async (req, res) => {
         // 4. Final Totals
         // Balance = Start + Sales + Manual In - Manual Out - Refunds
         const systemTotal = startAmount + cashSales + dollarValueInCordobas + manualIn - manualOut - refunds;
-        const difference = Number(end_amount_physical) - systemTotal;
+        const difference = physicalAmount - systemTotal;
 
-        // 5. Justification check
+        // 5. Justification check — allow negative values but require a note if there's a discrepancy
         if (Math.abs(difference) > 0.99 && !closing_note) {
             await connection.rollback();
             return res.status(400).json({
                 error: 'JUSTIFICATION_REQUIRED',
-                msg: `Diferencia detectada de ${difference.toFixed(2)}. Debe agregar una NOTA DE JUSTIFICACIÓN para cerrar con este descuadre.`,
+                msg: `Diferencia detectada de C$ ${difference.toFixed(2)}. Debe agregar una NOTA DE JUSTIFICACIÓN para cerrar con este descuadre.`,
                 systemTotal,
                 difference
             });
@@ -220,13 +221,13 @@ exports.closeSession = async (req, res) => {
              closing_note = ?,
              closed_by_user_id = ?
              WHERE id = ?`,
-            [systemTotal, end_amount_physical, difference, closing_note || null, closerId, session_id]
+            [systemTotal, physicalAmount, difference, closing_note || null, closerId, session_id]
         );
 
         await connection.commit();
         res.json({
             msg: 'Caja Cerrada Correctamente',
-            stats: { systemTotal, end_amount_physical, difference }
+            stats: { systemTotal, end_amount_physical: physicalAmount, difference }
         });
 
     } catch (err) {

@@ -78,7 +78,7 @@ exports.getHistory = async (req, res) => {
             cm.amount,
             cm.description,
             cm.created_at,
-            IF(cm.type = 'IN', 'INGRESO', 'GASTO') as type,
+            IF(cm.type = 'IN', 'INGRESO', IF(cm.type = 'REFUND', 'DEVOLUCION', 'GASTO')) as type,
             NULL as client_name,
             'COMPLETED' as status,
             NULL as cancellation_reason,

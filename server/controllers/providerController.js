@@ -59,9 +59,12 @@ exports.deleteProvider = async (req, res) => {
     const { id } = req.params;
     try {
         await db.query('DELETE FROM providers WHERE id = ?', [id]);
-        res.json({ message: 'Provider deleted' });
+        res.json({ msg: 'Proveedor eliminado exitosamente' });
     } catch (err) {
-        console.error(err); // likely foreign key constraint if products use it
-        res.status(500).send('Server Error');
+        console.error("Delete Provider Error:", err);
+        if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+            return res.status(400).json({ msg: 'No se puede eliminar el proveedor porque tiene productos asociados en el inventario.' });
+        }
+        res.status(500).json({ msg: 'Error interno del servidor al intentar eliminar el proveedor.' });
     }
 };

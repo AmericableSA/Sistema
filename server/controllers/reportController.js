@@ -560,10 +560,15 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         // Calculate
         let net = 0;
         combined.forEach(item => {
-            const val = parseFloat(item.amount);
-            if (item.category === 'TRANSACTION') net += val;
-            else if (item.type === 'IN') net += val;
-            else if (item.type === 'OUT') net -= val;
+            const val = parseFloat(item.amount) || 0;
+            const isCancelled = item.status === 'CANCELLED';
+            if (item.category === 'TRANSACTION') {
+                if (!isCancelled) net += val;
+            } else if (item.type === 'IN') {
+                net += val;
+            } else if (item.type === 'REFUND' || item.type === 'OUT') {
+                net -= val;
+            }
         });
 
         sheet.addRow({});

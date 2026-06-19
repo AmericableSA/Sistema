@@ -402,13 +402,15 @@ exports.updateClient = async (req, res) => {
 // --- Delete Client ---
 exports.deleteClient = async (req, res) => {
     const { id } = req.params;
-    const userId = req.user?.id || 1;
     try {
         await db.query('DELETE FROM clients WHERE id = ?', [id]);
-        res.json({ msg: 'Cliente eliminado' });
+        res.json({ msg: 'Cliente eliminado exitosamente' });
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
+        console.error("Delete Client Error:", err);
+        if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+            return res.status(400).json({ msg: 'No se puede eliminar el cliente porque tiene transacciones o historial financiero registrado en el sistema.' });
+        }
+        res.status(500).json({ msg: 'Error interno del servidor al intentar eliminar el cliente.' });
     }
 };
 

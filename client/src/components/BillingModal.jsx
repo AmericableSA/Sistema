@@ -44,6 +44,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
     // New Features
     const [isPromo2x1, setIsPromo2x1] = useState(false);
     const [manualInvoiceNo, setManualInvoiceNo] = useState('');
+    const [installationPrice, setInstallationPrice] = useState(500);
 
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
 
@@ -161,8 +162,8 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                 if (applyMora) desc += ` + Mora`;
             }
         } else if (type === 'installation') {
-            total = 500;
-            desc = 'Instalación de Servicio - C$ 500.00';
+            total = parseFloat(installationPrice) || 0;
+            desc = `Instalación de Servicio - C$ ${total.toFixed(2)}`;
         } else {
             total += cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         }
@@ -179,7 +180,7 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
         else setEnteredAmount(total.toFixed(2));
 
         setDescription(desc);
-    }, [type, selectedPlanId, cart, plans, clientStatus, monthsToPay, applyMora, manualMoraAmount, isPromo2x1]);
+    }, [type, selectedPlanId, cart, plans, clientStatus, monthsToPay, applyMora, manualMoraAmount, isPromo2x1, installationPrice]);
 
     // Update Description when 2x1 toggles
     useEffect(() => {
@@ -236,8 +237,9 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
 
     /* Justification Logic */
     const isPriceChanged = Math.abs(parseFloat(enteredAmount || 0) - calculatedTotal) > 0.5;
+    const isInstallationPromo = type === 'installation' && Math.abs(installationPrice - 500) > 0.5;
     const isMoraIssue = checkMoraChange();
-    const needsJustification = isPriceChanged || isMoraIssue;
+    const needsJustification = isPriceChanged || isMoraIssue || isInstallationPromo;
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -249,12 +251,12 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
         }
 
         const amt = parseFloat(enteredAmount || 0);
-        if (amt <= 0) return setAlert({ show: true, type: 'error', title: 'Monto Inválido', message: 'El monto debe ser > 0.' });
+        if (amt < 0) return setAlert({ show: true, type: 'error', title: 'Monto Inválido', message: 'El monto debe ser >= 0.' });
 
         // Validate Payment
         const received = parseFloat(receivedAmount || 0);
-        if (received < calculatedTotal) {
-            return setAlert({ show: true, type: 'warning', title: 'Monto Insuficiente', message: `El cliente debe pagar al menos C$ ${calculatedTotal.toFixed(2)}` });
+        if (received < amt && paymentMethod === 'cash') {
+            return setAlert({ show: true, type: 'warning', title: 'Monto Insuficiente', message: `El cliente debe pagar al menos C$ ${amt.toFixed(2)}` });
         }
 
         if (needsJustification && !justification.trim()) {
@@ -438,26 +440,54 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                             </div>
                         )}
 
-                        {/* PRODUCT SELECTOR (For Installation/Materials) */}
-                        {type !== 'monthly_fee' && (
+                        {/* INSTALLATION PRICE (Editable for Promotions) */}
+                        {type === 'installation' && (
+                            <div className="flex-col animate-slide-up" style={{ background: 'rgba(245, 158, 11, 0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
+                                <label className="text-white" style={{ marginBottom: '0.5rem', fontWeight: '600' }}>💰 Precio de Instalación</label>
+                                <input
+                                    type="number"
+                                    className="input-dark"
+                                    value={installationPrice}
+                                    onChange={e => setInstallationPrice(e.target.value)}
+                                    style={{ fontSize: '1.3rem', fontWeight: 'bold', textAlign: 'center', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)' }}
+                                />
+                                <small style={{ color: '#94a3b8', marginTop: '0.4rem' }}>Precio normal: C$ 500.00 — Modifique si es promoción.</small>
+                                {Math.abs(installationPrice - 500) > 0.5 && (
+                                    <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px', border: '1px solid rgba(251, 191, 36, 0.2)', fontSize: '0.85rem', color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>🏷️</span> Precio modificado — se requiere justificación
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* PRODUCT SELECTOR (For Materials) */}
+                        {type === 'material_sale' && (
                             <div className="flex-col animate-slide-up">
-                                <label className="text-muted">Seleccionar Producto / Servicio</label>
+                                <label className="text-muted">Seleccionar Producto / Material</label>
                                 <select className="input-dark" onChange={e => handleAddToCart(e.target.value)}>
                                     <option value="">-- Agregar al Carrito --</option>
                                     {products.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} - C$ {parseFloat(p.price).toFixed(2)} (Stock: {p.current_stock})</option>
+                                        <option key={p.id} value={p.id}>{p.name} - C$ {parseFloat(p.price).toFixed(2)} (Stock: {p.current_stock || 0})</option>
                                     ))}
                                 </select>
 
                                 {/* Cart Mini-View */}
                                 <div style={{ maxHeight: '150px', overflowY: 'auto', marginTop: '0.5rem' }}>
                                     {cart.map((item, idx) => (
-                                        <div key={idx} className="flex-between" style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '4px', marginBottom: '4px' }}>
-                                            <span style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>{item.quantity}x {item.name}</span>
-                                            <span style={{ fontSize: '0.9rem', color: 'white' }}>{item.total.toFixed(2)}</span>
+                                        <div key={idx} className="flex-between" style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.75rem', borderRadius: '8px', marginBottom: '4px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>{item.quantity}x {item.name}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <span style={{ fontSize: '0.9rem', color: 'white', fontWeight: 'bold' }}>C$ {(item.price * item.quantity).toFixed(2)}</span>
+                                                <button onClick={() => setCart(cart.filter((_, i) => i !== idx))} style={{ background: 'rgba(239,68,68,0.2)', border: 'none', color: '#f87171', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
+                                {cart.length === 0 && (
+                                    <div style={{ textAlign: 'center', padding: '1rem', color: '#64748b', fontSize: '0.9rem' }}>Agregue productos al carrito</div>
+                                )}
                             </div>
                         )}
 
@@ -516,7 +546,38 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                             <span style={{ color: '#34d399' }}>C$ {calculatedTotal.toFixed(2)}</span>
                         </div>
 
-                        <div style={{ marginTop: '2rem' }}>
+                        {/* Payment Method Selector */}
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem' }}>Método de Pago</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                                {[
+                                    { value: 'cash', label: '💵 Efectivo', color: '#10b981' },
+                                    { value: 'card', label: '💳 Tarjeta', color: '#3b82f6' },
+                                    { value: 'transfer', label: '🏦 Transferencia', color: '#8b5cf6' },
+                                    { value: 'dollars', label: '💲 Dólares', color: '#f59e0b' }
+                                ].map(pm => (
+                                    <button
+                                        key={pm.value}
+                                        onClick={() => setPaymentMethod(pm.value)}
+                                        style={{
+                                            padding: '0.6rem',
+                                            borderRadius: '10px',
+                                            border: paymentMethod === pm.value ? `2px solid ${pm.color}` : '1px solid rgba(255,255,255,0.1)',
+                                            background: paymentMethod === pm.value ? `${pm.color}22` : 'rgba(0,0,0,0.2)',
+                                            color: paymentMethod === pm.value ? pm.color : '#94a3b8',
+                                            cursor: 'pointer',
+                                            fontWeight: paymentMethod === pm.value ? '700' : '500',
+                                            fontSize: '0.9rem',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        {pm.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '1.5rem' }}>
                             <label className="text-muted" style={{ display: 'block', marginBottom: '0.5rem' }}>Monto Recibido</label>
                             <input
                                 type="number"
@@ -541,13 +602,15 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
                                     <span style={{ fontSize: '1.2rem' }}>🤔</span>
                                     <label className="text-muted" style={{ color: '#fbbf24', fontWeight: 'bold' }}>
-                                        {isMoraIssue && !applyMora ? 'Perdón de Mora Requerido' : 'Justificación de Precio'}
+                                        {isMoraIssue && !applyMora ? 'Perdón de Mora Requerido' : isInstallationPromo ? 'Justificación de Promoción' : 'Justificación de Precio'}
                                     </label>
                                 </div>
                                 <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.5rem' }}>
                                     {isMoraIssue && !applyMora
                                         ? 'Estás cobrando una factura vencida sin aplicar mora. Por favor indica la razón (autorización).'
-                                        : 'El precio total ha sido modificado manualmente. Explica la razón.'}
+                                        : isInstallationPromo
+                                            ? 'El precio de instalación fue modificado. Indica la razón (ej: Promoción autorizada).'
+                                            : 'El precio total ha sido modificado manualmente. Explica la razón.'}
                                 </p>
                                 <textarea
                                     className="input-dark"

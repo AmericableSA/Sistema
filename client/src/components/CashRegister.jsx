@@ -166,28 +166,38 @@ const CashRegister = (props) => {
     };
 
     const attemptClose = async (physicalAmount, note = null) => {
-        const res = await fetch('/api/billing/close', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                session_id: session.id,
-                end_amount_physical: physicalAmount,
-                closing_note: note,
-                current_user_id: user?.id
-            })
-        });
-        const data = await res.json();
+        try {
+            const res = await fetch('/api/billing/close', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: session.id,
+                    end_amount_physical: physicalAmount,
+                    closing_note: note,
+                    current_user_id: user?.id
+                })
+            });
 
-        if (res.status === 400 && data.error === 'JUSTIFICATION_REQUIRED') {
-            setClosingData({ physical: physicalAmount, diff: data.difference, system: data.systemTotal });
-            setShowClosePrompt(false);
-            setShowJustifyPrompt(true);
-        } else if (res.ok) {
-            setShowClosePrompt(false);
-            setShowJustifyPrompt(false);
-            setAlertInfo({ show: true, type: 'success', title: 'Caja Cerrada', message: 'Turno finalizado.' });
-            fetchStatus();
-        } else {
-            setAlertInfo({ show: true, type: 'error', title: 'Error', message: data.msg });
+            let data = {};
+            try { data = await res.json(); } catch (e) { data = { msg: 'Error de conexión con el servidor.' }; }
+
+            if (res.status === 400 && data.error === 'JUSTIFICATION_REQUIRED') {
+                setClosingData({ physical: physicalAmount, diff: data.difference, system: data.systemTotal });
+                setShowClosePrompt(false);
+                setShowJustifyPrompt(true);
+            } else if (res.ok) {
+                setShowClosePrompt(false);
+                setShowJustifyPrompt(false);
+                setPhysicalInput('');
+                setClosingNote('');
+                setAlertInfo({ show: true, type: 'success', title: 'Caja Cerrada', message: 'Turno finalizado correctamente.' });
+                fetchStatus();
+                fetchHistory();
+            } else {
+                setAlertInfo({ show: true, type: 'error', title: 'Error al Cerrar', message: data.msg || 'No se pudo cerrar la caja. Intente de nuevo.' });
+            }
+        } catch (e) {
+            console.error('Close session network error:', e);
+            setAlertInfo({ show: true, type: 'error', title: 'Error de Conexión', message: 'No se pudo conectar con el servidor. Verifique su conexión.' });
         }
     };
 

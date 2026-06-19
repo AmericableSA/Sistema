@@ -121,7 +121,7 @@ exports.createTransaction = async (req, res) => {
 
         if (sessions.length === 0) {
             await conn.rollback();
-            return res.status(403).json({ msg: `No hay caja de tipo ${targetType} abierta. Por favor abre caja primero.` });
+            return res.status(403).json({ msg: 'No hay caja abierta. Por favor abre caja primero.' });
         }
 
         const session = sessions[0];

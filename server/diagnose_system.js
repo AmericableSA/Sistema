@@ -24,15 +24,15 @@ async function diagnose() {
             console.log("   Columns:", invCols.map(c => c.Field).join(', '));
         }
 
-        // 3. Check Transactions Schema (for user_id vs collector_id)
+        // 3. Check Transactions Schema (for collector_id)
         console.log("\n3️⃣ CHECKING TRANSACTIONS SCHEMA...");
         const [transCols] = await pool.query("SHOW COLUMNS FROM transactions");
         const transFields = transCols.map(c => c.Field);
         console.log("   Columns:", transFields.join(', '));
-        if (transFields.includes('user_id')) console.log("   ✅ 'user_id' column present.");
-        else console.error("   ❌ 'user_id' column MISSING (Old schema uses collector_id?)");
+        if (transFields.includes('collector_id')) console.log("   ✅ 'collector_id' column present.");
+        else console.error("   ❌ 'collector_id' column MISSING");
 
-        // 4. Test Report Query (User Performance) - The likely crasher
+        // 4. Test Report Query (User Performance)
         console.log("\n4️⃣ TESTING REPORT QUERY (User Performance)...");
         try {
             const userQ = `
@@ -40,8 +40,8 @@ async function diagnose() {
                     u.full_name, 
                     count(t.id) as count
                 FROM transactions t
-                LEFT JOIN users u ON t.user_id = u.id
-                GROUP BY t.user_id, u.full_name
+                LEFT JOIN users u ON t.collector_id = u.id
+                GROUP BY t.collector_id, u.full_name
                 LIMIT 1
             `;
             await pool.query(userQ);
