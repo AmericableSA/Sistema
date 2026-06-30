@@ -301,11 +301,11 @@ const DailyReportModal = ({ onClose }) => {
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem', padding: '1.5rem', background: 'rgba(0,0,0,0.25)', borderRadius: '14px', flexWrap: 'wrap' }}>
                                 <div style={{ textAlign: 'right', flex: '1 1 auto' }}>
                                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingresos</div>
-                                    <div style={{ color: '#34d399', fontWeight: 'bold', fontSize: '1.1rem' }}>{formatMoney(summary.totalSales + summary.totalManualIn)}</div>
+                                    <div style={{ color: '#34d399', fontWeight: 'bold', fontSize: '1.1rem' }}>{formatMoney((summary.totalSales || 0) + (summary.totalManualIn || 0))}</div>
                                 </div>
                                 <div style={{ textAlign: 'right', flex: '1 1 auto' }}>
                                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Salidas</div>
-                                    <div style={{ color: '#f87171', fontWeight: 'bold', fontSize: '1.1rem' }}>{formatMoney(summary.totalManualOut)}</div>
+                                    <div style={{ color: '#f87171', fontWeight: 'bold', fontSize: '1.1rem' }}>{formatMoney((summary.totalManualOut || 0) + (summary.totalRefunds || 0))}</div>
                                 </div>
                                 <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '1.5rem', flex: '1 1 auto' }}>
                                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total {title}</div>
@@ -372,11 +372,11 @@ const DailyReportModal = ({ onClose }) => {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(1rem, 3vw, 3rem)', alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-start', '@media (min-width: 768px)': { justifyContent: 'flex-end' } }}>
                         <div>
                             <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Global Ingresos</div>
-                            <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney(data.grandTotal?.sales + data.grandTotal?.entries)}</div>
+                            <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney((data.grandTotal?.totalSales || data.grandTotal?.sales || 0) + (data.grandTotal?.totalManualIn || data.grandTotal?.entries || 0))}</div>
                         </div>
                         <div>
                             <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Global Salidas</div>
-                            <div style={{ fontSize: '1.2rem', color: '#f87171', fontWeight: 'bold' }}>{formatMoney(data.grandTotal?.exits)}</div>
+                            <div style={{ fontSize: '1.2rem', color: '#f87171', fontWeight: 'bold' }}>{formatMoney((data.grandTotal?.totalManualOut || data.grandTotal?.exits || 0) + (data.grandTotal?.totalRefunds || data.grandTotal?.refunds || 0))}</div>
                         </div>
                         <div style={{ borderLeft: '2px solid rgba(255,255,255,0.1)', paddingLeft: 'clamp(1rem, 3vw, 2rem)' }}>
                             <div style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gran Total Efectivo</div>
