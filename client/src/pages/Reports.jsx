@@ -697,7 +697,7 @@ const Reports = () => {
                     <ActionButton
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
                         onClick={() => {
-                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}`)
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=income`)
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);
@@ -719,7 +719,7 @@ const Reports = () => {
                     <ActionButton
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
                         onClick={() => {
-                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}`)
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=expense`)
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);
@@ -752,7 +752,7 @@ const Reports = () => {
                         $variant="outline-primary"
                         style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
                         onClick={() => {
-                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}`)
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=all`)
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);

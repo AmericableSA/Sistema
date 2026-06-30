@@ -469,7 +469,7 @@ exports.getDailyDetails = async (req, res) => {
 exports.exportDailyDetailsXLS = async (req, res) => {
     let pool;
     try {
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, reportType } = req.query;
         const sDate = startDate || getTodayManagua();
         const eDate = endDate || sDate;
 
@@ -505,45 +505,75 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             ...moveRows.map(r => ({ ...r, category: 'MOVEMENT' }))
         ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+        // Filtering by reportType
+        let filtered = combined;
+        let sheetName = 'Bitácora Diaria';
+        let filenamePrefix = 'Bitacora';
+        let totalLabel = 'BALANCE NETO';
+
+        if (reportType === 'expense') {
+            filtered = combined.filter(row => row.category === 'MOVEMENT' && (row.type === 'OUT' || row.type === 'REFUND'));
+            sheetName = 'Reporte de Gastos';
+            filenamePrefix = 'Bitacora_Gastos';
+            totalLabel = 'TOTAL GASTOS';
+        } else if (reportType === 'income') {
+            filtered = combined.filter(row => row.category === 'TRANSACTION' || (row.category === 'MOVEMENT' && row.type === 'IN'));
+            sheetName = 'Reporte de Ingresos';
+            filenamePrefix = 'Bitacora_Ingresos';
+            totalLabel = 'TOTAL INGRESOS';
+        }
+
         const ExcelJS = require('exceljs');
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('Bit├ícora Diaria');
+        const sheet = workbook.addWorksheet(sheetName);
 
         sheet.columns = [
-            { header: 'Fecha/Hora', key: 'time', width: 20 },
+            { header: 'Fecha', key: 'date', width: 15 },
+            { header: 'Hora', key: 'time', width: 15 },
             { header: 'Caja (Origen)', key: 'box', width: 15 },
             { header: 'Tipo', key: 'type', width: 15 },
-            { header: 'Cliente / Descripci├│n', key: 'desc', width: 40 },
+            { header: 'Contrato', key: 'contract', width: 12 },
+            { header: 'Cliente', key: 'client', width: 30 },
+            { header: 'Concepto / Razón', key: 'concept', width: 45 },
             { header: 'Estado Cliente', key: 'client_status', width: 15 },
             { header: 'Fecha Corte', key: 'cutoff_date', width: 15 },
-            { header: '├Ültimo Pago', key: 'last_payment_date', width: 15 },
-            { header: 'Fecha Instalaci├│n', key: 'installation_date', width: 18 },
+            { header: 'Último Pago', key: 'last_payment_date', width: 15 },
+            { header: 'Fecha Instalación', key: 'installation_date', width: 18 },
             { header: 'Responsable', key: 'collector', width: 15 },
-            { header: 'M├®todo', key: 'method', width: 10 },
+            { header: 'Método', key: 'method', width: 12 },
             { header: 'Monto', key: 'amount', width: 15 },
             { header: 'Estado', key: 'status', width: 15 },
-            { header: 'Motivo Cancelaci├│n', key: 'reason', width: 30 },
+            { header: 'Motivo Cancelación', key: 'reason', width: 30 },
         ];
 
-        combined.forEach(row => {
+        filtered.forEach(row => {
             const isIncome = (row.type !== 'OUT' && row.type !== 'REFUND' && row.type !== 'void');
             const typeLabel = row.category === 'TRANSACTION' ? 'COBRO' 
                 : row.type === 'IN' ? 'INGRESO' 
-                : row.type === 'REFUND' ? 'DEVOLUCI├ôN' 
+                : row.type === 'REFUND' ? 'DEVOLUCIÓN' 
                 : 'SALIDA';
             const boxLabel = 'GLOBAL';
             
             const statusMap = {
                 'active': 'Activo', 'suspended': 'Cortado', 'disconnected': 'Retirado',
                 'pending_install': 'Pendiente', 'disconnected_by_request': 'Desc. Solicitud',
-                'promotions': 'Promociones', 'courtesy': 'Cortes├¡a', 'provider': 'Proveedor', 'office': 'Oficina'
+                'promotions': 'Promociones', 'courtesy': 'Cortesía', 'provider': 'Proveedor', 'office': 'Oficina'
             };
 
+            const NicaraguanDate = row.created_at ? new Date(row.created_at).toLocaleDateString('es-NI', { timeZone: 'America/Managua' }) : 'N/A';
+            const NicaraguanTime = row.created_at ? new Date(row.created_at).toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+
+            const clientVal = (row.client_name === 'Movimiento Manual') ? 'N/A' : (row.client_name || 'N/A');
+            const conceptVal = row.description || 'N/A';
+
             sheet.addRow({
-                time: formatDateTimeManagua(row.created_at),
+                date: NicaraguanDate,
+                time: NicaraguanTime,
                 box: boxLabel,
                 type: typeLabel,
-                desc: (row.client_name || row.description) + (row.contract_number ? ` (#${row.contract_number})` : ''),
+                contract: row.contract_number || 'N/A',
+                client: clientVal,
+                concept: conceptVal,
                 client_status: statusMap[row.client_status] || row.client_status || 'N/A',
                 cutoff_date: formatDateDMY(row.cutoff_date),
                 last_payment_date: formatDateDMY(row.last_payment_date),
@@ -559,7 +589,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
         // Totals Row
         // Calculate
         let net = 0;
-        combined.forEach(item => {
+        filtered.forEach(item => {
             const val = parseFloat(item.amount) || 0;
             const isCancelled = item.status === 'CANCELLED';
             if (item.category === 'TRANSACTION') {
@@ -571,11 +601,18 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             }
         });
 
+        // Header style
+        sheet.getRow(1).font = { bold: true };
+
+        // Empty spacer row
         sheet.addRow({});
-        sheet.addRow({ desc: 'BALANCE NETO', amount: net });
+
+        // Add total row and format it
+        const totalRow = sheet.addRow({ concept: totalLabel, amount: net });
+        totalRow.font = { bold: true };
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename=Bitacora_${sDate}.xlsx`);
+        res.setHeader('Content-Disposition', `attachment; filename=${filenamePrefix}_${sDate}.xlsx`);
 
         await workbook.xlsx.write(res);
         res.end();
