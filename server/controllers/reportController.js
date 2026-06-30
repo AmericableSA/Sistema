@@ -151,11 +151,11 @@ exports.getSalesChart = async (req, res) => {
         const { startDate, endDate } = req.query;
         const pool = await db.getConnection();
         const [rows] = await pool.query(`
-            SELECT DATE(created_at) as dia, SUM(amount) as total_diario
+            SELECT DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) as dia, SUM(amount) as total_diario
             FROM transactions
             WHERE (status = 'SUCCESS' OR status = 'COMPLETED') AND type != 'void'
             AND DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) BETWEEN ? AND ?
-            GROUP BY DATE(created_at)
+            GROUP BY DATE(CONVERT_TZ(created_at, '+00:00', '-06:00'))
             ORDER BY dia ASC
         `, [startDate, endDate]);
         pool.release();
@@ -274,7 +274,7 @@ exports.getDailyClosing = async (req, res) => {
 
         // 2. Manual Cash Movements (Detecting Refunds by type or prefix)
         const [moveRows] = await pool.query(
-            "SELECT type, amount, description FROM cash_movements WHERE DATE(created_at) BETWEEN ? AND ?",
+            "SELECT type, amount, description FROM cash_movements WHERE DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) BETWEEN ? AND ?",
             [sDate, eDate]
         );
 
@@ -312,7 +312,7 @@ exports.getDailyClosing = async (req, res) => {
                    s.difference, s.closing_note, u.username
             FROM cash_sessions s
             LEFT JOIN users u ON s.user_id = u.id
-            WHERE DATE(s.start_time) BETWEEN ? AND ?
+            WHERE DATE(CONVERT_TZ(s.start_time, '+00:00', '-06:00')) BETWEEN ? AND ?
             ORDER BY s.start_time DESC
         `, [sDate, eDate]);
 
@@ -355,7 +355,7 @@ exports.getDailyDetails = async (req, res) => {
                 u.username, u.role, u.full_name
             FROM cash_sessions s
             JOIN users u ON s.user_id = u.id
-            WHERE DATE(s.start_time) BETWEEN ? AND ?
+            WHERE DATE(CONVERT_TZ(s.start_time, '+00:00', '-06:00')) BETWEEN ? AND ?
             ORDER BY s.start_time DESC
         `, [sDate, eDate]);
 
@@ -399,7 +399,7 @@ exports.getDailyDetails = async (req, res) => {
             FROM cash_movements m
             LEFT JOIN cash_sessions s ON m.session_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
-            WHERE DATE(m.created_at) BETWEEN ? AND ?
+            WHERE DATE(CONVERT_TZ(m.created_at, '+00:00', '-06:00')) BETWEEN ? AND ?
             ORDER BY m.created_at DESC
         `, [sDate, eDate]);
 
@@ -497,7 +497,7 @@ exports.exportDailyDetailsXLS = async (req, res) => {
             FROM cash_movements m
             LEFT JOIN cash_sessions s ON m.session_id = s.id
             LEFT JOIN users u ON s.user_id = u.id
-            WHERE DATE(m.created_at) BETWEEN ? AND ?
+            WHERE DATE(CONVERT_TZ(m.created_at, '+00:00', '-06:00')) BETWEEN ? AND ?
         `, [sDate, eDate]);
 
         const combined = [
