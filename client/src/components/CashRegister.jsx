@@ -4,9 +4,13 @@ import CustomAlert from './CustomAlert';
 import ConfirmModal from './ConfirmModal';
 import ReceiptSettingsModal from './ReceiptSettingsModal';
 import ReceiptModal from './ReceiptModal';
+import * as XLSX from 'xlsx';
 import {
     FaCashRegister, FaHandHoldingUsd, FaHistory, FaLock,
-    FaArrowUp, FaArrowDown, FaBuilding, FaMotorcycle, FaSyncAlt
+    FaArrowUp, FaArrowDown, FaBuilding, FaMotorcycle, FaSyncAlt,
+    FaSearch, FaFileExcel, FaCalendarDay, FaCalendarAlt, FaPrint,
+    FaBan, FaCheckCircle, FaFileInvoiceDollar, FaUser, FaMoneyBillWave,
+    FaFilter, FaTimes, FaCoins, FaCreditCard, FaExchangeAlt
 } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
 import eventBus from '../utils/eventBus';
@@ -37,10 +41,14 @@ const CashRegister = (props) => {
 
     // History & Filters
     const [history, setHistory] = useState([]);
+    const [historySummary, setHistorySummary] = useState({ totalIncome: 0, totalExpense: 0, totalCancelled: 0, netBalance: 0 });
     const [showHistory, setShowHistory] = useState(false);
     const [filterStart, setFilterStart] = useState('');
     const [filterEnd, setFilterEnd] = useState('');
     const [filterCollector, setFilterCollector] = useState('');
+    const [filterTxType, setFilterTxType] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterPaymentMethod, setFilterPaymentMethod] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -67,29 +75,68 @@ const CashRegister = (props) => {
         return () => unsubscribe();
     }, [sessionType]);
 
+    const setQuickDatePreset = (preset) => {
+        const now = new Date();
+        const getISO = (d) => d.toLocaleDateString('sv-SE', { timeZone: 'America/Managua' });
+        
+        if (preset === 'today') {
+            const today = getISO(now);
+            setFilterStart(today);
+            setFilterEnd(today);
+        } else if (preset === 'yesterday') {
+            const yest = new Date(now);
+            yest.setDate(now.getDate() - 1);
+            const yStr = getISO(yest);
+            setFilterStart(yStr);
+            setFilterEnd(yStr);
+        } else if (preset === '7days') {
+            const past7 = new Date(now);
+            past7.setDate(now.getDate() - 6);
+            setFilterStart(getISO(past7));
+            setFilterEnd(getISO(now));
+        } else if (preset === 'month') {
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            setFilterStart(getISO(firstDay));
+            setFilterEnd(getISO(now));
+        } else if (preset === 'all') {
+            setFilterStart('');
+            setFilterEnd('');
+        }
+        setPage(1);
+    };
+
     const handleSearchHistory = () => {
+        setPage(1);
         fetchHistory(true);
     };
 
     const fetchHistory = async (useFilters = false) => {
         try {
             setLoading(true);
-            let url = `/api/billing/history?limit=7&page=${page}&session_type=${sessionType}`; // Added session_type
-            if (useFilters || filterStart || filterEnd || searchTerm || filterCollector) {
+            let url = `/api/billing/history?limit=15&page=${page}&session_type=${sessionType}`;
+            if (useFilters || filterStart || filterEnd || searchTerm || filterCollector || filterTxType !== 'all' || filterStatus !== 'all' || filterPaymentMethod !== 'all') {
                 if (filterStart) url += `&startDate=${filterStart}`;
                 if (filterEnd) url += `&endDate=${filterEnd}`;
                 if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
                 if (filterCollector) url += `&collector=${filterCollector}`;
+                if (filterTxType && filterTxType !== 'all') url += `&txType=${filterTxType}`;
+                if (filterStatus && filterStatus !== 'all') url += `&status=${filterStatus}`;
+                if (filterPaymentMethod && filterPaymentMethod !== 'all') url += `&paymentMethod=${filterPaymentMethod}`;
             }
 
-            const res = await fetch(url);
+            const token = localStorage.getItem('token');
+            const res = await fetch(url, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             const jsonData = await res.json();
 
             if (jsonData.data && Array.isArray(jsonData.data)) {
                 setHistory(jsonData.data);
+                if (jsonData.summary) {
+                    setHistorySummary(jsonData.summary);
+                }
                 if (jsonData.pagination) {
-                    setTotalPages(jsonData.pagination.totalPages);
-                    // Ensure page isn't out of bounds if filters reduce count
+                    setTotalPages(jsonData.pagination.totalPages || 1);
                     if (page > jsonData.pagination.totalPages && jsonData.pagination.totalPages > 0) {
                         setPage(1);
                     }
@@ -105,13 +152,44 @@ const CashRegister = (props) => {
         }
     };
 
+    const handleExportHistoryExcel = () => {
+        try {
+            if (history.length === 0) {
+                return setAlertInfo({ show: true, type: 'warning', title: 'Sin Datos', message: 'No hay transacciones para exportar con los filtros actuales.' });
+            }
+            const rows = history.map(tx => {
+                const dateObj = new Date(tx.created_at);
+                return {
+                    "Fecha": dateObj.toLocaleDateString('es-NI', { timeZone: 'America/Managua' }),
+                    "Hora": dateObj.toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true }),
+                    "No. Factura": tx.reference_id || 'S/N',
+                    "Cliente": tx.client_name || 'N/A',
+                    "No. Contrato": tx.contract_number || 'N/A',
+                    "Tipo": tx.type === 'SALE' ? (tx.tx_category || 'Venta') : (tx.type === 'IN' ? 'Entrada' : 'Salida'),
+                    "Descripción": tx.description || '',
+                    "Método": tx.payment_method === 'cash' ? 'Efectivo' : (tx.payment_method === 'card' ? 'Tarjeta' : (tx.payment_method === 'transfer' ? 'Transferencia' : (tx.payment_method || 'Efectivo'))),
+                    "Monto (NIO)": parseFloat(tx.amount || 0),
+                    "Estado": tx.status === 'CANCELLED' ? 'ANULADA' : 'COMPLETADA',
+                    "Motivo Anulación": tx.cancellation_reason || ''
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Historial");
+            XLSX.writeFile(wb, `Historial_Facturas_${filterStart || 'Todo'}_al_${filterEnd || 'Hoy'}.xlsx`);
+        } catch (e) {
+            console.error("Error al exportar:", e);
+            setAlertInfo({ show: true, type: 'error', title: 'Error', message: 'Error al generar el archivo Excel.' });
+        }
+    };
+
     useEffect(() => {
         if (session) fetchHistory();
-    }, [page, session]);
+    }, [page, session, filterTxType, filterStatus, filterPaymentMethod, filterCollector, filterStart, filterEnd]);
 
     useEffect(() => {
         if (props.viewMode === 'HISTORY') {
-            fetchHistory(true); // Refrescar historial automáticamente al abrir la pestaña
+            fetchHistory(true);
         }
     }, [props.viewMode]);
 
@@ -901,76 +979,204 @@ const CashRegister = (props) => {
                 {/* INLINE HISTORY TABLE */}
                 {props.viewMode === 'HISTORY' && (
                     <div className="animate-entry" style={{ marginTop: '1.5rem' }}>
-                        <div className="glass-panel" style={{ width: '100%', padding: '0', overflow: 'hidden', borderRadius: '24px', display: 'flex', flexDirection: 'column' }}>
-                            {/* Tuani Header */}
-                            <div className="flex-between" style={{ padding: '1.5rem 2rem', background: '#0f172a', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div className="glass-panel" style={{ width: '100%', padding: '0', overflow: 'hidden', borderRadius: '24px', display: 'flex', flexDirection: 'column', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            {/* Header */}
+                            <div className="flex-between" style={{ padding: '1.5rem 2rem', background: '#0f172a', borderBottom: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap', gap: '1rem' }}>
                                 <div className="flex-center" style={{ gap: '12px' }}>
-                                    <span style={{ fontSize: '1.8rem' }}>📜</span>
+                                    <div style={{ background: 'rgba(59, 130, 246, 0.15)', padding: '0.75rem', borderRadius: '14px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                                        <FaFileInvoiceDollar size={24} color="#60a5fa" />
+                                    </div>
                                     <div>
-                                        <h3 className="text-white" style={{ margin: 0, fontSize: '1.25rem', letterSpacing: '0.5px' }}>Historial de Transacciones</h3>
-                                        <small className="text-muted">Movimientos y Ventas Registradas</small>
+                                        <h3 className="text-white" style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800 }}>
+                                            Historial & Bitácora de Facturas
+                                        </h3>
+                                        <small style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                                            Búsqueda por cliente, fechas, tipo de cobro y estado
+                                        </small>
                                     </div>
                                 </div>
-                                <button onClick={() => props.setViewMode('SEARCH')} className="btn-icon-close">×</button>
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                    <button
+                                        onClick={handleExportHistoryExcel}
+                                        className="btn-dark-glow"
+                                        style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)', color: '#34d399', display: 'flex', alignItems: 'center', gap: '6px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: '700' }}
+                                    >
+                                        <FaFileExcel /> Exportar Excel
+                                    </button>
+                                    <button onClick={() => props.setViewMode('SEARCH')} className="btn-icon-close" title="Cerrar Historial">×</button>
+                                </div>
                             </div>
 
-                            {/* Filters Bar */}
-                            <div className="flex-between" style={{ padding: '1.25rem 2rem', background: '#1e293b', gap: '1rem', flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <div className="flex-center filters-container" style={{ gap: '0.8rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <input type="date" className="input-dark" value={filterStart} onChange={e => setFilterStart(e.target.value)} style={{ padding: '0.4rem', fontSize: '0.9rem' }} />
-                                    <span className="text-muted">→</span>
-                                    <input type="date" className="input-dark" value={filterEnd} onChange={e => setFilterEnd(e.target.value)} style={{ padding: '0.4rem', fontSize: '0.9rem' }} />
+                            {/* Summary KPI Cards */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                gap: '1rem',
+                                padding: '1.25rem 2rem',
+                                background: 'rgba(30, 41, 59, 0.5)',
+                                borderBottom: '1px solid rgba(255,255,255,0.06)'
+                            }}>
+                                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '14px', padding: '0.9rem 1.25rem' }}>
+                                    <div style={{ color: '#6ee7b7', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        💵 Ingresos Cobrados
+                                    </div>
+                                    <div style={{ color: '#34d399', fontSize: '1.35rem', fontWeight: '900', marginTop: '4px' }}>
+                                        C$ {historySummary.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
                                 </div>
 
+                                <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '14px', padding: '0.9rem 1.25rem' }}>
+                                    <div style={{ color: '#fca5a5', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        💸 Egresos / Salidas
+                                    </div>
+                                    <div style={{ color: '#f87171', fontSize: '1.35rem', fontWeight: '900', marginTop: '4px' }}>
+                                        C$ {historySummary.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
+                                </div>
+
+                                <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '14px', padding: '0.9rem 1.25rem' }}>
+                                    <div style={{ color: '#fde68a', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        🚫 Facturas Anuladas
+                                    </div>
+                                    <div style={{ color: '#fbbf24', fontSize: '1.35rem', fontWeight: '900', marginTop: '4px' }}>
+                                        C$ {historySummary.totalCancelled.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
+                                </div>
+
+                                <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '14px', padding: '0.9rem 1.25rem' }}>
+                                    <div style={{ color: '#93c5fd', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        ⚖️ Balance Neto
+                                    </div>
+                                    <div style={{ color: historySummary.netBalance >= 0 ? '#60a5fa' : '#ef4444', fontSize: '1.35rem', fontWeight: '900', marginTop: '4px' }}>
+                                        C$ {historySummary.netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Date Chips */}
+                            <div style={{ padding: '0.75rem 2rem', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: '700', marginRight: '4px' }}>
+                                    <FaCalendarDay /> Accesos rápidos:
+                                </span>
+                                <button onClick={() => setQuickDatePreset('today')} className="btn-letter" style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                                    ⚡ Hoy
+                                </button>
+                                <button onClick={() => setQuickDatePreset('yesterday')} className="btn-letter" style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    🗓️ Ayer
+                                </button>
+                                <button onClick={() => setQuickDatePreset('7days')} className="btn-letter" style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    📅 Últimos 7 Días
+                                </button>
+                                <button onClick={() => setQuickDatePreset('month')} className="btn-letter" style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    🗓️ Este Mes
+                                </button>
+                                <button onClick={() => setQuickDatePreset('all')} className="btn-letter" style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    ♾️ Todo
+                                </button>
+                            </div>
+
+                            {/* Detailed Filters Bar */}
+                            <div style={{ padding: '1rem 2rem', background: '#0f172a', gap: '0.75rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                {/* Date Range */}
+                                <div className="flex-center filters-container" style={{ gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.4rem 0.6rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <input type="date" className="input-dark" value={filterStart} onChange={e => setFilterStart(e.target.value)} style={{ padding: '0.35rem', fontSize: '0.85rem' }} />
+                                    <span className="text-muted">→</span>
+                                    <input type="date" className="input-dark" value={filterEnd} onChange={e => setFilterEnd(e.target.value)} style={{ padding: '0.35rem', fontSize: '0.85rem' }} />
+                                </div>
+
+                                {/* Type Selector */}
+                                <select
+                                    className="input-dark"
+                                    value={filterTxType}
+                                    onChange={e => { setFilterTxType(e.target.value); setPage(1); }}
+                                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', minWidth: '150px' }}
+                                >
+                                    <option value="all">🏷️ Todos los Tipos</option>
+                                    <option value="monthly_fee">📅 Mensualidad</option>
+                                    <option value="materials">📦 Venta Materiales / Combos</option>
+                                    <option value="installation">📡 Instalación</option>
+                                    <option value="reconnection">🔌 Reconexión</option>
+                                    <option value="IN">📥 Entradas Manuales</option>
+                                    <option value="OUT">📤 Salidas Manuales</option>
+                                </select>
+
+                                {/* Method Selector */}
+                                <select
+                                    className="input-dark"
+                                    value={filterPaymentMethod}
+                                    onChange={e => { setFilterPaymentMethod(e.target.value); setPage(1); }}
+                                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', minWidth: '140px' }}
+                                >
+                                    <option value="all">💳 Todos los Métodos</option>
+                                    <option value="cash">💵 Efectivo</option>
+                                    <option value="card">💳 Tarjeta</option>
+                                    <option value="transfer">🏦 Transferencia</option>
+                                </select>
+
+                                {/* Status Selector */}
+                                <select
+                                    className="input-dark"
+                                    value={filterStatus}
+                                    onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
+                                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', minWidth: '130px' }}
+                                >
+                                    <option value="all">📊 Todos los Estados</option>
+                                    <option value="SUCCESS">✅ Exitosas</option>
+                                    <option value="CANCELLED">🚫 Anuladas</option>
+                                </select>
+
+                                {/* Collector Selector */}
                                 <select
                                     className="input-dark"
                                     value={filterCollector}
-                                    onChange={e => setFilterCollector(e.target.value)}
-                                    style={{ padding: '0.4rem', fontSize: '0.9rem', maxWidth: '150px' }}
+                                    onChange={e => { setFilterCollector(e.target.value); setPage(1); }}
+                                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem', maxWidth: '140px' }}
                                 >
-                                    <option value="">👤 Todos</option>
+                                    <option value="">👤 Todos los Cobradores</option>
                                     {users.map(u => (
                                         <option key={u.id} value={u.id}>{u.username}</option>
                                     ))}
                                 </select>
 
-                                <div style={{ display: 'flex', gap: '0.5rem', flex: 1, minWidth: '250px' }}>
+                                {/* Search Bar */}
+                                <div style={{ display: 'flex', gap: '0.5rem', flex: 1, minWidth: '220px' }}>
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <input
                                             type="text"
-                                            placeholder="Buscar por cliente, descripción..."
+                                            placeholder="Buscar cliente, contrato, factura..."
                                             className="input-dark"
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && handleSearchHistory()}
-                                            style={{ paddingRight: '2.5rem' }}
+                                            style={{ paddingRight: '2.5rem', fontSize: '0.85rem' }}
                                         />
-                                        <button onClick={handleSearchHistory} className="search-icon-btn">🔍</button>
+                                        <button onClick={handleSearchHistory} className="search-icon-btn" style={{ padding: '0 0.6rem' }}>🔍</button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Data Table Area - Responsive Flex */}
-                            <div style={{ padding: '0', overflowX: 'auto', flex: 1, overflowY: 'auto', minHeight: '300px' }}>
-                                <table className="table-tuani">
+                            {/* Data Table */}
+                            <div style={{ padding: '0', overflowX: 'auto', flex: 1, overflowY: 'auto', minHeight: '320px', WebkitOverflowScrolling: 'touch' }}>
+                                <table className="table-tuani" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: '950px' }}>
                                     <thead>
-                                        <tr>
-                                            <th>Hora</th>
-                                            <th>No. Factura</th>
-                                            <th>Tipo</th>
-                                            <th>Descripción / Cliente</th>
-                                            <th className="text-right">Monto</th>
-                                            <th className="text-center">Acciones</th>
+                                        <tr style={{ background: 'rgba(15, 23, 42, 0.9)' }}>
+                                            <th style={{ padding: '1rem' }}>Fecha / Hora</th>
+                                            <th style={{ padding: '1rem' }}>Factura #</th>
+                                            <th style={{ padding: '1rem' }}>Cliente & Contrato</th>
+                                            <th style={{ padding: '1rem' }}>Tipo & Detalle</th>
+                                            <th style={{ padding: '1rem' }}>Método</th>
+                                            <th style={{ padding: '1rem', textAlign: 'right' }}>Monto</th>
+                                            <th style={{ padding: '1rem', textAlign: 'center' }}>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {loading ? (
-                                            <tr><td colSpan="6" className="text-center" style={{ padding: '4rem' }}><div className="spinner"></div></td></tr>
+                                            <tr><td colSpan="7" className="text-center" style={{ padding: '4rem' }}><div className="spinner"></div></td></tr>
                                         ) : history.length === 0 ? (
                                             <tr>
-                                                <td colSpan="6" className="text-center" style={{ padding: '4rem' }}>
-                                                    <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>📭</div>
-                                                    <p className="text-muted">No se encontraron registros para esta búsqueda.</p>
+                                                <td colSpan="7" className="text-center" style={{ padding: '4rem' }}>
+                                                    <div style={{ fontSize: '3rem', marginBottom: '0.5rem', opacity: 0.5 }}>📭</div>
+                                                    <p className="text-muted" style={{ margin: 0 }}>No se encontraron registros con los filtros seleccionados.</p>
                                                 </td>
                                             </tr>
                                         ) : (
@@ -983,59 +1189,123 @@ const CashRegister = (props) => {
                                                 return (
                                                     <tr key={tx.id || i} className="row-hover" style={{
                                                         opacity: isCancelled ? 0.6 : 1,
-                                                        background: isCancelled ? 'rgba(15, 23, 42, 0.6)' : undefined
+                                                        background: isCancelled ? 'rgba(15, 23, 42, 0.4)' : undefined,
+                                                        borderBottom: '1px solid rgba(255,255,255,0.04)'
                                                     }}>
-                                                        <td style={{ color: isCancelled ? '#94a3b8' : '#94a3b8', fontSize: '0.9rem' }}>
-                                                            <div style={{ fontWeight: 'bold', color: isCancelled ? '#cbd5e1' : '#e2e8f0', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit' })}</div>
-                                                            <div style={{ fontSize: '0.75rem', textDecoration: isCancelled ? 'line-through' : 'none' }}>{dateObj.toLocaleDateString('es-NI', { timeZone: 'America/Managua' })}</div>
+                                                        <td style={{ padding: '0.9rem 1rem', fontSize: '0.85rem' }}>
+                                                            <div style={{ fontWeight: '700', color: isCancelled ? '#cbd5e1' : '#f8fafc', textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                                                                {dateObj.toLocaleDateString('es-NI', { timeZone: 'America/Managua', day: '2-digit', month: 'short', year: 'numeric' })}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                                {dateObj.toLocaleTimeString('es-NI', { timeZone: 'America/Managua', hour12: true, hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
                                                         </td>
-                                                        <td style={{ color: isCancelled ? '#ef4444' : '#f59e0b', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>
-                                                            {tx.reference_id || 'S/N'}
+
+                                                        <td style={{ padding: '0.9rem 1rem' }}>
+                                                            <span style={{
+                                                                background: isCancelled ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                                                color: isCancelled ? '#f87171' : '#fbbf24',
+                                                                border: isCancelled ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+                                                                padding: '0.25rem 0.55rem',
+                                                                borderRadius: '6px',
+                                                                fontWeight: '800',
+                                                                fontSize: '0.85rem',
+                                                                textDecoration: isCancelled ? 'line-through' : 'none'
+                                                            }}>
+                                                                #{tx.reference_id || 'S/N'}
+                                                            </span>
                                                         </td>
-                                                        <td>
-                                                            {isCancelled ? (
-                                                                <span className="badge" style={{ background: '#ef4444', color: 'white', textDecoration: 'none' }}>ANULADO</span>
+
+                                                        <td style={{ padding: '0.9rem 1rem' }}>
+                                                            {tx.client_name ? (
+                                                                <div>
+                                                                    <div style={{ color: isCancelled ? '#94a3b8' : '#f1f5f9', fontWeight: '700', fontSize: '0.95rem', textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                                                                        {tx.client_name}
+                                                                    </div>
+                                                                    {tx.contract_number && (
+                                                                        <div style={{ fontSize: '0.75rem', color: '#60a5fa' }}>
+                                                                            Contrato: <strong>{tx.contract_number}</strong>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             ) : (
-                                                                <span className={`badge ${isIncome ? 'badge-success' : 'badge-danger'}`}>
-                                                                    {tx.type === 'SALE' ? 'VENTA' : tx.type}
-                                                                </span>
+                                                                <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.85rem' }}>Movimiento de Caja</span>
                                                             )}
                                                         </td>
-                                                        <td>
-                                                            <div style={{ color: isCancelled ? '#ef4444' : '#f1f5f9', fontWeight: '500', textDecoration: isCancelled ? 'line-through' : 'none' }}>{tx.client_name || tx.description}</div>
-                                                            {tx.client_name && tx.description && tx.description !== tx.client_name && (
-                                                                <div style={{ fontSize: '0.8rem', color: isCancelled ? '#fca5a5' : '#64748b', textDecoration: isCancelled ? 'line-through' : 'none' }}>{tx.description}</div>
-                                                            )}
+
+                                                        <td style={{ padding: '0.9rem 1rem' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                                {isCancelled ? (
+                                                                    <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+                                                                        ANULADO
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`badge ${isIncome ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.75rem' }}>
+                                                                        {tx.type === 'SALE' ? (tx.tx_category === 'monthly_fee' ? 'Mensualidad' : (tx.tx_category || 'Venta')) : tx.type}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.8rem', color: isCancelled ? '#fca5a5' : '#cbd5e1', marginTop: '3px', textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                                                                {tx.description}
+                                                            </div>
                                                             {isCancelled && tx.cancellation_reason && (
                                                                 <div style={{ fontSize: '0.75rem', color: '#ef4444', fontStyle: 'italic', marginTop: '2px' }}>
                                                                     Motivo: {tx.cancellation_reason}
                                                                 </div>
                                                             )}
                                                         </td>
-                                                        <td className="text-right">
-                                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: isCancelled ? '#ef4444' : (isIncome ? '#34d399' : '#f87171'), textDecoration: isCancelled ? 'line-through' : 'none' }}>
+
+                                                        <td style={{ padding: '0.9rem 1rem' }}>
+                                                            <span style={{
+                                                                background: 'rgba(255,255,255,0.05)',
+                                                                color: '#cbd5e1',
+                                                                padding: '0.2rem 0.5rem',
+                                                                borderRadius: '6px',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: '600',
+                                                                border: '1px solid rgba(255,255,255,0.08)'
+                                                            }}>
+                                                                {tx.payment_method === 'cash' ? '💵 Efectivo' : (tx.payment_method === 'card' ? '💳 Tarjeta' : (tx.payment_method === 'transfer' ? '🏦 Transferencia' : (tx.payment_method || 'Efectivo')))}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="text-right" style={{ padding: '0.9rem 1rem' }}>
+                                                            <span style={{
+                                                                fontSize: '1.15rem',
+                                                                fontWeight: '800',
+                                                                color: isCancelled ? '#ef4444' : (isIncome ? '#34d399' : '#f87171'),
+                                                                textDecoration: isCancelled ? 'line-through' : 'none'
+                                                            }}>
                                                                 {isIncome ? '+' : '-'} C$ {Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                             </span>
                                                         </td>
-                                                        <td className="text-center" style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                                                            {isSale && !isCancelled && (
-                                                                <button onClick={() => handleReprint(tx.id)} className="btn-icon-soft" title="Reimprimir Recibo">
-                                                                    🖨️
-                                                                </button>
-                                                            )}
-                                                            {!isCancelled && isSale && (
-                                                                <button
-                                                                    onClick={() => setCancelTxId(tx.id)}
-                                                                    className="btn-icon-soft"
-                                                                    title="Cancelar Factura"
-                                                                    style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
-                                                                >
-                                                                    ❌
-                                                                </button>
-                                                            )}
-                                                            {isCancelled && (
-                                                                <span style={{ fontSize: '1.2rem', cursor: 'help' }} title="Factura Cancelada">🚫</span>
-                                                            )}
+
+                                                        <td className="text-center" style={{ padding: '0.9rem 1rem' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                                                                {isSale && !isCancelled && (
+                                                                    <button
+                                                                        onClick={() => handleReprint(tx.id)}
+                                                                        className="btn-icon-soft"
+                                                                        title="Reimprimir Recibo"
+                                                                        style={{ padding: '0.4rem 0.6rem', background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#60a5fa' }}
+                                                                    >
+                                                                        <FaPrint size={13} />
+                                                                    </button>
+                                                                )}
+                                                                {!isCancelled && isSale && (
+                                                                    <button
+                                                                        onClick={() => setCancelTxId(tx.id)}
+                                                                        className="btn-icon-soft"
+                                                                        title="Anular Factura"
+                                                                        style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.4rem 0.6rem' }}
+                                                                    >
+                                                                        <FaBan size={13} />
+                                                                    </button>
+                                                                )}
+                                                                {isCancelled && (
+                                                                    <span style={{ fontSize: '1.1rem', color: '#ef4444' }} title="Factura Anulada">🚫</span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -1046,7 +1316,7 @@ const CashRegister = (props) => {
                             </div>
 
                             {/* Pagination Footer */}
-                            <div className="flex-between" style={{ padding: '1rem 2rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: '#0f172a' }}>
+                            <div className="flex-between" style={{ padding: '1rem 2rem', borderTop: '1px solid rgba(255,255,255,0.06)', background: '#0f172a' }}>
                                 <div className="text-muted" style={{ fontSize: '0.9rem' }}>
                                     Página <span style={{ color: 'white', fontWeight: 'bold' }}>{page}</span> de {totalPages || 1}
                                 </div>
@@ -1061,8 +1331,7 @@ const CashRegister = (props) => {
                             </div>
                         </div>
                     </div>
-                )
-                }
+                )}
 
                 {
                     showJustifyPrompt && (

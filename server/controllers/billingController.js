@@ -257,20 +257,20 @@ exports.createTransaction = async (req, res) => {
     } finally {
         conn.release();
     }
-};// 3. Get History (Filtered) — Timezone-safe: Nicaragua CST (UTC-6)
+// 3. Get History (Filtered) — Timezone-safe: Nicaragua CST (UTC-6)
 exports.getDailyTransactions = async (req, res) => {
     try {
-        const { startDate, endDate, search, limit, collector } = req.query;
+        const { startDate, endDate, search, limit, collector, txType, status, paymentMethod } = req.query;
 
         // ── Zona horaria Nicaragua: convertimos created_at a UTC-6 para filtrar por fecha local ──
-        // Esto evita el error clásico de "el día empieza 6 horas tarde" cuando MySQL está en UTC
         const TZ_FROM = '+00:00';
         const TZ_NI = '-06:00';
 
         // Base Queries — usamos CONVERT_TZ para que DATE() aplique en hora de Nicaragua
         let querySales = `
             SELECT t.id, t.amount, t.description, t.created_at, 'SALE' as type,
-                   c.full_name as client_name, t.status, t.cancellation_reason,
+                   t.type as tx_category, t.payment_method,
+                   c.full_name as client_name, c.contract_number, t.status, t.cancellation_reason,
                    COALESCE(NULLIF(t.reference_id, ''), '⚠️ SIN NUMERO ⚠️') as reference_id
             FROM transactions t
             LEFT JOIN clients c ON t.client_id = c.id
@@ -278,7 +278,8 @@ exports.getDailyTransactions = async (req, res) => {
         `;
         let queryMoves = `
             SELECT id, amount, description, created_at, type,
-                   NULL as client_name, 'COMPLETED' as status, NULL as cancellation_reason, NULL as reference_id
+                   type as tx_category, 'cash' as payment_method,
+                   NULL as client_name, NULL as contract_number, 'COMPLETED' as status, NULL as cancellation_reason, NULL as reference_id
             FROM cash_movements
             WHERE 1=1
         `;
@@ -303,22 +304,56 @@ exports.getDailyTransactions = async (req, res) => {
         if (collector && collector !== '') {
             querySales += ` AND t.collector_id = ?`;
             paramsSales.push(collector);
-            // Los movimientos de caja no tienen collector directo, se excluyen si se filtra por cobrador
             queryMoves += ` AND 1=0`;
         }
 
-        // ── Búsqueda de texto ──
+        // ── Filtro por Categoría de Transacción (Mensualidad, Instalación, Materiales, Movimiento) ──
+        if (txType && txType !== 'all') {
+            if (txType === 'IN' || txType === 'OUT') {
+                querySales += ` AND 1=0`;
+                queryMoves += ` AND type = ?`;
+                paramsMoves.push(txType);
+            } else if (txType === 'materials' || txType === 'material_sale') {
+                querySales += ` AND (t.type = 'material_sale' OR t.description LIKE '%Material%' OR t.description LIKE '%Producto%')`;
+                queryMoves += ` AND 1=0`;
+            } else {
+                querySales += ` AND t.type = ?`;
+                paramsSales.push(txType);
+                queryMoves += ` AND 1=0`;
+            }
+        }
+
+        // ── Filtro por Método de Pago ──
+        if (paymentMethod && paymentMethod !== 'all') {
+            querySales += ` AND t.payment_method = ?`;
+            paramsSales.push(paymentMethod);
+            if (paymentMethod !== 'cash') {
+                queryMoves += ` AND 1=0`;
+            }
+        }
+
+        // ── Filtro por Estado (SUCCESS/COMPLETED vs CANCELLED) ──
+        if (status && status !== 'all') {
+            if (status === 'CANCELLED') {
+                querySales += ` AND t.status = 'CANCELLED'`;
+                queryMoves += ` AND 1=0`;
+            } else if (status === 'SUCCESS' || status === 'COMPLETED') {
+                querySales += ` AND (t.status = 'SUCCESS' OR t.status = 'COMPLETED')`;
+            }
+        }
+
+        // ── Búsqueda de texto (Nombre, Contrato, Factura, Concepto) ──
         if (search) {
             const likeTerm = `%${search}%`;
-            querySales += ' AND (t.description LIKE ? OR c.full_name LIKE ? OR c.id LIKE ? OR t.reference_id LIKE ?)';
+            querySales += ' AND (t.description LIKE ? OR c.full_name LIKE ? OR c.contract_number LIKE ? OR c.id LIKE ? OR t.reference_id LIKE ?)';
             queryMoves += ' AND (description LIKE ? OR id LIKE ?)';
-            paramsSales.push(likeTerm, likeTerm, likeTerm, likeTerm);
+            paramsSales.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
             paramsMoves.push(likeTerm, likeTerm);
         }
 
         // ── Paginación ──
         const pageNum = parseInt(limit === 'all' ? 1 : req.query.page) || 1;
-        const pageSize = parseInt(limit === 'all' ? 1000000 : limit) || 10;
+        const pageSize = parseInt(limit === 'all' ? 1000000 : limit) || 15;
         const offset = (pageNum - 1) * pageSize;
 
         const finalQuery = `
@@ -334,19 +369,31 @@ exports.getDailyTransactions = async (req, res) => {
         const finalParams = [...paramsSales, ...paramsMoves, pageSize, offset];
         const [rows] = await db.query(finalQuery, finalParams);
 
-        // ── Conteo total para paginación ──
-        const countQuery = `
-            SELECT COUNT(*) as total FROM (
+        // ── Conteo total y métricas sumarias ──
+        const summaryQuery = `
+            SELECT 
+                COUNT(*) as total_count,
+                COALESCE(SUM(CASE WHEN (type = 'SALE' OR type = 'IN') AND (status != 'CANCELLED' OR status IS NULL) THEN amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN type = 'OUT' THEN amount ELSE 0 END), 0) as total_expense,
+                COALESCE(SUM(CASE WHEN status = 'CANCELLED' THEN amount ELSE 0 END), 0) as total_cancelled
+            FROM (
                 ${querySales}
                 UNION ALL
                 ${queryMoves}
-            ) as combined_count
+            ) as combined_summary
         `;
-        const [countRes] = await db.query(countQuery, [...paramsSales, ...paramsMoves]);
-        const total = countRes[0].total;
+        const [summaryRes] = await db.query(summaryQuery, [...paramsSales, ...paramsMoves]);
+        const summary = summaryRes[0] || { total_count: 0, total_income: 0, total_expense: 0, total_cancelled: 0 };
+        const total = summary.total_count;
 
         res.json({
             data: rows,
+            summary: {
+                totalIncome: parseFloat(summary.total_income || 0),
+                totalExpense: parseFloat(summary.total_expense || 0),
+                totalCancelled: parseFloat(summary.total_cancelled || 0),
+                netBalance: parseFloat(summary.total_income || 0) - parseFloat(summary.total_expense || 0)
+            },
             pagination: {
                 total,
                 page: pageNum,
