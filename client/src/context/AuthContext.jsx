@@ -99,7 +99,15 @@ export const AuthProvider = ({ children }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
-            const data = await res.json();
+            let data = {};
+            try {
+                data = await res.json();
+            } catch (jsonErr) {
+                if (res.status === 502 || res.status === 503 || res.status === 504) {
+                    throw new Error('El servidor se está reiniciando o actualizando. Por favor espere unos segundos e intente de nuevo.');
+                }
+                throw new Error('Error de conexión con el servidor.');
+            }
 
             if (!res.ok) throw new Error(data.msg || 'Error al iniciar sesión');
 

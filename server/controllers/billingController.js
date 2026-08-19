@@ -257,6 +257,8 @@ exports.createTransaction = async (req, res) => {
     } finally {
         conn.release();
     }
+};
+
 // 3. Get History (Filtered) — Timezone-safe: Nicaragua CST (UTC-6)
 exports.getDailyTransactions = async (req, res) => {
     try {
