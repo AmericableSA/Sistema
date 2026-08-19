@@ -70,6 +70,60 @@ function App() {
   const location = useLocation();
   const { user } = useAuth();
 
+  // ── Auto-Update Sentinel: Detecta actualizaciones y recarga automáticamente sin Shift + F5 ──
+  React.useEffect(() => {
+    let currentBootTime: string | null = null;
+    let isChecking = false;
+
+    const checkServerVersion = async () => {
+      if (isChecking) return;
+      isChecking = true;
+      try {
+        const res = await fetch('/api/version', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.bootTime) {
+            if (currentBootTime && currentBootTime !== data.bootTime) {
+              console.log('🚀 Nueva actualización detectada en el servidor. Sincronizando interfaz automáticamente...');
+              // Limpiar ServiceWorker caches para forzar assets nuevos
+              if ('caches' in window) {
+                try {
+                  const keys = await caches.keys();
+                  await Promise.all(keys.map(k => caches.delete(k)));
+                } catch (e) { }
+              }
+              window.location.reload();
+              return;
+            }
+            currentBootTime = data.bootTime;
+          }
+        }
+      } catch (err) {
+        // Red no disponible temporalmente
+      } finally {
+        isChecking = false;
+      }
+    };
+
+    checkServerVersion();
+    const interval = setInterval(checkServerVersion, 45000);
+
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === 'visible') {
+        checkServerVersion();
+      }
+    };
+
+    window.addEventListener('focus', onFocusOrVisible);
+    document.addEventListener('visibilitychange', onFocusOrVisible);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocusOrVisible);
+      document.removeEventListener('visibilitychange', onFocusOrVisible);
+    };
+  }, []);
+
   if (location.pathname === '/login') {
     return <Routes><Route path="/login" element={<Login />} /></Routes>;
   }

@@ -22,6 +22,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rutas de la API (Prioridad)
+const SERVER_BOOT_TIME = new Date().toISOString();
+app.get('/api/version', (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.json({
+        bootTime: SERVER_BOOT_TIME,
+        timestamp: Date.now()
+    });
+});
+
 app.use('/api/products', require('./routes/products'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/users', require('./routes/users'));
@@ -37,15 +46,29 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/notifications', require('./routes/webNotifications'));
 
-// Archivos Estáticos
-app.use(express.static(path.join(__dirname, '../client/dist')));
+// Servir /assets/ con hash inmutable (1 año) para máxima velocidad
+app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'), {
+    maxAge: '1y',
+    immutable: true
+}));
 
-// SOLUCIÓN AL PathError: Captura todo sin usar caracteres conflictivos
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
-});
+// Servir el resto de archivos estáticos (index.html, sw.js, manifest) SIN CACHÉ persistente
+app.use(express.static(path.join(__dirname, '../client/dist'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('sw.js') || filePath.endsWith('registerSW.js') || filePath.endsWith('.webmanifest')) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 
-app.get('/login', (req, res) => {
+// SPA Fallback: Captura cualquier ruta que no sea /api y entrega index.html fresco
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 
