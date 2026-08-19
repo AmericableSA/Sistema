@@ -40,19 +40,21 @@ exports.getBundleDetails = async (req, res) => {
 
 // Create a new product
 exports.createProduct = async (req, res) => {
-    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, bundle_items, unit_of_measure, creates_service_order, service_order_type } = req.body;
+    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, bundle_items, unit_of_measure, creates_service_order, service_order_type, is_for_sale } = req.body;
 
     // Default to 'product' if not specified
     const prodType = type || 'product';
-    const initialStock = prodType === 'bundle' ? 0 : (current_stock || 0); // Bundles don't carry physical stock themselves usually, or calculated.
+    const initialStock = prodType === 'bundle' ? 0 : (current_stock || 0);
+    const saleFlag = (is_for_sale === 0 || is_for_sale === false) ? 0 : 1;
 
     const connection = await db.getConnection();
     try {
+        await ensureProductSaleColumn();
         await connection.beginTransaction();
 
         const [result] = await connection.query(
-            'INSERT INTO products (sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, unit_of_measure, creates_service_order, service_order_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [sku, name, description, category_id, provider_id || null, initialStock, min_stock_alert || 5, unit_cost || 0, selling_price, prodType, unit_of_measure || 'Unidad', creates_service_order ? 1 : 0, service_order_type || null]
+            'INSERT INTO products (sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, type, unit_of_measure, creates_service_order, service_order_type, is_for_sale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [sku, name, description, category_id, provider_id || null, initialStock, min_stock_alert || 5, unit_cost || 0, selling_price, prodType, unit_of_measure || 'Unidad', creates_service_order ? 1 : 0, service_order_type || null, saleFlag]
         );
         const newId = result.insertId;
 
@@ -75,7 +77,7 @@ exports.createProduct = async (req, res) => {
         }
 
         await connection.commit();
-        res.status(201).json({ id: newId, ...req.body });
+        res.status(201).json({ id: newId, ...req.body, is_for_sale: saleFlag });
     } catch (err) {
         await connection.rollback();
         console.error(err);
@@ -88,7 +90,7 @@ exports.createProduct = async (req, res) => {
 // Update a product
 exports.updateProduct = async (req, res) => {
     const { id } = req.params;
-    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, user_id, reason, type, bundle_items, unit_of_measure, creates_service_order, service_order_type } = req.body;
+    const { sku, name, description, category_id, provider_id, current_stock, min_stock_alert, unit_cost, selling_price, user_id, reason, type, bundle_items, unit_of_measure, creates_service_order, service_order_type, is_for_sale } = req.body;
 
     if (!name || isNaN(selling_price)) {
         return res.status(400).json({ msg: 'Nombre y Precio de Venta son obligatorios.' });
@@ -96,6 +98,7 @@ exports.updateProduct = async (req, res) => {
 
     const connection = await db.getConnection();
     try {
+        await ensureProductSaleColumn();
         await connection.beginTransaction();
 
         // 1. Get old data with Lock
@@ -118,16 +121,17 @@ exports.updateProduct = async (req, res) => {
         const oldStock = Number(oldProduct.current_stock);
         const newStock = isNaN(current_stock) ? oldStock : Number(current_stock);
         let stockDiff = 0;
-
-        if (oldStock !== newStock) {
+        if (newStock !== oldStock) {
             stockDiff = newStock - oldStock;
-            changes.push(`Stock: ${oldStock} -> ${newStock}`);
+            changes.push(`Stock: ${oldStock} -> ${newStock} (${stockDiff > 0 ? '+' : ''}${stockDiff})`);
         }
 
-        // 3. Update Product Main Data
+        const saleFlag = is_for_sale !== undefined ? ((is_for_sale === 0 || is_for_sale === false) ? 0 : 1) : (oldProduct.is_for_sale !== undefined ? oldProduct.is_for_sale : 1);
+
+        // 3. Update Database
         await connection.query(
-            'UPDATE products SET sku=?, name=?, description=?, category_id=?, provider_id=?, current_stock=?, min_stock_alert=?, unit_cost=?, selling_price=?, type=?, unit_of_measure=?, creates_service_order=?, service_order_type=?, updated_at=NOW() WHERE id=?',
-            [sku, name, description, category_id, provider_id || null, newStock, min_stock_alert || 5, unit_cost || 0, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', creates_service_order ? 1 : 0, service_order_type || null, id]
+            'UPDATE products SET sku = ?, name = ?, description = ?, category_id = ?, provider_id = ?, current_stock = ?, min_stock_alert = ?, unit_cost = ?, selling_price = ?, type = ?, unit_of_measure = ?, creates_service_order = ?, service_order_type = ?, is_for_sale = ?, updated_at = NOW() WHERE id = ?',
+            [sku, name, description, category_id, provider_id || null, newStock, min_stock_alert || 5, unit_cost || 0, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', creates_service_order ? 1 : 0, service_order_type || null, saleFlag, id]
         );
 
         // 4. Handle Bundle Items Update
@@ -351,3 +355,39 @@ exports.exportProductsXLS = async (req, res) => {
         res.status(500).send('Error exportando excel: ' + err.message);
     }
 };
+
+// Auto-check for is_for_sale column
+let isSaleColumnChecked = false;
+async function ensureProductSaleColumn() {
+    if (isSaleColumnChecked) return;
+    try {
+        await db.query("ALTER TABLE products ADD COLUMN is_for_sale TINYINT(1) DEFAULT 1");
+    } catch (e) {
+        // column already exists
+    }
+    isSaleColumnChecked = true;
+}
+
+// Toggle product sale status
+exports.toggleSaleStatus = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await ensureProductSaleColumn();
+        const [rows] = await db.query('SELECT id, is_for_sale FROM products WHERE id = ?', [id]);
+        if (!rows.length) return res.status(404).json({ msg: 'Producto no encontrado' });
+
+        const currentStatus = (rows[0].is_for_sale === 0) ? 0 : 1;
+        const newStatus = currentStatus === 1 ? 0 : 1;
+
+        await db.query('UPDATE products SET is_for_sale = ? WHERE id = ?', [newStatus, id]);
+        res.json({
+            id: parseInt(id),
+            is_for_sale: newStatus,
+            msg: newStatus === 1 ? 'Producto activado para la venta en caja' : 'Producto desactivado para la venta en caja'
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Error al alternar estado de venta: ' + err.message });
+    }
+};
+

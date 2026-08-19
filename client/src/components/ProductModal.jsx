@@ -373,6 +373,35 @@ const ProductModal = ({ product, allProducts, onClose, onSave }) => {
                         <input type="number" step="0.01" className="input-dark" name="selling_price" value={formData.selling_price} onChange={handleChange} />
                     </div>
 
+                    {/* ACTIVAR PARA VENTA EN CAJA */}
+                    <div style={{
+                        background: (formData.is_for_sale === 0) ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                        border: (formData.is_for_sale === 0) ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '1rem'
+                    }}>
+                        <div>
+                            <div style={{ fontWeight: 700, color: (formData.is_for_sale === 0) ? '#f87171' : '#34d399', fontSize: '0.95rem' }}>
+                                🛒 Activar para Venta en Facturación
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
+                                Si está activado, aparecerá en el menú de cobro y venta de materiales en caja.
+                            </div>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={formData.is_for_sale !== 0}
+                                onChange={e => setFormData(prev => ({ ...prev, is_for_sale: e.target.checked ? 1 : 0 }))}
+                                style={{ width: '22px', height: '22px', accentColor: '#10b981', cursor: 'pointer' }}
+                            />
+                        </label>
+                    </div>
+
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <button type="button" onClick={onClose} className="btn-secondary" style={{ flex: 1, padding: '0.8rem', background: 'transparent', border: '1px solid #475569', color: '#cbd5e1' }}>Cancelar</button>
                         <button type="submit" className="btn-primary-glow" style={{ flex: 1, padding: '0.8rem' }}>

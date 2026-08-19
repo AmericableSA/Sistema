@@ -35,6 +35,10 @@ router.put('/:id', productController.updateProduct);
 // @desc    Delete a product
 router.delete('/:id', productController.deleteProduct);
 
+// @route   PUT /api/products/:id/toggle-sale
+// @desc    Toggle product is_for_sale status
+router.put('/:id/toggle-sale', productController.toggleSaleStatus);
+
 router.get('/export/excel', productController.exportProductsXLS);
 router.get('/bundles/:id', productController.getBundleDetails);
 

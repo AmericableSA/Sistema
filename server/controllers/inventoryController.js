@@ -2,10 +2,17 @@ const db = require('../config/db');
 
 exports.getProductsForBilling = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, name, price, current_stock FROM products WHERE is_active = 1 ORDER BY name ASC');
+        // Solo productos activos y habilitados para la venta (is_for_sale != 0)
+        const [rows] = await db.query(`
+            SELECT id, name, COALESCE(selling_price, price, 0) as price, selling_price, current_stock, type 
+            FROM products 
+            WHERE is_active = 1 AND (is_for_sale IS NULL OR is_for_sale = 1)
+            ORDER BY name ASC
+        `);
         res.json(rows);
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
     }
 };
+
