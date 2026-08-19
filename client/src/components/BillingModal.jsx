@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     FaMoneyBillWave, FaCalendarCheck, FaReceipt, FaUser, FaUserCheck,
     FaCreditCard, FaExchangeAlt, FaShieldAlt, FaTimes, FaCheckCircle,
-    FaBoxOpen, FaTools, FaPercentage, FaCheck
+    FaBoxOpen, FaTools, FaPercentage, FaCheck, FaSearch
 } from 'react-icons/fa';
 import CustomAlert from './CustomAlert';
 import eventBus from '../utils/eventBus';
