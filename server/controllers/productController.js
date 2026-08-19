@@ -391,3 +391,17 @@ exports.toggleSaleStatus = async (req, res) => {
     }
 };
 
+// Toggle Product Sale status
+exports.toggleProductSale = async (req, res) => {
+    const { id } = req.params;
+    const { is_for_sale } = req.body;
+    
+    try {
+        await ensureProductSaleColumn();
+        await db.query('UPDATE products SET is_for_sale = ? WHERE id = ?', [is_for_sale ? 1 : 0, id]);
+        res.json({ msg: 'Product sale status updated successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server Error' });
+    }
+};

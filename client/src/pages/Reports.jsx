@@ -774,7 +774,7 @@ const Reports = () => {
                     </Value>
                     <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
                         {dailyClosing.egresos === 0
-                            ? 'Igual a ingresos (0 gastos en periodo)'
+                            ? 'Balance 100% de Ingresos (Cero Gastos en el periodo)'
                             : `Ingresos (${formatCurrency(dailyClosing.ingresos)}) - Gastos (${formatCurrency(dailyClosing.egresos)})`}
                     </div>
                     <ActionButton

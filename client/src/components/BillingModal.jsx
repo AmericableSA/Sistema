@@ -49,6 +49,10 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
     const [manualInvoiceNo, setManualInvoiceNo] = useState('');
     const [installationPrice, setInstallationPrice] = useState(500);
 
+    // Product Search Modal
+    const [showProductModal, setShowProductModal] = useState(false);
+    const [productSearch, setProductSearch] = useState('');
+
     const [alert, setAlert] = useState({ show: false, title: '', message: '', type: 'info' });
 
     // Anuncio Personalizado Post-Cobro
@@ -479,16 +483,67 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
 
                         {/* PRODUCT SELECTOR (For Materials) */}
                         {type === 'material_sale' && (
-                            <div className="flex-col animate-slide-up" style={{ marginTop: '1rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <FaBoxOpen color="#60a5fa" /> Seleccionar Material / Producto
+                            <div className="flex-col animate-slide-up" style={{ marginTop: '1rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+                                <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <FaBoxOpen color="#60a5fa" /> Materiales a Vender
                                 </label>
-                                <select className="input-dark" onChange={e => handleAddToCart(e.target.value)}>
-                                    <option value="">-- Agregar al Carrito --</option>
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} - C$ {parseFloat(p.price || p.selling_price || 0).toFixed(2)} (Stock: {p.current_stock || 0})</option>
-                                    ))}
-                                </select>
+                                
+                                {/* Autocomplete Product Search */}
+                                <div style={{ position: 'relative', marginTop: '0.5rem' }}>
+                                    <div style={{ position: 'relative' }}>
+                                        <FaSearch color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                        <input
+                                            type="text"
+                                            className="input-dark"
+                                            placeholder="Escriba para buscar material..."
+                                            value={productSearch}
+                                            onChange={e => {
+                                                setProductSearch(e.target.value);
+                                                if (e.target.value.length > 0) setShowProductModal(true);
+                                                else setShowProductModal(false);
+                                            }}
+                                            onFocus={() => { if (products.length > 0) setShowProductModal(true); }}
+                                            onBlur={() => setTimeout(() => setShowProductModal(false), 250)}
+                                            style={{ paddingLeft: '35px', width: '100%', borderRadius: '12px' }}
+                                        />
+                                    </div>
+
+                                    {showProductModal && (
+                                        <div style={{ 
+                                            position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, 
+                                            maxHeight: '220px', overflowY: 'auto', background: '#1e293b', 
+                                            border: '1px solid #3b82f6', borderRadius: '12px', 
+                                            zIndex: 50, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' 
+                                        }}>
+                                            {products
+                                                .filter(p => p.is_for_sale !== 0)
+                                                .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                                .slice(0, 20) // limit results for better performance
+                                                .map(p => (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => { 
+                                                        handleAddToCart(p.id); 
+                                                        setProductSearch(''); 
+                                                        setShowProductModal(false); 
+                                                    }}
+                                                    style={{ padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 0.2s' }}
+                                                    onMouseOver={e => e.currentTarget.style.background = 'rgba(59,130,246,0.2)'}
+                                                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <div style={{ color: 'white', fontWeight: '600', fontSize: '0.9rem' }}>{p.name}</div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginTop: '2px' }}>
+                                                        <span style={{ color: '#34d399' }}>C$ {parseFloat(p.price || p.selling_price || 0).toFixed(2)}</span>
+                                                        <span style={{ color: '#94a3b8' }}>Stock: {p.current_stock || 0}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {products.filter(p => p.is_for_sale !== 0 && p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+                                                <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>No hay resultados</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
 
                                 {/* Cart Mini-View */}
                                 <div style={{ maxHeight: '160px', overflowY: 'auto', marginTop: '0.75rem' }}>

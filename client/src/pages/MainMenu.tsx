@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FaBoxOpen, FaUsers, FaCashRegister, FaChartPie, FaUserShield } from 'react-icons/fa';
 
 const MainMenu = () => {
     const { user, hasRole } = useAuth();
@@ -11,7 +12,7 @@ const MainMenu = () => {
             desc: 'Materiales y Stock',
             path: '/inventory',
             color: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-            icon: '📦',
+            icon: <FaBoxOpen />,
             roles: ['admin', 'bodeguero']
         },
         {
@@ -19,7 +20,7 @@ const MainMenu = () => {
             desc: 'Contratos y Servicios',
             path: '/clients',
             color: 'linear-gradient(135deg, #10b981, #059669)',
-            icon: 'busts_in_silhouette',
+            icon: <FaUsers />,
             roles: ['admin', 'cajero', 'oficinista']
         },
         {
@@ -27,7 +28,7 @@ const MainMenu = () => {
             desc: 'Pagos y Recibos',
             path: '/billing',
             color: 'linear-gradient(135deg, #f59e0b, #d97706)',
-            icon: 'credit_card',
+            icon: <FaCashRegister />,
             roles: ['admin', 'cajero', 'oficinista']
         },
         {
@@ -35,7 +36,7 @@ const MainMenu = () => {
             desc: 'Estadísticas Globales',
             path: '/reports',
             color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-            icon: 'bar_chart',
+            icon: <FaChartPie />,
             roles: ['admin'] // Restricted
         },
         {
@@ -43,7 +44,7 @@ const MainMenu = () => {
             desc: 'Gestión de Acceso',
             path: '/users',
             color: 'linear-gradient(135deg, #ec4899, #db2777)',
-            icon: 'lock',
+            icon: <FaUserShield />,
             roles: ['admin']
         },
     ];
@@ -131,11 +132,7 @@ const MainMenu = () => {
                                 zIndex: 1,
                                 transition: 'transform 0.4s'
                             }} className="menu-icon">
-                                {mod.icon === 'busts_in_silhouette' ? '👥' :
-                                    mod.icon === 'credit_card' ? '💳' :
-                                        mod.icon === 'bar_chart' ? '📊' :
-                                            mod.icon === 'lock' ? '🔐' :
-                                                mod.icon === 'receipt' ? '🧾' : mod.icon}
+                                {mod.icon}
                             </div>
                             
                             <div style={{ position: 'relative', zIndex: 1 }}>

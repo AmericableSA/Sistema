@@ -123,6 +123,29 @@ const Inventory = () => {
         }
     };
 
+    const handleToggleSale = async (product) => {
+        const newStatus = product.is_for_sale === 1 ? 0 : 1;
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/products/${product.id}/toggle-sale`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ is_for_sale: newStatus })
+            });
+            if (res.ok) {
+                fetchProducts();
+                setAlert({ show: true, type: 'success', title: 'Actualizado', message: 'Estado de venta actualizado.' });
+            } else {
+                setAlert({ show: true, type: 'error', title: 'Error', message: 'No se pudo actualizar.' });
+            }
+        } catch (e) {
+            setAlert({ show: true, type: 'error', title: 'Error', message: 'Error de red.' });
+        }
+    };
+
     const handleDeleteProduct = (product) => {
         setConfirm({
             show: true,
