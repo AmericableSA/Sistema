@@ -494,13 +494,14 @@ button {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 10000;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 1rem;
+  align-items: flex-start;
+  padding: 5vh 1rem;
   overflow-y: auto;
 }
 
@@ -515,6 +516,7 @@ button {
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+  margin: auto; /* IMPORTANTE: centra verticalmente si es más pequeño que el alto */
 }
 
 @media (max-width: 480px) {
