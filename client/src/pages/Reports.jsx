@@ -20,18 +20,20 @@ const getTodayISO = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Am
 const fadeIn = keyframes`from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }`;
 
 const PageWrapper = styled.div`
-  padding: clamp(1rem, 3vw, 2.5rem);
+  padding: clamp(0.75rem, 2.5vw, 2.5rem);
   background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 100%);
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
   color: #f8fafc;
   animation: ${fadeIn} 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-x: hidden;
 `;
 
 const Header = styled.header`
-  display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2rem;
+  display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 2rem;
   background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(16px);
-  padding: 1.5rem; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08);
+  padding: clamp(1rem, 2.5vw, 1.5rem); border-radius: clamp(16px, 3vw, 24px);
+  border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   @media (min-width: 1024px) { flex-direction: row; justify-content: space-between; align-items: flex-start; }
 `;
@@ -39,20 +41,21 @@ const Header = styled.header`
 const HeaderControls = styled.div`
   display: flex; 
   flex-wrap: wrap; 
-  gap: 1rem; 
+  gap: 0.75rem; 
   align-items: center;
   justify-content: flex-start;
-  @media (min-width: 1024px) { justify-content: flex-end; }
+  width: 100%;
+  @media (min-width: 1024px) { width: auto; justify-content: flex-end; }
   
   & > button, & > div {
     flex: 1 1 100%;
-    @media (min-width: 640px) { flex: 1 1 calc(50% - 0.5rem); }
+    @media (min-width: 600px) { flex: 1 1 calc(50% - 0.5rem); }
     @media (min-width: 1024px) { flex: 0 1 auto; }
   }
 `;
 
 const TitleHeader = styled.h1`
-  font-size: clamp(1.5rem, 4vw, 2.2rem); color: white; margin: 0; font-weight: 800;
+  font-size: clamp(1.4rem, 4vw, 2.2rem); color: white; margin: 0; font-weight: 800;
   background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 50%, #94a3b8 100%); 
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   line-height: 1.2;
@@ -60,16 +63,20 @@ const TitleHeader = styled.h1`
 
 const Grid = styled.div`
   display: grid; 
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); 
-  gap: 1.5rem; 
-  margin-bottom: 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+  gap: clamp(0.75rem, 2vw, 1.5rem); 
+  margin-bottom: 2rem;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const Card = styled.div`
   background: rgba(30, 41, 59, 0.5); 
   backdrop-filter: blur(12px);
-  padding: 1.5rem; 
-  border-radius: 20px;
+  padding: clamp(1rem, 2.5vw, 1.5rem); 
+  border-radius: clamp(14px, 2.5vw, 20px);
   border: 1px solid rgba(255,255,255,0.05); 
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -78,9 +85,9 @@ const Card = styled.div`
   justify-content: space-between;
 
   &:hover { 
-    transform: translateY(-5px) scale(1.02); 
+    transform: translateY(-4px); 
     border-color: rgba(255,255,255,0.15); 
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.25);
   }
   ${props => props.$highlight && css`
     background: ${props.$highlight}; 
@@ -90,15 +97,16 @@ const Card = styled.div`
 `;
 
 const Value = styled.div`
-  font-size: clamp(1.8rem, 3vw, 2.2rem); 
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem); 
   font-weight: 800; 
   color: white; 
-  margin: 0.5rem 0;
+  margin: 0.4rem 0;
   text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  word-break: break-word;
 `;
 
 const Label = styled.div`
-  font-size: 0.85rem; 
+  font-size: clamp(0.75rem, 1.8vw, 0.85rem); 
   font-weight: 700; 
   color: #94a3b8; 
   text-transform: uppercase; 
@@ -106,18 +114,20 @@ const Label = styled.div`
   display: flex; 
   align-items: center; 
   gap: 0.5rem;
+  flex-wrap: wrap;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: clamp(1.1rem, 2vw, 1.4rem); 
+  font-size: clamp(1.05rem, 2.2vw, 1.4rem); 
   color: #f1f5f9; 
   margin-bottom: 1rem; 
   font-weight: 700; 
   border-left: 4px solid #3b82f6; 
-  padding-left: 1rem;
+  padding-left: 0.85rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 `;
 
 const OverflowWrapper = styled.div`
@@ -132,8 +142,8 @@ const OverflowWrapper = styled.div`
 `;
 
 const CashClosingTable = styled.table`
-    width: 100%; border-collapse: separate; border-spacing: 0; min-width: 400px;
-    th, td { padding: 1.2rem 1rem; text-align: left; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    width: 100%; border-collapse: separate; border-spacing: 0; min-width: 380px;
+    th, td { padding: clamp(0.75rem, 1.8vw, 1.2rem) clamp(0.6rem, 1.5vw, 1rem); text-align: left; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); }
     th { font-weight: 600; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(0,0,0,0.2); }
     tr:last-child td { border-bottom: none; }
     tr { transition: background-color 0.2s; }
@@ -146,10 +156,12 @@ const DateInputContainer = styled.div`
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 14px;
-  padding: 0.7rem 1.2rem;
+  padding: 0.6rem 1rem;
   gap: 0.5rem;
   transition: all 0.3s ease;
   box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  width: 100%;
+  @media (min-width: 600px) { width: auto; }
   &:hover, &:focus-within { 
     border-color: rgba(59, 130, 246, 0.5); 
     background: rgba(30, 41, 59, 0.8); 
@@ -159,8 +171,8 @@ const DateInputContainer = styled.div`
 
 const DateInput = styled.input`
   background: transparent; border: none; color: white;
-  font-family: inherit; font-size: 0.95rem; font-weight: 500;
-  width: 130px;
+  font-family: inherit; font-size: 0.9rem; font-weight: 500;
+  width: 120px;
   &::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; transition: filter 0.2s; }
   &::-webkit-calendar-picker-indicator:hover { filter: invert(1); }
   outline: none;
@@ -168,9 +180,11 @@ const DateInput = styled.input`
 
 const ActionButton = styled.button`
   display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-  padding: 0.8rem 1.5rem; border-radius: 14px; font-weight: 600; font-size: 0.95rem;
+  padding: 0.75rem 1.25rem; border-radius: 14px; font-weight: 600; font-size: 0.9rem;
   cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
+  min-height: 44px;
+  text-align: center;
 
   ${props => props.$variant === 'primary' && css`
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -554,7 +568,10 @@ const Reports = () => {
                     <ActionButton
                         $variant="outline-success"
                         onClick={() => {
-                            fetch('/api/clients/export-routes-xls')
+                            const token = localStorage.getItem('token');
+                            fetch('/api/clients/export-routes-xls', {
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                            })
                                 .then(res => {
                                     if (!res.ok) throw new Error('Error en descarga');
                                     return res.blob();
@@ -691,13 +708,16 @@ const Reports = () => {
             </div>
             <Grid>
                 <Card $highlight="linear-gradient(135deg, #059669 0%, #10b981 100%)">
-                    <Label style={{ color: 'white' }}><FaCashRegister /> Ingresos</Label>
+                    <Label style={{ color: 'white' }}><FaCashRegister /> Total Ingresos</Label>
                     <Value>{formatCurrency(dailyClosing.ingresos)}</Value>
-                    <div style={{ color: '#d1fae5', fontSize: '0.9rem' }}>Cobrado en transacciones</div>
+                    <div style={{ color: '#d1fae5', fontSize: '0.85rem' }}>Facturas cobradas + Entradas</div>
                     <ActionButton
-                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+                        style={{ marginTop: '0.75rem', padding: '0.5rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
                         onClick={() => {
-                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=income`)
+                            const token = localStorage.getItem('token');
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=income`, {
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                            })
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);
@@ -709,17 +729,22 @@ const Reports = () => {
                                     a.remove();
                                 });
                         }}>
-                        📥 Exportar Detalle
+                        📥 Exportar Ingresos
                     </ActionButton>
                 </Card>
                 <Card $highlight="linear-gradient(135deg, #dc2626 0%, #ef4444 100%)">
-                    <Label style={{ color: 'white' }}><FaExchangeAlt /> Gastos</Label>
+                    <Label style={{ color: 'white' }}><FaExchangeAlt /> Total Gastos / Salidas</Label>
                     <Value>{formatCurrency(dailyClosing.egresos)}</Value>
-                    <div style={{ color: '#fecaca' }}>Pagos y Salidas</div>
+                    <div style={{ color: '#fecaca', fontSize: '0.85rem' }}>
+                        {dailyClosing.egresos === 0 ? 'Sin gastos registrados en el periodo' : 'Egresos y pagos operativos'}
+                    </div>
                     <ActionButton
-                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+                        style={{ marginTop: '0.75rem', padding: '0.5rem 0.8rem', fontSize: '0.85rem', width: '100%', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
                         onClick={() => {
-                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=expense`)
+                            const token = localStorage.getItem('token');
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=expense`, {
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                            })
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);
@@ -731,7 +756,7 @@ const Reports = () => {
                                     a.remove();
                                 });
                         }}>
-                        📥 Exportar Detalle
+                        📥 Exportar Gastos
                     </ActionButton>
                 </Card>
                 {/* Devoluciones - facturas anuladas, NO es gasto */}
@@ -739,20 +764,27 @@ const Reports = () => {
                     <Card style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)' }}>
                         <Label style={{ color: 'white' }}><FaUndo /> Devoluciones</Label>
                         <Value>{formatCurrency(dailyClosing.devoluciones)}</Value>
-                        <div style={{ color: '#ddd6fe', fontSize: '0.85rem' }}>Facturas anuladas (no es gasto)</div>
+                        <div style={{ color: '#ddd6fe', fontSize: '0.85rem' }}>Facturas anuladas (no resta caja)</div>
                     </Card>
                 )}
-                <Card>
-                    <Label><FaMoneyBillWave /> Balance Neto</Label>
+                <Card style={{ border: '1px solid rgba(59, 130, 246, 0.3)', background: 'rgba(15, 23, 42, 0.7)' }}>
+                    <Label style={{ color: '#60a5fa' }}><FaMoneyBillWave /> Balance Neto en Caja</Label>
                     <Value style={{ color: dailyClosing.balance_dia >= 0 ? '#4ade80' : '#ef4444' }}>
                         {formatCurrency(dailyClosing.balance_dia)}
                     </Value>
-                    <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Diferencia (Caja Real)</div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                        {dailyClosing.egresos === 0
+                            ? 'Igual a ingresos (0 gastos en periodo)'
+                            : `Ingresos (${formatCurrency(dailyClosing.ingresos)}) - Gastos (${formatCurrency(dailyClosing.egresos)})`}
+                    </div>
                     <ActionButton
                         $variant="outline-primary"
-                        style={{ marginTop: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
+                        style={{ marginTop: '0.75rem', padding: '0.5rem 0.8rem', fontSize: '0.85rem', width: '100%' }}
                         onClick={() => {
-                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=all`)
+                            const token = localStorage.getItem('token');
+                            fetch(`/api/reports/daily-details/export?startDate=${startDate}&endDate=${endDate}&reportType=all`, {
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                            })
                                 .then(res => res.blob())
                                 .then(blob => {
                                     const url = window.URL.createObjectURL(blob);
@@ -764,7 +796,7 @@ const Reports = () => {
                                     a.remove();
                                 });
                         }}>
-                        📥 Exportar Detalle
+                        📥 Exportar Balance
                     </ActionButton>
                 </Card>
             </Grid>

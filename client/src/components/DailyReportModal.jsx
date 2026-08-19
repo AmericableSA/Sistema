@@ -76,6 +76,19 @@ const Footer = styled.div`
   }
 `;
 
+const FooterStats = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  align-items: center;
+  flex: 1 1 auto;
+  justify-content: flex-start;
+
+  @media (min-width: 768px) {
+    justify-content: flex-end;
+  }
+`;
+
 const TableWrapper = styled.div`
   width: 100%;
   overflow-x: auto;
@@ -140,14 +153,16 @@ const DailyReportModal = ({ onClose }) => {
     const fetchReport = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/reports/daily-details?startDate=${date}&endDate=${date}`);
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/reports/daily-details?startDate=${date}&endDate=${date}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             const json = await res.json();
-            // Handle both legacy (array) and new (object) structures gracefully during potential transition
-            if (json.office) {
+            if (json.globalBox || json.office) {
                 setData(json);
             } else {
-                // Fallback for old API response style (should not happen after deploy)
                 setData({
+                    globalBox: { data: json.details || [], sessions: [], summary: json.summary || {} },
                     office: { data: json.details || [], sessions: [], summary: json.summary || {} },
                     collectors: { data: [], sessions: [], summary: {} },
                     grandTotal: json.summary || {}
@@ -166,10 +181,13 @@ const DailyReportModal = ({ onClose }) => {
 
     const handleExport = async () => {
         const btn = document.getElementById('btn-export-daily');
-        if (btn) btn.innerText = '⌛...';
+        if (btn) btn.innerText = '⌛ Generando...';
 
         try {
-            const res = await fetch(`/api/reports/daily-details/export?startDate=${date}&endDate=${date}`);
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/reports/daily-details/export?startDate=${date}&endDate=${date}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             if (!res.ok) throw new Error('Error generando reporte');
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
@@ -369,7 +387,7 @@ const DailyReportModal = ({ onClose }) => {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(1rem, 3vw, 3rem)', alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-start', '@media (min-width: 768px)': { justifyContent: 'flex-end' } }}>
+                    <FooterStats>
                         <div>
                             <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Global Ingresos</div>
                             <div style={{ fontSize: '1.2rem', color: '#34d399', fontWeight: 'bold' }}>{formatMoney((data.grandTotal?.totalSales || data.grandTotal?.sales || 0) + (data.grandTotal?.totalManualIn || data.grandTotal?.entries || 0))}</div>
@@ -382,7 +400,7 @@ const DailyReportModal = ({ onClose }) => {
                             <div style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gran Total Efectivo</div>
                             <div style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', color: '#fbbf24', fontWeight: '900', textShadow: '0 4px 10px rgba(251, 191, 36, 0.3)', lineHeight: '1' }}>{formatMoney(data.grandTotal?.net)}</div>
                         </div>
-                    </div>
+                    </FooterStats>
                 </Footer>
             </ModalContent>
         </ModalOverlay >

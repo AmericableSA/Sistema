@@ -1,5 +1,7 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 exports.login = async (req, res) => {
     const { username, password } = req.body;
@@ -16,18 +18,26 @@ exports.login = async (req, res) => {
         const user = users[0];
 
         // Compare hashed password
-        const isMatch = await bcrypt.compare(password, user.password_hash || user.password); // Fallback to 'password' column if migration incomplete, but mainly password_hash
+        const isMatch = await bcrypt.compare(password, user.password_hash || user.password);
 
         if (!isMatch) {
             return res.status(401).json({ msg: 'Contraseña incorrecta' });
         }
 
-        // Return user info (excluding password)
-        res.json({
+        const payload = {
             id: user.id,
             username: user.username,
             full_name: user.full_name,
             role: user.role
+        };
+
+        // Sign JWT with 12 hours expiration
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '12h' });
+
+        // Return user info and JWT token
+        res.json({
+            ...payload,
+            token
         });
 
     } catch (err) {
@@ -37,3 +47,25 @@ exports.login = async (req, res) => {
         if (pool) pool.release();
     }
 };
+
+exports.verifyTokenOnline = async (req, res) => {
+    try {
+        // req.user was populated by verifyToken middleware
+        const pool = await db.getConnection();
+        const [users] = await pool.query('SELECT id, username, full_name, role FROM users WHERE id = ?', [req.user.id]);
+        pool.release();
+
+        if (users.length === 0) {
+            return res.status(401).json({ valid: false, msg: 'Usuario ya no existe en el sistema.' });
+        }
+
+        res.json({
+            valid: true,
+            user: users[0]
+        });
+    } catch (err) {
+        console.error('Verify Token Error:', err);
+        res.status(500).json({ valid: false, msg: 'Error verificando sesión' });
+    }
+};
+

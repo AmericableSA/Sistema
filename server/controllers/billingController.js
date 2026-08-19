@@ -136,11 +136,11 @@ exports.createTransaction = async (req, res) => {
         );
         const transactionId = trxRes.insertId;
 
-        // Inventory Logic (Enhanced for Bundles)
+        // Inventory Logic (Enhanced for Bundles and Kardex History)
         if (items && items.length > 0) {
             for (const item of items) {
                 // 1. Check Product Type
-                const [pRows] = await conn.query('SELECT id, type, current_stock, name, creates_service_order, service_order_type FROM products WHERE id = ?', [item.product_id]);
+                const [pRows] = await conn.query('SELECT id, type, current_stock, name, selling_price, creates_service_order, service_order_type FROM products WHERE id = ?', [item.product_id]);
                 if (!pRows.length) throw new Error(`Producto ID ${item.product_id} no encontrado.`);
                 const product = pRows[0];
 
@@ -154,18 +154,19 @@ exports.createTransaction = async (req, res) => {
                     // Multiply: BundleQty (Sold) * IngredientQty (Recipe)
                     itemsToDeduct = bItems.map(bi => ({
                         product_id: bi.product_id,
-                        quantity: bi.quantity * item.quantity
+                        quantity: bi.quantity * item.quantity,
+                        bundleName: product.name
                     }));
                 } else if (product.type === 'product') {
                     // Regular Product
-                    itemsToDeduct = [{ product_id: item.product_id, quantity: item.quantity }];
+                    itemsToDeduct = [{ product_id: item.product_id, quantity: item.quantity, bundleName: null }];
                 }
                 // Services don't deduct stock
 
-                // 2. Process Deductions
+                // 2. Process Deductions & Kardex Tracking
                 for (const dItem of itemsToDeduct) {
                     // Check Stock
-                    const [stockRows] = await conn.query('SELECT current_stock, name FROM products WHERE id = ?', [dItem.product_id]);
+                    const [stockRows] = await conn.query('SELECT current_stock, name, selling_price, unit_cost FROM products WHERE id = ?', [dItem.product_id]);
                     if (!stockRows.length) continue;
 
                     const comp = stockRows[0];
@@ -173,13 +174,25 @@ exports.createTransaction = async (req, res) => {
                         throw new Error(`Stock insuficiente de: ${comp.name} (Req: ${dItem.quantity}, Disp: ${comp.current_stock})`);
                     }
 
-                    // Deduct
+                    // Deduct Stock from Products
                     await conn.query('UPDATE products SET current_stock = current_stock - ? WHERE id = ?', [dItem.quantity, dItem.product_id]);
 
-                    // Log Move
+                    // Log to inventory_moves (legacy/operational)
                     await conn.query(
                         `INSERT INTO inventory_moves(product_id, transaction_id, quantity, type) VALUES(?, ?, ?, 'sale')`,
                         [dItem.product_id, transactionId, -dItem.quantity]
+                    );
+
+                    // Log to inventory_transactions (Core Kardex History)
+                    const invoiceRef = reference_id || `#${transactionId}`;
+                    const reasonText = dItem.bundleName
+                        ? `Venta Combo ${dItem.bundleName} (Factura ${invoiceRef})`
+                        : `Venta Factura ${invoiceRef} - ${comp.name} (x${dItem.quantity})`;
+
+                    await conn.query(
+                        `INSERT INTO inventory_transactions (product_id, user_id, transaction_type, quantity, unit_price, reason)
+                         VALUES (?, ?, 'OUT', ?, ?, ?)`,
+                        [dItem.product_id, reqUserId, dItem.quantity, comp.selling_price || 0, reasonText]
                     );
                 }
 
@@ -482,6 +495,55 @@ exports.cancelTransaction = async (req, res) => {
                 // Safely revert month using Database logic instead of JS Dates timezone parsing
                 if (monthsPaid > 0) {
                     await conn.query('UPDATE clients SET last_paid_month = DATE_SUB(last_paid_month, INTERVAL ? MONTH) WHERE id = ?', [monthsPaid, tx.client_id]);
+                }
+            }
+        }
+
+        // 5b. Revert Inventory Stock & Log Reversal (if items were sold)
+        let parsedDetails = {};
+        if (typeof tx.details_json === 'string') {
+            try { parsedDetails = JSON.parse(tx.details_json); } catch (e) { }
+        } else if (typeof tx.details_json === 'object' && tx.details_json !== null) {
+            parsedDetails = tx.details_json;
+        }
+
+        if (parsedDetails.items && Array.isArray(parsedDetails.items) && parsedDetails.items.length > 0) {
+            for (const item of parsedDetails.items) {
+                const [pRows] = await conn.query('SELECT id, type, name, selling_price FROM products WHERE id = ?', [item.product_id]);
+                if (!pRows.length) continue;
+                const product = pRows[0];
+
+                let itemsToRestore = [];
+                if (product.type === 'bundle') {
+                    const [bItems] = await conn.query('SELECT product_id, quantity FROM bundle_items WHERE bundle_id = ?', [item.product_id]);
+                    itemsToRestore = bItems.map(bi => ({
+                        product_id: bi.product_id,
+                        quantity: bi.quantity * item.quantity,
+                        bundleName: product.name
+                    }));
+                } else if (product.type === 'product') {
+                    itemsToRestore = [{ product_id: item.product_id, quantity: item.quantity, bundleName: null }];
+                }
+
+                for (const rItem of itemsToRestore) {
+                    await conn.query('UPDATE products SET current_stock = current_stock + ? WHERE id = ?', [rItem.quantity, rItem.product_id]);
+
+                    const invoiceRef = tx.reference_id || `#${id}`;
+                    const revReason = rItem.bundleName
+                        ? `Anulación Factura ${invoiceRef} - Devolución Combo ${rItem.bundleName}`
+                        : `Anulación Factura ${invoiceRef} - Devolución ${product.name} (x${rItem.quantity})`;
+
+                    await conn.query(
+                        `INSERT INTO inventory_transactions (product_id, user_id, transaction_type, quantity, unit_price, reason)
+                         VALUES (?, ?, 'IN', ?, ?, ?)`,
+                        [rItem.product_id, validUserId, rItem.quantity, product.selling_price || 0, revReason]
+                    );
+
+                    await conn.query(
+                        `INSERT INTO inventory_moves (product_id, transaction_id, quantity, type)
+                         VALUES (?, ?, ?, 'adjustment')`,
+                        [rItem.product_id, id, rItem.quantity]
+                    );
                 }
             }
         }
