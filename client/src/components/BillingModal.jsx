@@ -81,10 +81,10 @@ const BillingModal = ({ client, onClose, onPaymentSuccess, defaultTargetBox }) =
     useEffect(() => {
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         Promise.all([
-            fetch('/api/billing/products', { headers }).then(r => r.json()),
-            fetch('/api/billing/plans', { headers }).then(r => r.json()),
-            fetch(`/api/billing/details/${client.id}`, { headers }).then(r => r.json()),
-            fetch('/api/users', { headers }).then(r => r.json())
+            fetch('/api/billing/products', { headers }).then(r => r.ok ? r.json() : []),
+            fetch('/api/billing/plans', { headers }).then(r => r.ok ? r.json() : []),
+            fetch(`/api/billing/details/${client.id}`, { headers }).then(r => r.ok ? r.json() : {}),
+            fetch('/api/users', { headers }).then(r => r.ok ? r.json() : [])
         ]).then(([dProds, dPlans, dClient, dUsers]) => {
             setProducts(Array.isArray(dProds) ? dProds : []);
             setPlans(Array.isArray(dPlans) ? dPlans : []);
