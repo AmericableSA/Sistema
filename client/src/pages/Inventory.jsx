@@ -7,6 +7,7 @@ import {
 import ProductModal from '../components/ProductModal';
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 import CustomAlert from '../components/CustomAlert';
+import ConfirmModal from '../components/ConfirmModal';
 import ComboManagerModal from '../components/ComboManagerModal';
 import InventoryHistoryModal from '../components/InventoryHistoryModal';
 import FullPageLoader from '../components/FullPageLoader';
@@ -178,39 +179,189 @@ const Inventory = () => {
         }
     };
 
+    /* ═══ MOBILE CARD RENDER ═══ */
+    const renderMobileCard = (product) => {
+        const isForSale = product.is_for_sale !== 0;
+        return (
+            <div key={product.id} style={{
+                background: 'rgba(15, 23, 42, 0.6)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '16px',
+                padding: '1rem',
+                marginBottom: '0.75rem',
+                transition: 'all 0.2s'
+            }}>
+                {/* Top: Name + Type badge */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {product.name}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                            SKU: {product.sku || '—'} · ID: {product.id}
+                        </div>
+                    </div>
+                    {product.type === 'bundle' ? (
+                        <span style={{ background: 'rgba(139,92,246,0.15)', color: '#c084fc', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', border: '1px solid rgba(139,92,246,0.35)', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <FaLayerGroup size={10} /> Combo
+                        </span>
+                    ) : product.type === 'service' ? (
+                        <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', border: '1px solid rgba(59,130,246,0.35)', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <FaTools size={10} /> Servicio
+                        </span>
+                    ) : (
+                        <span style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', border: '1px solid rgba(52,211,153,0.3)', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <FaBoxOpen size={10} /> Producto
+                        </span>
+                    )}
+                </div>
+
+                {/* Middle: Price + Stock */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', padding: '0.6rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px' }}>
+                    <div>
+                        <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Precio Venta</div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
+                            C$ {Number(product.selling_price || 0).toFixed(2)}
+                        </div>
+                    </div>
+                    {product.type !== 'bundle' && product.type !== 'service' && (
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Stock</div>
+                            <div style={{
+                                fontSize: '1.15rem', fontWeight: 800,
+                                color: product.current_stock <= product.min_stock_alert ? '#ef4444' : '#22c55e'
+                            }}>
+                                {product.current_stock} <span style={{ fontSize: '0.7rem', fontWeight: 500, color: '#94a3b8' }}>{product.unit_of_measure || 'Und'}</span>
+                            </div>
+                            {product.current_stock <= product.min_stock_alert && (
+                                <div style={{ fontSize: '0.6rem', color: '#ef4444', fontWeight: 800, textTransform: 'uppercase' }}>Stock Crítico</div>
+                            )}
+                        </div>
+                    )}
+                    <div style={{ textAlign: 'center' }}>
+                        <button
+                            onClick={() => handleToggleSale(product)}
+                            style={{
+                                background: isForSale ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)',
+                                border: isForSale ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(239,68,68,0.35)',
+                                color: isForSale ? '#34d399' : '#f87171',
+                                padding: '0.3rem 0.6rem', borderRadius: '8px', cursor: 'pointer',
+                                fontSize: '0.7rem', fontWeight: 700,
+                                display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}
+                        >
+                            {isForSale ? <><FaCheckCircle size={10} /> Venta</> : <><FaBan size={10} /> Inactivo</>}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Bottom: Action buttons */}
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {product.type !== 'bundle' && product.type !== 'service' && (
+                        <>
+                            <button
+                                onClick={() => { setStockProduct({ ...product, _defaultType: 'IN' }); setShowStockModal(true); }}
+                                style={{
+                                    flex: '1 1 auto', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)',
+                                    color: '#4ade80', padding: '0.4rem 0.6rem', borderRadius: '8px',
+                                    cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                                }}
+                            >
+                                <FaArrowDown size={10} /> Entrada
+                            </button>
+                            <button
+                                onClick={() => { setStockProduct({ ...product, _defaultType: 'OUT' }); setShowStockModal(true); }}
+                                style={{
+                                    flex: '1 1 auto', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                                    color: '#f87171', padding: '0.4rem 0.6rem', borderRadius: '8px',
+                                    cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                                }}
+                            >
+                                <FaArrowUp size={10} /> Salida
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={() => { setQuickPriceProduct(product); setQuickPriceValue(product.selling_price); }}
+                        style={{
+                            flex: '1 1 auto', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)',
+                            color: '#fbbf24', padding: '0.4rem 0.6rem', borderRadius: '8px',
+                            cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                    >
+                        <FaCoins size={10} /> Precio
+                    </button>
+                    <button
+                        onClick={() => handleEdit(product)}
+                        style={{
+                            background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                            color: '#60a5fa', padding: '0.4rem 0.6rem', borderRadius: '8px',
+                            cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                    >
+                        <FaEdit size={10} /> Editar
+                    </button>
+                    <button
+                        onClick={() => handleDeleteProduct(product)}
+                        style={{
+                            background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                            color: '#f87171', padding: '0.4rem 0.6rem', borderRadius: '8px',
+                            cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                    >
+                        <FaTrash size={10} />
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    /* ═══ Detect mobile ═══ */
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
-        <div className="page-container" style={{ padding: 'clamp(1rem, 2.5vw, 2rem)' }}>
+        <div className="page-container" style={{ padding: 'clamp(0.75rem, 2.5vw, 2rem)' }}>
             {loading && <FullPageLoader />}
 
-            <div className="animate-entry page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div className="animate-entry page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
-                    <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)', margin: 0, fontWeight: '800', color: 'white' }}>
+                    <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 'clamp(1.3rem, 3.5vw, 2.2rem)', margin: 0, fontWeight: '800', color: 'white' }}>
                         <FaBoxes color="#3b82f6" /> Inventario General
                     </h1>
-                    <p style={{ color: '#94a3b8', margin: '0.4rem 0 0 0', fontSize: '0.95rem' }}>
-                        Control de existencias, precios y activación exclusiva de productos para venta en caja.
+                    <p style={{ color: '#94a3b8', margin: '0.4rem 0 0 0', fontSize: 'clamp(0.8rem, 1.5vw, 0.95rem)' }}>
+                        Control de existencias, precios y activación de productos para venta en caja.
                     </p>
                 </div>
 
-                <div className="header-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div className="header-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button
                         className="btn-dark-glow"
                         onClick={handleExport}
-                        style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#34d399', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
+                        style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#34d399', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', padding: '0.6rem 1rem', fontSize: '0.85rem' }}
                     >
-                        <FaFileExcel /> Exportar Excel
+                        <FaFileExcel /> <span className="hide-mobile-text">Exportar</span> Excel
                     </button>
                     <button
                         className="btn-dark-glow"
                         onClick={() => setShowComboManager(true)}
-                        style={{ background: 'rgba(124, 58, 237, 0.12)', border: '1px solid rgba(124, 58, 237, 0.35)', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
+                        style={{ background: 'rgba(124, 58, 237, 0.12)', border: '1px solid rgba(124, 58, 237, 0.35)', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', padding: '0.6rem 1rem', fontSize: '0.85rem' }}
                     >
                         <FaLayerGroup /> Combos
                     </button>
                     <button
                         className="btn-dark-glow"
                         onClick={() => setShowHistoryModal(true)}
-                        style={{ background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.35)', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
+                        style={{ background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.35)', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', padding: '0.6rem 1rem', fontSize: '0.85rem' }}
                     >
                         <FaHistory /> Historial
                     </button>
@@ -218,178 +369,188 @@ const Inventory = () => {
                     <button
                         className="btn-dark-glow"
                         onClick={() => handleCreate('product')}
-                        style={{ padding: '0.8rem 1.4rem', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.35)' }}
+                        style={{ padding: '0.6rem 1.2rem', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.35)', fontSize: '0.85rem' }}
                     >
-                        <FaPlus /> NUEVO PRODUCTO
+                        <FaPlus /> NUEVO
                     </button>
                 </div>
             </div>
 
-            <div className="animate-entry" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ position: 'relative', width: '100%', maxWidth: '420px' }}>
+            {/* Search bar */}
+            <div className="animate-entry" style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', flex: '1 1 250px', maxWidth: '420px' }}>
                     <FaSearch style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                     <input
                         type="text"
-                        placeholder="Buscar por SKU o Nombre de producto..."
+                        placeholder="Buscar por SKU o Nombre..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="input-dark"
                         style={{ width: '100%', paddingLeft: '2.75rem', borderRadius: '12px' }}
                     />
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                <div style={{ color: '#94a3b8', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                     Total: <strong style={{ color: 'white' }}>{filteredProducts.length}</strong> ítems
                 </div>
             </div>
 
-            <div className="glass-card" style={{ padding: '0', overflow: 'hidden', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(30, 41, 59, 0.5)' }}>
-                <div className="responsive-table-wrapper" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                    <table className="table-tuani" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: '850px' }}>
-                        <thead>
-                            <tr style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
-                                <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SKU</th>
-                                <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Producto</th>
-                                <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipo</th>
-                                <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Stock / Unidad</th>
-                                <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Precio Venta</th>
-                                <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Venta en Caja</th>
-                                <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Accediendo a base de datos...</td></tr>
-                            ) : filteredProducts.length === 0 ? (
-                                <tr><td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>{searchTerm ? 'No se encontraron productos.' : 'No hay productos registrados.'}</td></tr>
-                            ) : filteredProducts.map((product) => {
-                                const isForSale = product.is_for_sale !== 0;
-                                return (
-                                    <tr key={product.id} style={{
-                                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                                        transition: 'background 0.2s'
-                                    }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        <td style={{ padding: '1.1rem 1.25rem', color: 'white', fontWeight: 600 }}>
-                                            {product.sku}
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>ID: {product.id}</div>
-                                        </td>
-                                        <td style={{ padding: '1.1rem 1.25rem', color: '#e2e8f0' }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>{product.name}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {product.description || 'Sin descripción'}
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '1.1rem 1.25rem' }}>
-                                            {product.type === 'bundle' ? (
-                                                <span style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c084fc', padding: '0.3rem 0.65rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(139, 92, 246, 0.35)', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                    <FaLayerGroup size={12} /> Combo
-                                                </span>
-                                            ) : product.type === 'service' ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {/* ═══════ CONTENT: Table (desktop) or Cards (mobile) ═══════ */}
+            {isMobile ? (
+                /* ─── MOBILE CARDS ─── */
+                <div className="animate-entry">
+                    {loading ? (
+                        <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Accediendo a base de datos...</div>
+                    ) : filteredProducts.length === 0 ? (
+                        <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>{searchTerm ? 'No se encontraron productos.' : 'No hay productos registrados.'}</div>
+                    ) : (
+                        filteredProducts.map(product => renderMobileCard(product))
+                    )}
+                </div>
+            ) : (
+                /* ─── DESKTOP TABLE ─── */
+                <div style={{ padding: '0', overflow: 'hidden', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(30, 41, 59, 0.5)' }}>
+                    <div className="responsive-table-wrapper" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                        <table className="table-tuani" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: '850px' }}>
+                            <thead>
+                                <tr style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
+                                    <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SKU</th>
+                                    <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Producto</th>
+                                    <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipo</th>
+                                    <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Stock / Unidad</th>
+                                    <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Precio Venta</th>
+                                    <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Venta en Caja</th>
+                                    <th style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Accediendo a base de datos...</td></tr>
+                                ) : filteredProducts.length === 0 ? (
+                                    <tr><td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>{searchTerm ? 'No se encontraron productos.' : 'No hay productos registrados.'}</td></tr>
+                                ) : filteredProducts.map((product) => {
+                                    const isForSale = product.is_for_sale !== 0;
+                                    return (
+                                        <tr key={product.id} style={{
+                                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                            transition: 'background 0.2s'
+                                        }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <td style={{ padding: '1.1rem 1.25rem', color: 'white', fontWeight: 600 }}>
+                                                {product.sku}
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>ID: {product.id}</div>
+                                            </td>
+                                            <td style={{ padding: '1.1rem 1.25rem', color: '#e2e8f0' }}>
+                                                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>{product.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {product.description || 'Sin descripción'}
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '1.1rem 1.25rem' }}>
+                                                {product.type === 'bundle' ? (
+                                                    <span style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c084fc', padding: '0.3rem 0.65rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(139, 92, 246, 0.35)', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                        <FaLayerGroup size={12} /> Combo
+                                                    </span>
+                                                ) : product.type === 'service' ? (
                                                     <span style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', padding: '0.3rem 0.65rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(59, 130, 246, 0.35)', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                         <FaTools size={12} /> Servicio
                                                     </span>
-                                                </div>
-                                            ) : (
-                                                <span style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#34d399', padding: '0.3rem 0.65rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(52, 211, 153, 0.3)', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                    <FaBoxOpen size={12} /> Producto
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td style={{ textAlign: 'right', padding: '1.1rem 1.25rem' }}>
-                                            {product.type === 'bundle' || product.type === 'service' ? (
-                                                <span style={{ color: '#64748b' }}>—</span>
-                                            ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                    <button onClick={() => { setStockProduct(product); setShowStockModal(true); }}
-                                                        style={{
-                                                            background: 'transparent', border: 'none', cursor: 'pointer',
-                                                            display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end'
-                                                        }}
-                                                    >
-                                                        <span style={{
-                                                            fontSize: '1.15rem', fontWeight: 800,
-                                                            color: product.current_stock <= product.min_stock_alert ? '#ef4444' : '#22c55e',
-                                                            textShadow: product.current_stock <= product.min_stock_alert ? '0 0 10px rgba(239,68,68,0.4)' : '0 0 10px rgba(34,197,94,0.4)'
-                                                        }}>
-                                                            {product.current_stock}
-                                                        </span>
-                                                    </button>
-                                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{product.unit_of_measure || 'Unidad'}</span>
-                                                    {product.current_stock <= product.min_stock_alert && (
-                                                        <span style={{ fontSize: '0.65rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px', fontWeight: '800' }}>Stock Crítico</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td style={{ textAlign: 'right', fontWeight: 800, color: 'white', fontSize: '1rem', padding: '1.1rem 1.25rem' }}>
-                                            C$ {Number(product.selling_price || 0).toFixed(2)}
-                                        </td>
-                                        <td style={{ textAlign: 'center', padding: '1.1rem 1.25rem' }}>
-                                            <button
-                                                onClick={() => handleToggleSale(product)}
-                                                title={isForSale ? "Desactivar para que NO aparezca en la caja al cobrar" : "Activar para que APAREZCA en la caja al cobrar"}
-                                                style={{
-                                                    background: isForSale ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.12)',
-                                                    border: isForSale ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.35)',
-                                                    color: isForSale ? '#34d399' : '#f87171',
-                                                    padding: '0.45rem 0.85rem',
-                                                    borderRadius: '10px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: '700',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px',
-                                                    transition: 'all 0.2s ease',
-                                                    boxShadow: isForSale ? '0 0 12px rgba(16, 185, 129, 0.25)' : 'none'
-                                                }}
-                                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                                            >
-                                                {isForSale ? (
-                                                    <><FaCheckCircle /> En Venta (Caja)</>
                                                 ) : (
-                                                    <><FaBan /> Inactivo en Caja</>
+                                                    <span style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#34d399', padding: '0.3rem 0.65rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(52, 211, 153, 0.3)', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                        <FaBoxOpen size={12} /> Producto
+                                                    </span>
                                                 )}
-                                            </button>
-                                        </td>
-                                        <td style={{ textAlign: 'center', padding: '1.1rem 1.25rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                                {product.type !== 'bundle' && product.type !== 'service' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => { setStockProduct({ ...product, _defaultType: 'IN' }); setShowStockModal(true); }}
-                                                            title="Registrar Entrada de Stock"
+                                            </td>
+                                            <td style={{ textAlign: 'right', padding: '1.1rem 1.25rem' }}>
+                                                {product.type === 'bundle' || product.type === 'service' ? (
+                                                    <span style={{ color: '#64748b' }}>—</span>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                        <button onClick={() => { setStockProduct(product); setShowStockModal(true); }}
                                                             style={{
-                                                                background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)',
-                                                                color: '#4ade80', padding: '0.45rem 0.65rem', borderRadius: '8px',
-                                                                cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
-                                                                display: 'flex', alignItems: 'center', gap: '4px'
+                                                                background: 'transparent', border: 'none', cursor: 'pointer',
+                                                                display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end'
                                                             }}
                                                         >
-                                                            <FaArrowDown size={11} /> Entrada
+                                                            <span style={{
+                                                                fontSize: '1.15rem', fontWeight: 800,
+                                                                color: product.current_stock <= product.min_stock_alert ? '#ef4444' : '#22c55e',
+                                                                textShadow: product.current_stock <= product.min_stock_alert ? '0 0 10px rgba(239,68,68,0.4)' : '0 0 10px rgba(34,197,94,0.4)'
+                                                            }}>
+                                                                {product.current_stock}
+                                                            </span>
                                                         </button>
-                                                        <button
-                                                            onClick={() => { setStockProduct({ ...product, _defaultType: 'OUT' }); setShowStockModal(true); }}
-                                                            title="Registrar Salida de Stock"
-                                                            style={{
-                                                                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
-                                                                color: '#f87171', padding: '0.45rem 0.65rem', borderRadius: '8px',
-                                                                cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
-                                                                display: 'flex', alignItems: 'center', gap: '4px'
-                                                            }}
-                                                        >
-                                                            <FaArrowUp size={11} /> Salida
-                                                        </button>
-                                                    </>
+                                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{product.unit_of_measure || 'Unidad'}</span>
+                                                        {product.current_stock <= product.min_stock_alert && (
+                                                            <span style={{ fontSize: '0.65rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px', fontWeight: '800' }}>Stock Crítico</span>
+                                                        )}
+                                                    </div>
                                                 )}
-                                                <button onClick={() => handleEdit(product)} className="btn-icon btn-edit" title="Editar producto" style={{ padding: '0.45rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                    <FaEdit size={13} />
+                                            </td>
+                                            <td style={{ textAlign: 'right', fontWeight: 800, color: 'white', fontSize: '1rem', padding: '1.1rem 1.25rem' }}>
+                                                C$ {Number(product.selling_price || 0).toFixed(2)}
+                                            </td>
+                                            <td style={{ textAlign: 'center', padding: '1.1rem 1.25rem' }}>
+                                                <button
+                                                    onClick={() => handleToggleSale(product)}
+                                                    title={isForSale ? "Desactivar para que NO aparezca en la caja al cobrar" : "Activar para que APAREZCA en la caja al cobrar"}
+                                                    style={{
+                                                        background: isForSale ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+                                                        border: isForSale ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.35)',
+                                                        color: isForSale ? '#34d399' : '#f87171',
+                                                        padding: '0.45rem 0.85rem',
+                                                        borderRadius: '10px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: '700',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        transition: 'all 0.2s ease',
+                                                        boxShadow: isForSale ? '0 0 12px rgba(16, 185, 129, 0.25)' : 'none'
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                                                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                                >
+                                                    {isForSale ? (
+                                                        <><FaCheckCircle /> En Venta</>
+                                                    ) : (
+                                                        <><FaBan /> Inactivo</>
+                                                    )}
                                                 </button>
-                                                {product.type === 'service' && (
+                                            </td>
+                                            <td style={{ textAlign: 'center', padding: '1.1rem 1.25rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                    {product.type !== 'bundle' && product.type !== 'service' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => { setStockProduct({ ...product, _defaultType: 'IN' }); setShowStockModal(true); }}
+                                                                title="Registrar Entrada de Stock"
+                                                                style={{
+                                                                    background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)',
+                                                                    color: '#4ade80', padding: '0.45rem 0.65rem', borderRadius: '8px',
+                                                                    cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                                                                    display: 'flex', alignItems: 'center', gap: '4px'
+                                                                }}
+                                                            >
+                                                                <FaArrowDown size={11} /> Entrada
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setStockProduct({ ...product, _defaultType: 'OUT' }); setShowStockModal(true); }}
+                                                                title="Registrar Salida de Stock"
+                                                                style={{
+                                                                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                                                                    color: '#f87171', padding: '0.45rem 0.65rem', borderRadius: '8px',
+                                                                    cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                                                                    display: 'flex', alignItems: 'center', gap: '4px'
+                                                                }}
+                                                            >
+                                                                <FaArrowUp size={11} /> Salida
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {/* Quick Price — now for ALL types */}
                                                     <button
                                                         onClick={() => { setQuickPriceProduct(product); setQuickPriceValue(product.selling_price); }}
                                                         title="Cambiar precio rápidamente"
@@ -402,20 +563,24 @@ const Inventory = () => {
                                                     >
                                                         <FaCoins size={11} /> Precio
                                                     </button>
-                                                )}
-                                                <button onClick={() => handleDeleteProduct(product)} className="btn-icon btn-delete" title="Eliminar producto" style={{ padding: '0.45rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)' }}>
-                                                    <FaTrash size={13} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                                    <button onClick={() => handleEdit(product)} className="btn-icon btn-edit" title="Editar producto" style={{ padding: '0.45rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <FaEdit size={13} />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteProduct(product)} className="btn-icon btn-delete" title="Eliminar producto" style={{ padding: '0.45rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)' }}>
+                                                        <FaTrash size={13} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
 
+            {/* ═══════ MODALS ═══════ */}
             {showModal && (
                 <ProductModal
                     product={editingProduct}
@@ -459,26 +624,36 @@ const Inventory = () => {
                 onClose={() => setAlert({ ...alert, show: false })}
             />
 
+            {/* FIX: ConfirmModal was missing — delete confirmations now actually work */}
+            <ConfirmModal
+                isOpen={confirm.show}
+                title="⚠️ Confirmar Acción"
+                message={confirm.message}
+                onConfirm={confirm.action}
+                onCancel={() => setConfirm({ show: false, message: '', action: null })}
+            />
+
+            {/* Quick Price Modal */}
             {quickPriceProduct && (
                 <div style={{
                     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 2000, backdropFilter: 'blur(6px)'
+                    zIndex: 2000, backdropFilter: 'blur(6px)', padding: '1rem'
                 }}>
                     <div style={{
                         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
                         border: '1px solid rgba(245,158,11,0.4)',
-                        borderRadius: '20px', padding: '2rem', width: '420px', maxWidth: '95%',
+                        borderRadius: '20px', padding: 'clamp(1.25rem, 3vw, 2rem)', width: '420px', maxWidth: '100%',
                         boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,158,11,0.15)'
                     }}>
                         {/* Header */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                             <span style={{ fontSize: '2rem' }}>💰</span>
-                            <div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
                                 <h3 style={{ margin: 0, color: 'white', fontWeight: 800, fontSize: '1.15rem' }}>
                                     Cambiar Precio
                                 </h3>
-                                <p style={{ margin: 0, color: '#f59e0b', fontSize: '0.85rem', fontWeight: 600 }}>
+                                <p style={{ margin: 0, color: '#f59e0b', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {quickPriceProduct.name}
                                 </p>
                             </div>
@@ -510,7 +685,7 @@ const Inventory = () => {
                                 value={quickPriceValue}
                                 onChange={e => setQuickPriceValue(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') handleQuickPriceSave(); if (e.key === 'Escape') setQuickPriceProduct(null); }}
-                                style={{ width: '100%', fontSize: '1.4rem', fontWeight: 700, textAlign: 'center', padding: '0.75rem', color: '#fbbf24' }}
+                                style={{ width: '100%', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', fontWeight: 700, textAlign: 'center', padding: '0.75rem', color: '#fbbf24' }}
                             />
                             <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
                                 Presiona Enter para guardar · Esc para cancelar
@@ -552,4 +727,3 @@ const Inventory = () => {
 };
 
 export default Inventory;
-
