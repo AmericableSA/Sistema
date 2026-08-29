@@ -130,7 +130,7 @@ exports.updateProduct = async (req, res) => {
 
         // 3. Update Database
         await connection.query(
-            'UPDATE products SET sku = ?, name = ?, description = ?, category_id = ?, provider_id = ?, current_stock = ?, min_stock_alert = ?, unit_cost = ?, selling_price = ?, type = ?, unit_of_measure = ?, creates_service_order = ?, service_order_type = ?, is_for_sale = ?, updated_at = NOW() WHERE id = ?',
+            'UPDATE products SET sku = ?, name = ?, description = ?, category_id = ?, provider_id = ?, current_stock = ?, min_stock_alert = ?, unit_cost = ?, selling_price = ?, type = ?, unit_of_measure = ?, creates_service_order = ?, service_order_type = ?, is_for_sale = ? WHERE id = ?',
             [sku, name, description, category_id, provider_id || null, newStock, min_stock_alert || 5, unit_cost || 0, selling_price, type || oldProduct.type, unit_of_measure || 'Unidad', creates_service_order ? 1 : 0, service_order_type || null, saleFlag, id]
         );
 
