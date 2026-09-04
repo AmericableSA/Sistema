@@ -139,6 +139,7 @@ exports.createTransaction = async (req, res) => {
         // Inventory Logic (Enhanced for Bundles and Kardex History)
         if (items && items.length > 0) {
             for (const item of items) {
+                const itemQty = parseFloat(item.quantity) || 1;
                 // 1. Check Product Type
                 const [pRows] = await conn.query('SELECT id, type, current_stock, name, selling_price, creates_service_order, service_order_type FROM products WHERE id = ?', [item.product_id]);
                 if (!pRows.length) throw new Error(`Producto ID ${item.product_id} no encontrado.`);
@@ -154,12 +155,12 @@ exports.createTransaction = async (req, res) => {
                     // Multiply: BundleQty (Sold) * IngredientQty (Recipe)
                     itemsToDeduct = bItems.map(bi => ({
                         product_id: bi.product_id,
-                        quantity: bi.quantity * item.quantity,
+                        quantity: bi.quantity * itemQty,
                         bundleName: product.name
                     }));
-                } else if (product.type === 'product') {
-                    // Regular Product
-                    itemsToDeduct = [{ product_id: item.product_id, quantity: item.quantity, bundleName: null }];
+                } else if (product.type !== 'service') {
+                    // Regular Product / Material (any non-service item deducts stock)
+                    itemsToDeduct = [{ product_id: item.product_id, quantity: itemQty, bundleName: null }];
                 }
                 // Services don't deduct stock
 
@@ -171,10 +172,10 @@ exports.createTransaction = async (req, res) => {
 
                     const comp = stockRows[0];
                     if (comp.current_stock < dItem.quantity) {
-                        throw new Error(`Stock insuficiente de: ${comp.name} (Req: ${dItem.quantity}, Disp: ${comp.current_stock})`);
+                        throw new Error(`Stock insuficiente de: ${comp.name} (Requerido: ${dItem.quantity}, Disponible: ${comp.current_stock})`);
                     }
 
-                    // Deduct Stock from Products
+                    // Deduct Stock from Products (Merma)
                     await conn.query('UPDATE products SET current_stock = current_stock - ? WHERE id = ?', [dItem.quantity, dItem.product_id]);
 
                     // Log to inventory_moves (legacy/operational)
@@ -558,6 +559,7 @@ exports.cancelTransaction = async (req, res) => {
 
         if (parsedDetails.items && Array.isArray(parsedDetails.items) && parsedDetails.items.length > 0) {
             for (const item of parsedDetails.items) {
+                const itemQty = parseFloat(item.quantity) || 1;
                 const [pRows] = await conn.query('SELECT id, type, name, selling_price FROM products WHERE id = ?', [item.product_id]);
                 if (!pRows.length) continue;
                 const product = pRows[0];
@@ -567,11 +569,11 @@ exports.cancelTransaction = async (req, res) => {
                     const [bItems] = await conn.query('SELECT product_id, quantity FROM bundle_items WHERE bundle_id = ?', [item.product_id]);
                     itemsToRestore = bItems.map(bi => ({
                         product_id: bi.product_id,
-                        quantity: bi.quantity * item.quantity,
+                        quantity: bi.quantity * itemQty,
                         bundleName: product.name
                     }));
-                } else if (product.type === 'product') {
-                    itemsToRestore = [{ product_id: item.product_id, quantity: item.quantity, bundleName: null }];
+                } else if (product.type !== 'service') {
+                    itemsToRestore = [{ product_id: item.product_id, quantity: itemQty, bundleName: null }];
                 }
 
                 for (const rItem of itemsToRestore) {
